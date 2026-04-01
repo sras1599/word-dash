@@ -1,0 +1,225 @@
+/* ─────────────────────────────────────────────
+   Card – custom properties
+   Parent can override --card-width to resize
+   everything proportionally.
+───────────────────────────────────────────── */
+.card {
+    --card-width: 80px;
+    --card-teal: #2db89c;
+    --card-red: #E8231A;
+    --card-face-bg: #fafaf0;
+    --card-face-border: #deded4;
+    --card-back-bg: #111111;
+    --card-radius: calc(var(--card-width) * 0.09);
+    --card-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.14);
+
+    position: relative;
+    width: var(--card-width);
+    aspect-ratio: 2 / 3;
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    user-select: none;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        border-color 0.15s ease;
+    cursor: default;
+    outline: none;
+    box-sizing: border-box;
+    border: 2px solid transparent;
+}
+
+/* ─────────────────────────────────────────────
+   Face-up (letter visible)
+───────────────────────────────────────────── */
+.card--face-up {
+    background: var(--card-face-bg);
+    border-color: var(--card-face-border);
+}
+
+/* ─────────────────────────────────────────────
+   Face-down (card back)
+───────────────────────────────────────────── */
+.card--face-down {
+    background: var(--card-back-bg);
+    border-color: transparent;
+}
+
+/* ─────────────────────────────────────────────
+   Empty placeholder slot
+───────────────────────────────────────────── */
+.card--empty {
+    background: transparent;
+    border: 2px dashed var(--card-face-border);
+    box-shadow: none;
+}
+
+.card__placeholder {
+    width: 100%;
+    height: 100%;
+}
+
+/* ─────────────────────────────────────────────
+   State: drawn this turn
+───────────────────────────────────────────── */
+.card--drawn {
+    border-color: var(--card-teal);
+    border-width: 2.5px;
+}
+
+/* ─────────────────────────────────────────────
+   State: selected
+───────────────────────────────────────────── */
+.card--selected {
+    transform: translateY(-5px) scale(1.04);
+    box-shadow:
+        var(--card-shadow),
+        0 0 0 3px #f5a623;
+}
+
+/* ─────────────────────────────────────────────
+   State: draggable
+───────────────────────────────────────────── */
+.card--draggable {
+    cursor: grab;
+}
+
+.card--draggable:active {
+    cursor: grabbing;
+}
+
+/* ─────────────────────────────────────────────
+   State: read-only
+───────────────────────────────────────────── */
+.card--readonly {
+    cursor: default;
+    pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────
+   Interactive focus ring (keyboard nav)
+───────────────────────────────────────────── */
+.card[role='button']:focus-visible {
+    outline: 3px solid var(--card-teal);
+    outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────
+   Vowel card
+───────────────────────────────────────────── */
+.card--vowel .card__letter {
+    color: var(--card-red);
+}
+
+/* ─────────────────────────────────────────────
+   Letters on the face-up card
+───────────────────────────────────────────── */
+.card__letter {
+    position: absolute;
+    color: var(--card-teal);
+    font-weight: 800;
+    line-height: 1;
+    font-family: inherit;
+}
+
+/* Top-left corner */
+.card__letter--top {
+    top: 8%;
+    left: 9%;
+    font-size: clamp(8px, 0.85em, 13px);
+}
+
+/* Centred large letter */
+.card__letter--center {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(22px, 2.6em, 48px);
+    font-weight: 900;
+}
+
+/* Bottom-right corner – rotated 180° */
+.card__letter--bottom {
+    bottom: 8%;
+    right: 9%;
+    font-size: clamp(8px, 0.85em, 13px);
+    transform: rotate(180deg);
+}
+
+/* ─────────────────────────────────────────────
+   Card back
+───────────────────────────────────────────── */
+.card__back {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Full-bleed SVG that paints red wave / black middle / teal wave */
+.card__back-waves {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* "WordIt!" logo – top right */
+.card__back-logo {
+    position: absolute;
+    top: 5%;
+    right: 5%;
+    z-index: 2;
+    height: clamp(7px, 9%, 13px);
+    width: auto;
+}
+
+/* "WordIt!" logo – bottom left, rotated 180° */
+.card__back-logo--inverted {
+    top: auto;
+    right: auto;
+    bottom: 5%;
+    left: 5%;
+    transform: rotate(180deg);
+}
+
+/* Scrambled-letter texture: confined to the black middle band */
+.card__back-pattern {
+    position: absolute;
+    inset: 23% 0 23%;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.88);
+    font-weight: 900;
+    line-height: 1.05;
+    font-size: clamp(11px, 1.35em, 20px);
+    word-break: break-all;
+    word-spacing: -0.15em;
+    padding: 4%;
+    z-index: 1;
+}
+
+/* Dense letter pattern rendered as CSS content */
+.card__back-pattern::before {
+    content: 'th ngeac bkoc slo meow yafs rth ngeac bkoc slo meow yafs rth ngeac bkoc slo meow yafs';
+    display: block;
+    overflow: hidden;
+    max-height: 100%;
+    text-transform: lowercase;
+}
+
+/* "flipside" brand centred in the teal wave section */
+.card__back-brand {
+    position: absolute;
+    bottom: 4%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    color: #0d0d0d;
+    font-size: clamp(6px, 0.6em, 9px);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: lowercase;
+    white-space: nowrap;
+}
