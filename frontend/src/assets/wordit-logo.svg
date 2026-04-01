@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 14" role="img" aria-label="WordIt!">
+  <!-- Drop shadow layer -->
+  <text
+    x="1.5" y="12.5"
+    font-family="'Arial Black', 'Black Han Sans', Arial, sans-serif"
+    font-weight="900"
+    font-style="italic"
+    font-size="12"
+    fill="#000000"
+    opacity="0.35"
+    letter-spacing="-0.5"
+  >WordIt!</text>
+  <!-- White "Word" -->
+  <text
+    x="0" y="11"
+    font-family="'Arial Black', 'Black Han Sans', Arial, sans-serif"
+    font-weight="900"
+    font-style="italic"
+    font-size="12"
+    fill="white"
+    letter-spacing="-0.5"
+  >Word</text>
+  <!-- Yellow "It!" (tspan continues from same baseline after "Word") -->
+  <text
+    x="30" y="11"
+    font-family="'Arial Black', 'Black Han Sans', Arial, sans-serif"
+    font-weight="900"
+    font-style="italic"
+    font-size="12"
+    fill="#ffe040"
+    letter-spacing="-0.5"
+  >It!</text>
+</svg>
