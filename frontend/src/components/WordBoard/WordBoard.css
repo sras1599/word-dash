@@ -1,0 +1,65 @@
+/* ─────────────────────────────────────────────
+   WordBoard – custom properties
+───────────────────────────────────────────── */
+.word-board {
+    --board-gap: 12px;
+    --board-padding: 12px;
+    --board-radius: 12px;
+    --board-complete-color: #2db89c;
+    --board-complete-transition: box-shadow 0.3s ease, background-color 0.3s ease;
+    --label-color: #666;
+    --label-font-size: 0.8rem;
+    --label-min-width: 100px;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--board-gap);
+    padding: var(--board-padding);
+    border-radius: var(--board-radius);
+    transition: var(--board-complete-transition);
+}
+
+/* ─────────────────────────────────────────────
+   All words complete — celebration state
+───────────────────────────────────────────── */
+.word-board--complete {
+    background-color: rgba(45, 184, 156, 0.08);
+    box-shadow: 0 0 0 2px var(--board-complete-color);
+    animation: word-board-celebrate 0.5s ease forwards;
+}
+
+@keyframes word-board-celebrate {
+    0% {
+        box-shadow: 0 0 0 2px var(--board-complete-color);
+    }
+
+    40% {
+        box-shadow: 0 0 16px 4px var(--board-complete-color);
+    }
+
+    100% {
+        box-shadow: 0 0 0 2px var(--board-complete-color);
+    }
+}
+
+/* ─────────────────────────────────────────────
+   Row wrapper — label + row side-by-side
+───────────────────────────────────────────── */
+.word-board__row-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ─────────────────────────────────────────────
+   Row label — "Word 1 (3)"
+───────────────────────────────────────────── */
+.word-board__row-label {
+    min-width: var(--label-min-width);
+    font-size: var(--label-font-size);
+    color: var(--label-color);
+    text-align: right;
+    flex-shrink: 0;
+    user-select: none;
+}
