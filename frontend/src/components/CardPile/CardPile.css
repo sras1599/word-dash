@@ -1,0 +1,137 @@
+/* ─────────────────────────────────────────────
+   CardPile – custom properties
+   Set --pile-width on the host element to scale
+   the entire component proportionally.
+───────────────────────────────────────────── */
+.card-pile {
+    --pile-width: 80px;
+    --pile-teal: #2db89c;
+    --pile-radius: calc(var(--pile-width) * 0.09);
+    --pile-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.14);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: default;
+    outline: none;
+}
+
+/* ─────────────────────────────────────────────
+   Stack container
+   Extra top padding gives ghost cards room to
+   peek above the top card without being clipped.
+───────────────────────────────────────────── */
+.card-pile__stack {
+    position: relative;
+    /* Pass pile width down to the Card component via its own custom property */
+    --card-width: var(--pile-width);
+    /* Padding accommodates the two ghost cards above the top card */
+    padding-top: 8px;
+}
+
+/* ─────────────────────────────────────────────
+   Ghost cards (stack illusion)
+   Absolutely positioned behind the top Card,
+   slightly offset upward to suggest depth.
+───────────────────────────────────────────── */
+.card-pile__ghost {
+    position: absolute;
+    width: var(--pile-width);
+    aspect-ratio: 2 / 3;
+    background: #111111;
+    border-radius: var(--pile-radius);
+    box-shadow: var(--pile-shadow);
+}
+
+/* Second-from-top — 3 px above the top card */
+.card-pile__ghost--1 {
+    top: 5px;
+    left: 0;
+    z-index: 1;
+}
+
+/* Third-from-top — 6 px above the top card */
+.card-pile__ghost--2 {
+    top: 2px;
+    left: 0;
+    z-index: 0;
+}
+
+/* Discard pile cards are face-up — ghost cards show a muted light face */
+.card-pile--discard .card-pile__ghost {
+    background: #c8c8c0;
+}
+
+/* Top card sits above all ghost layers */
+.card-pile__stack>.card {
+    position: relative;
+    z-index: 2;
+}
+
+/* ─────────────────────────────────────────────
+   Count badge (draw pile only)
+───────────────────────────────────────────── */
+.card-pile__badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────
+   Modifier: active (local player's draw phase)
+   Pulsing teal glow signals the player to act.
+───────────────────────────────────────────── */
+.card-pile--active .card-pile__stack {
+    animation: pile-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pile-pulse {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 0px rgba(45, 184, 156, 0));
+    }
+
+    50% {
+        filter: drop-shadow(0 0 8px rgba(45, 184, 156, 0.85));
+    }
+}
+
+/* ─────────────────────────────────────────────
+   Modifier: interactive (clickable pile)
+───────────────────────────────────────────── */
+.card-pile--interactive {
+    cursor: pointer;
+}
+
+.card-pile--interactive:hover .card-pile__stack>.card {
+    transform: translateY(-4px);
+    transition: transform 0.15s ease;
+}
+
+.card-pile--interactive:focus-visible {
+    outline: 3px solid var(--pile-teal);
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+
+/* ─────────────────────────────────────────────
+   Modifier: drop-target (arrange phase)
+   Discard pile is eligible to receive a card.
+───────────────────────────────────────────── */
+.card-pile--drop-target .card-pile__stack>.card {
+    box-shadow: 0 0 0 2px var(--pile-teal);
+    transition: box-shadow 0.15s ease;
+}
+
+/* ─────────────────────────────────────────────
+   Modifier: drag-over (card hovering above pile)
+   Green ring confirms valid drop target.
+───────────────────────────────────────────── */
+.card-pile--drag-over .card-pile__stack>.card {
+    box-shadow: 0 0 0 3px var(--pile-teal), var(--pile-shadow);
+    transition: box-shadow 0.15s ease;
+}
