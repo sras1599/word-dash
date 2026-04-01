@@ -10,10 +10,6 @@ export interface WordSlotProps {
     rowIndex: number
     /** Card currently placed here. `null` means the slot is empty. */
     card: CardData | null
-    /** True during the local player's arrange phase — accepts drops. */
-    isActive: boolean
-    /** `true` = valid word; `false` = invalid word; `null` = not yet checked. */
-    isValid: boolean | null
     /** Called when a card is dropped into this slot. */
     onPlace?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when the card in this slot begins being dragged away. */
@@ -26,8 +22,6 @@ export function WordSlot({
     slotIndex,
     rowIndex,
     card,
-    isActive,
-    isValid,
     onPlace,
     onUnplace,
     onCardSelected,
@@ -35,7 +29,6 @@ export function WordSlot({
     const [isDragOver, setIsDragOver] = useState(false)
 
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!isActive) return
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
         setIsDragOver(true)
@@ -51,7 +44,6 @@ export function WordSlot({
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault()
         setIsDragOver(false)
-        if (!isActive) return
         const cardId = e.dataTransfer.getData('text/plain')
         if (cardId) {
             onPlace?.(cardId, rowIndex, slotIndex)
@@ -74,11 +66,7 @@ export function WordSlot({
     const className = [
         'word-slot',
         card ? 'word-slot--filled' : 'word-slot--empty',
-        isActive && 'word-slot--active',
-        isActive && isDragOver && 'word-slot--drag-over',
-        !isActive && 'word-slot--locked',
-        isValid === true && 'word-slot--valid',
-        isValid === false && 'word-slot--invalid',
+        isDragOver && 'word-slot--drag-over',
     ]
         .filter(Boolean)
         .join(' ')
@@ -100,10 +88,10 @@ export function WordSlot({
             {card ? (
                 <Card
                     card={card}
-                    draggable={isActive}
-                    readOnly={!isActive}
-                    onClick={isActive ? handleCardClick : undefined}
-                    onDragStart={isActive ? handleCardDragStart : undefined}
+                    draggable={true}
+                    readOnly={false}
+                    onClick={handleCardClick}
+                    onDragStart={handleCardDragStart}
                 />
             ) : (
                 <div className="word-slot__placeholder" aria-hidden="true" />

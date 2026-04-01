@@ -3,8 +3,6 @@
    Sized to wrap a single Card component.
 ───────────────────────────────────────────── */
 .word-slot {
-    --slot-valid-color: #2db89c;
-    --slot-invalid-color: #e8231a;
     --slot-drag-color: #2db89c;
     --slot-border-width: 2px;
     --slot-radius: 8px;
@@ -23,7 +21,7 @@
    Empty slot – dashed outline placeholder
 ───────────────────────────────────────────── */
 .word-slot--empty {
-    border: var(--slot-border-width) dashed #deded4;
+    border: var(--slot-border-width) dashed #b0b0a0;
     width: 80px;
     aspect-ratio: 2 / 3;
 }
@@ -36,45 +34,12 @@
 }
 
 /* ─────────────────────────────────────────────
-   Active – player's arrange phase
-───────────────────────────────────────────── */
-.word-slot--active.word-slot--empty {
-    border-color: #b0b0a0;
-    cursor: default;
-}
-
-/* ─────────────────────────────────────────────
    Drag-over – green highlight to indicate valid drop
 ───────────────────────────────────────────── */
 .word-slot--drag-over {
     border-color: var(--slot-drag-color) !important;
     box-shadow: 0 0 0 3px rgba(45, 184, 156, 0.35);
     background-color: rgba(45, 184, 156, 0.08);
-}
-
-/* ─────────────────────────────────────────────
-   Valid word – green tint
-───────────────────────────────────────────── */
-.word-slot--valid {
-    box-shadow: 0 0 0 2px var(--slot-valid-color);
-    background-color: rgba(45, 184, 156, 0.12);
-}
-
-/* ─────────────────────────────────────────────
-   Invalid word – red tint
-───────────────────────────────────────────── */
-.word-slot--invalid {
-    box-shadow: 0 0 0 2px var(--slot-invalid-color);
-    background-color: rgba(232, 35, 26, 0.1);
-}
-
-/* ─────────────────────────────────────────────
-   Locked – not the player's turn
-───────────────────────────────────────────── */
-.word-slot--locked {
-    opacity: 0.6;
-    cursor: default;
-    pointer-events: none;
 }
 
 /* ─────────────────────────────────────────────

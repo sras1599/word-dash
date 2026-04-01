@@ -22,11 +22,6 @@ const meta = {
     tags: ['autodocs'],
     argTypes: {
         card: { control: 'object' },
-        isActive: { control: 'boolean' },
-        isValid: {
-            control: 'select',
-            options: [null, true, false],
-        },
         slotIndex: { control: 'number' },
         rowIndex: { control: 'number' },
     },
@@ -34,8 +29,6 @@ const meta = {
         slotIndex: 0,
         rowIndex: 0,
         card: SAMPLE_CARD,
-        isActive: true,
-        isValid: null,
         onPlace: fn(),
         onUnplace: fn(),
         onCardSelected: fn(),
@@ -45,57 +38,17 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Active slot with a card placed — player can drag or click the card. */
-export const FilledActive: Story = {
+/** Slot with a card placed — player can drag or click the card. */
+export const Filled: Story = {
     args: {
         card: SAMPLE_CARD,
-        isActive: true,
-        isValid: null,
     },
 }
 
-/** Empty slot during the player's arrange phase — ready to accept a drop. */
-export const EmptyActive: Story = {
+/** Empty slot — ready to accept a drop. */
+export const Empty: Story = {
     args: {
         card: null,
-        isActive: true,
-        isValid: null,
-    },
-}
-
-/** Filled slot when it's not the player's turn — locked and muted. */
-export const FilledLocked: Story = {
-    args: {
-        card: SAMPLE_CARD,
-        isActive: false,
-        isValid: null,
-    },
-}
-
-/** Empty slot when it's not the player's turn — locked and muted. */
-export const EmptyLocked: Story = {
-    args: {
-        card: null,
-        isActive: false,
-        isValid: null,
-    },
-}
-
-/** Part of a validated word — green tint on the slot. */
-export const Valid: Story = {
-    args: {
-        card: SAMPLE_CARD,
-        isActive: false,
-        isValid: true,
-    },
-}
-
-/** Part of an unrecognised word — red tint on the slot. */
-export const Invalid: Story = {
-    args: {
-        card: SAMPLE_CARD,
-        isActive: true,
-        isValid: false,
     },
 }
 
