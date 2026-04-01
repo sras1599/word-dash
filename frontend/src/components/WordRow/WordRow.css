@@ -1,0 +1,35 @@
+/* ─────────────────────────────────────────────
+   WordRow – custom properties
+───────────────────────────────────────────── */
+.word-row {
+    --row-valid-color: #2db89c;
+    --row-invalid-color: #e8231a;
+    --row-gap: 8px;
+    --row-padding: 8px;
+    --row-radius: 10px;
+    --row-transition: background-color 0.2s ease, box-shadow 0.2s ease;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--row-gap);
+    padding: var(--row-padding);
+    border-radius: var(--row-radius);
+    transition: var(--row-transition);
+}
+
+/* ─────────────────────────────────────────────
+   Valid word — all slots filled and recognised
+───────────────────────────────────────────── */
+.word-row--valid {
+    background-color: rgba(45, 184, 156, 0.1);
+    box-shadow: 0 0 0 2px var(--row-valid-color);
+}
+
+/* ─────────────────────────────────────────────
+   Invalid word — all slots filled but unrecognised
+───────────────────────────────────────────── */
+.word-row--invalid {
+    background-color: rgba(232, 35, 26, 0.07);
+    box-shadow: 0 0 0 2px var(--row-invalid-color);
+}
