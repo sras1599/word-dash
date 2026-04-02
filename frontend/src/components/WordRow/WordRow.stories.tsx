@@ -42,7 +42,7 @@ const completeInvalidRow: WordRowState = {
 }
 
 const meta = {
-    title: 'WordIt/WordRow',
+    title: 'WordIt/Components/WordRow',
     component: WordRow,
     parameters: {
         layout: 'centered',

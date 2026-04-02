@@ -6,7 +6,7 @@ import { WordSlot } from './WordSlot'
 const SAMPLE_CARD = { id: 'card-e', letter: 'E' }
 
 const meta = {
-    title: 'WordIt/WordSlot',
+    title: 'WordIt/Components/WordSlot',
     component: WordSlot,
     parameters: {
         layout: 'centered',

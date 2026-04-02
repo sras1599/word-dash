@@ -6,7 +6,7 @@ import { CardPile } from './CardPile'
 const SAMPLE_CARD = { id: 'card-t', letter: 'T' }
 
 const meta = {
-    title: 'WordIt/CardPile',
+    title: 'WordIt/Components/CardPile',
     component: CardPile,
     parameters: {
         layout: 'centered',
