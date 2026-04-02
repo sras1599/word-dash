@@ -1,0 +1,74 @@
+/* ─────────────────────────────────────────────
+   PlayerHand
+   Horizontal row of the local player's cards.
+   The drawn card is separated by a divider and
+   always appears last (rightmost).
+───────────────────────────────────────────── */
+.player-hand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ─────────────────────────────────────────────
+   Card row
+───────────────────────────────────────────── */
+.player-hand__cards {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+/* ─────────────────────────────────────────────
+   Divider between hand cards and drawn card
+───────────────────────────────────────────── */
+.player-hand__divider {
+    width: 1px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.3);
+    align-self: center;
+    border-radius: 1px;
+    margin: 0 4px;
+}
+
+/* ─────────────────────────────────────────────
+   Drawn card wrapper — slight upward nudge to
+   visually distinguish it from the hand cards.
+───────────────────────────────────────────── */
+.player-hand__drawn-wrapper {
+    display: flex;
+    align-items: flex-end;
+    position: relative;
+}
+
+/* ─────────────────────────────────────────────
+   Discard button — only shown when a card is
+   selected and onDiscard is provided.
+───────────────────────────────────────────── */
+.player-hand__discard-btn {
+    padding: 6px 20px;
+    border-radius: 6px;
+    border: none;
+    background: #E8231A;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.player-hand__discard-btn:hover {
+    background: #c41c14;
+}
+
+.player-hand__discard-btn:active {
+    transform: scale(0.97);
+}
+
+.player-hand__discard-btn:focus-visible {
+    outline: 3px solid #f5a623;
+    outline-offset: 2px;
+}
