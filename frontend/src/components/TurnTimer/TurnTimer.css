@@ -1,0 +1,95 @@
+/* ─────────────────────────────────────────────
+   TurnTimer – custom properties
+───────────────────────────────────────────── */
+.turn-timer {
+    --timer-color-normal: #333;
+    --timer-color-urgent: #e8231a;
+    --timer-bar-bg: #e0e0d8;
+    --timer-bar-fill-normal: #2db89c;
+    --timer-bar-fill-urgent: #e8231a;
+    --timer-bar-radius: 4px;
+    --timer-font-size: 2rem;
+    --timer-font-weight: 700;
+    --timer-bar-height: 6px;
+    --timer-gap: 0.5rem;
+
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--timer-gap);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ─────────────────────────────────────────────
+   Time display
+───────────────────────────────────────────── */
+.turn-timer__display {
+    font-size: var(--timer-font-size);
+    font-weight: var(--timer-font-weight);
+    color: var(--timer-color-normal);
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+/* ─────────────────────────────────────────────
+   Progress bar
+───────────────────────────────────────────── */
+.turn-timer__bar-track {
+    width: 100%;
+    min-width: 6rem;
+    height: var(--timer-bar-height);
+    background-color: var(--timer-bar-bg);
+    border-radius: var(--timer-bar-radius);
+    overflow: hidden;
+}
+
+.turn-timer__bar-fill {
+    height: 100%;
+    background-color: var(--timer-bar-fill-normal);
+    border-radius: var(--timer-bar-radius);
+    transition: width 0.25s linear, background-color 0.2s ease;
+}
+
+/* ─────────────────────────────────────────────
+   Urgent state (≤15 s) — red + pulsing text
+───────────────────────────────────────────── */
+.turn-timer--urgent .turn-timer__display {
+    color: var(--timer-color-urgent);
+    animation: timer-pulse 0.8s ease-in-out infinite;
+}
+
+.turn-timer--urgent .turn-timer__bar-fill {
+    background-color: var(--timer-bar-fill-urgent);
+}
+
+@keyframes timer-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.45;
+    }
+}
+
+/* ─────────────────────────────────────────────
+   Expired state (0:00) — solid red, no pulse
+───────────────────────────────────────────── */
+.turn-timer--expired .turn-timer__display {
+    color: var(--timer-color-urgent);
+    animation: none;
+}
+
+.turn-timer--expired .turn-timer__bar-fill {
+    background-color: var(--timer-bar-fill-urgent);
+}
+
+/* ─────────────────────────────────────────────
+   Idle state — invisible placeholder
+───────────────────────────────────────────── */
+.turn-timer--idle {
+    visibility: hidden;
+    pointer-events: none;
+}
