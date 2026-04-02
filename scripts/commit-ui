@@ -55,7 +55,7 @@ if [[ "$TYPE" == "component" ]]; then
   SOURCE_COMMIT_MSG="ui: Add logic, styles, and stories for the ${NAME} component"
 else
   README_COMMIT_MSG="chore (ui): add readme file for the ${NAME} page"
-  SOURCE_COMMIT_MSG="ui: Add logic and styles for the ${NAME} page"
+  SOURCE_COMMIT_MSG="ui: Add logic, styles, and stories for the ${NAME} page"
 fi
 
 if [[ "$DRY_RUN" == true ]]; then
