@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DRY_RUN=false
+TYPE="component"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY_RUN=true; shift ;;
+    --type)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: --type requires an argument (component|page)" >&2
+        exit 1
+      fi
+      TYPE="$2"; shift 2 ;;
+    -*) echo "Unknown option: $1" >&2; exit 1 ;;
+    *) break ;;
+  esac
+done
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $(basename "$0") [--dry-run] [--type component|page] <Name>" >&2
+  exit 1
+fi
+
+if [[ "$TYPE" != "component" && "$TYPE" != "page" ]]; then
+  echo "Error: --type must be 'component' or 'page'" >&2
+  exit 1
+fi
+
+NAME="$1"
+REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
+
+if [[ "$TYPE" == "component" ]]; then
+  README_PATH="docs/internal/frontend/components/${NAME}.md"
+  SOURCE_DIR="frontend/src/components/${NAME}"
+else
+  README_PATH="docs/internal/frontend/pages/${NAME}.md"
+  SOURCE_DIR="frontend/src/pages/${NAME}"
+fi
+
+# Validate paths exist
+if [[ ! -f "${REPO_ROOT}/${README_PATH}" ]]; then
+  echo "Error: readme not found at ${README_PATH}" >&2
+  exit 1
+fi
+
+if [[ ! -d "${REPO_ROOT}/${SOURCE_DIR}" ]]; then
+  echo "Error: ${TYPE} directory not found at ${SOURCE_DIR}" >&2
+  exit 1
+fi
+
+if [[ "$TYPE" == "component" ]]; then
+  README_COMMIT_MSG="chore (ui): add readme file for the ${NAME} Component"
+  SOURCE_COMMIT_MSG="ui: Add logic, styles, and stories for the ${NAME} component"
+else
+  README_COMMIT_MSG="chore (ui): add readme file for the ${NAME} page"
+  SOURCE_COMMIT_MSG="ui: Add logic and styles for the ${NAME} page"
+fi
+
+if [[ "$DRY_RUN" == true ]]; then
+  echo "[dry-run] Would stage: ${README_PATH}"
+  echo "[dry-run] Would commit: \"${README_COMMIT_MSG}\""
+  echo "[dry-run] Would stage: ${SOURCE_DIR}"
+  echo "[dry-run] Would commit: \"${SOURCE_COMMIT_MSG}\""
+else
+  # Commit 1: readme
+  git -C "$REPO_ROOT" add "${README_PATH}"
+  git -C "$REPO_ROOT" commit -m "${README_COMMIT_MSG}"
+
+  # Commit 2: logic and styles (and stories for components)
+  git -C "$REPO_ROOT" add "${SOURCE_DIR}"
+  git -C "$REPO_ROOT" commit -m "${SOURCE_COMMIT_MSG}"
+fi
