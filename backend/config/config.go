@@ -10,6 +10,7 @@ const (
 	defaultPort           = "8080"
 	defaultWSPort         = "8081"
 	defaultTurnDurationMS = 60000
+	defaultCORSOrigin     = "http://localhost:5173"
 )
 
 type Config struct {
@@ -18,6 +19,7 @@ type Config struct {
 	DBURL          string
 	RedisURL       string
 	TurnDurationMS int
+	CORSOrigin     string
 }
 
 func (c Config) RESTAddr() string {
@@ -46,6 +48,7 @@ func Load() Config {
 		DBURL:          os.Getenv("DB_URL"),
 		RedisURL:       os.Getenv("REDIS_URL"),
 		TurnDurationMS: turnDurationMS,
+		CORSOrigin:     getEnvOrDefault("CORS_ORIGIN", defaultCORSOrigin),
 	}
 }
 

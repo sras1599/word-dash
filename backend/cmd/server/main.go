@@ -13,17 +13,20 @@ import (
 	apihttp "github.com/sras1599/wordit/backend/api/http"
 	apiws "github.com/sras1599/wordit/backend/api/ws"
 	"github.com/sras1599/wordit/backend/config"
+	"github.com/sras1599/wordit/backend/internal/room"
 	internalws "github.com/sras1599/wordit/backend/internal/ws"
 )
 
 func main() {
 	cfg := config.Load()
 
+	store := room.NewStore()
+
 	restMux := http.NewServeMux()
-	apihttp.RegisterRoutes(restMux)
+	apihttp.RegisterRoutes(restMux, store)
 	restServer := &http.Server{
 		Addr:    cfg.RESTAddr(),
-		Handler: restMux,
+		Handler: apihttp.CORSMiddleware(cfg.CORSOrigin, restMux),
 	}
 
 	wsMux := http.NewServeMux()

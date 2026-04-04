@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { createRoom } from '../../lib/api'
+import { session } from '../../lib/session'
 import './Home.css'
 
 type Panel = 'create' | 'join' | null
@@ -41,8 +43,9 @@ export function Home() {
 
         setCreateLoading(true)
         try {
-            // TODO: call server to create a new room — expects { roomCode: string; playerId: string }
-            const roomCode = 'PLACEHOLDER'
+            const { roomCode, playerId } = await createRoom(createName.trim(), { wordLengths: [3, 4, 5] })
+            session.setPlayerId(playerId)
+            session.setRoomCode(roomCode)
             navigate(`/lobby/${roomCode}`)
         } catch {
             setCreateLoading(false)
