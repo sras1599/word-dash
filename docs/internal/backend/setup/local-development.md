@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Go 1.22 or later
-- Docker and Docker Compose (for PostgreSQL and Redis)
+- Docker and Docker Compose (for PostgreSQL)
 
 ## Setup
 
@@ -14,9 +14,9 @@ cd wordit/backend
 
 # 2. Copy and configure environment variables
 cp .env.example .env
-# Edit .env with your local DB_URL and REDIS_URL if needed
+# Edit .env with your local DB_URL if needed
 
-# 3. Start PostgreSQL and Redis
+# 3. Start PostgreSQL
 docker compose up -d
 
 # 4. Run the server

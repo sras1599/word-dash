@@ -19,8 +19,8 @@ The backend is a single Go binary that serves both HTTP REST and WebSocket traff
 | Language            | Go (latest stable)                              |
 | HTTP + WebSocket    | `net/http` + `gorilla/websocket` (or `nhooyr.io/websocket`) |
 | HTTP Router         | `chi` (or stdlib `net/http`)                    |
-| Hot game state      | Redis — active rooms, game state, session map   |
-| Durable storage     | PostgreSQL — word list, future game records     |
+| Hot game state      | In-memory map — active rooms, game state, session map |
+| Durable storage     | PostgreSQL — word list, future game records          |
 | Word validation     | Pluggable `DictionaryChecker` interface         |
 
 ## Architecture Overview
@@ -47,17 +47,17 @@ The backend is a monolith: one process, two protocol surfaces.
 │            │  Win check · Timer goroutine  │    │
 │            └──────┬────────────────┬───────┘    │
 │                   │                │            │
-│          ┌────────▼──┐    ┌────────▼──────┐     │
-│          │   Redis   │    │  PostgreSQL   │     │
-│          │ (hot state│    │ (word list +  │     │
-│          │  sessions)│    │ future records│     │
-│          └───────────┘    └───────────────┘     │
+│          ┌────────────▼──┐  ┌────────▼──────┐     │
+│          │  In-Memory    │  │  PostgreSQL   │     │
+│          │  Store        │  │ (word list +  │     │
+│          │ (rooms/state) │  │ future records│     │
+│          └───────────────┘  └───────────────┘     │
 └─────────────────────────────────────────────────┘
 ```
 
 ## Key Design Decisions
 
-- Room isolation: each room's game state is keyed by `roomCode` in Redis. Rooms do not share state.
+- Room isolation: each room's game state is keyed by `roomCode` in an in-memory map. Rooms do not share state.
 - In-memory connection map: a per-process `map[playerID]*websocket.Conn` tracks live connections. On reconnect, the entry is replaced.
 - Server-authoritative timer: a goroutine per active room ticks every second and emits `game:timer_tick`. On expiry it auto-discards the drawn card and advances the turn.
 - No optimistic updates: clients wait for the server to confirm every card placement or move via `game:board_updated`.
@@ -69,7 +69,7 @@ The backend is a monolith: one process, two protocol surfaces.
 backend/
 ├── cmd/
 │   └── server/
-│       └── main.go            ← entry point; wires config, DB, Redis, router
+│       └── main.go            ← entry point; wires config, DB, in-memory store, router
 ├── internal/
 │   ├── room/                  ← room creation, join, lobby state, lifecycle
 │   ├── game/                  ← game state machine, turn logic, win condition check
@@ -78,7 +78,7 @@ backend/
 │   ├── ws/                    ← WebSocket hub, connection registry, broadcast helpers
 │   └── store/
 │       ├── postgres/          ← PostgreSQL client, schema migrations, queries
-│       └── redis/             ← Redis client, GameState serialization/deserialization
+│       └── memory/            ← In-memory RoomStore implementation (sync.RWMutex-guarded map)
 ├── api/
 │   ├── http/                  ← REST handlers (create room, join room)
 │   └── ws/                    ← WebSocket event handlers (lobby events, game events)

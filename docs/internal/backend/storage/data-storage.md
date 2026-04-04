@@ -1,17 +1,14 @@
 # Data Storage Design
 
-## Redis: Hot, Ephemeral State
+## In-Memory Store: Hot, Ephemeral State
 
-Redis holds everything that is read and written on every event during an active game.
+Game state is held in a `sync.RWMutex`-guarded map in process memory, keyed by `roomCode`. This is intentionally simple for the hobby-project stage — no external dependency, no persistence across restarts.
 
-| Key pattern                    | Type        | Contents |
-|--------------------------------|-------------|----------|
-| `room:{roomCode}:state`        | JSON string | Full serialized `GameState` |
-| `room:{roomCode}:draw_pile`    | List        | Ordered card IDs (top = index 0); identities hidden from clients |
-| `room:{roomCode}:discard_pile` | List        | Ordered card IDs (top = index 0) |
-| `session:{playerId}`           | Hash        | `name`, `roomCode` player session metadata |
+| Key          | Type              | Contents |
+|--------------|-------------------|----------|
+| `roomCode`   | `*domain.GameState` | Full game state including players, board, turn, and draw/discard piles |
 
-Game state is written back to Redis after every mutation. TTL is set on room keys to expire idle rooms automatically.
+Game state is written back to the map after every mutation. Rooms are lost on server restart (acceptable for now).
 
 ## PostgreSQL: Durable Data
 
