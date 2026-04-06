@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -88,9 +89,37 @@ func handleJoinRoom(w http.ResponseWriter, r *http.Request, store *room.Store) {
 		return
 	}
 
-	writeJSON(w, http.StatusNotImplemented, map[string]string{
-		"message":  "room join is scaffolded but not implemented yet",
-		"roomCode": parts[1],
+	roomCode := parts[1]
+
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+	if strings.TrimSpace(body.Name) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name is required"})
+		return
+	}
+
+	playerID, err := room.Join(store, roomCode, strings.TrimSpace(body.Name))
+	if errors.Is(err, room.ErrRoomNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "room not found"})
+		return
+	}
+	if errors.Is(err, room.ErrPlayerDuplicate) {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "a player with that name is already in the room"})
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to join room"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"roomCode": roomCode,
+		"playerId": playerID,
 	})
 }
 

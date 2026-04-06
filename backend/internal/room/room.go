@@ -2,8 +2,15 @@ package room
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"sync"
+)
+
+// Sentinel errors returned by Join.
+var (
+	ErrRoomNotFound    = errors.New("room not found")
+	ErrPlayerDuplicate = errors.New("player already in room")
 )
 
 // --- Domain types ---
@@ -100,6 +107,47 @@ func (s *Store) Get(roomCode string) (*GameState, bool) {
 	return state, ok
 }
 
+// MarkPlayerConnected sets the given player's IsConnected flag to true and
+// returns a shallow copy of the game state as it stands after the update.
+func (s *Store) MarkPlayerConnected(roomCode, playerID string) (GameState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return GameState{}, fmt.Errorf("room %s not found", roomCode)
+	}
+	found := false
+	for i := range state.Players {
+		if state.Players[i].ID == playerID {
+			state.Players[i].IsConnected = true
+			found = true
+			break
+		}
+	}
+	if !found {
+		return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
+	}
+	// Return a value copy so callers read consistent data outside the lock.
+	return *state, nil
+}
+
+// IsPlayerConnected reports whether the given player is currently marked as
+// connected in the given room. Returns false if the room or player is not found.
+func (s *Store) IsPlayerConnected(roomCode, playerID string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return false
+	}
+	for _, p := range state.Players {
+		if p.ID == playerID {
+			return p.IsConnected
+		}
+	}
+	return false
+}
+
 // --- Room creation ---
 
 const roomCodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -147,6 +195,40 @@ func buildWordBoard(v Variation) WordBoard {
 		rows[i] = WordRow{TargetLength: length, Slots: slots}
 	}
 	return WordBoard{Rows: rows}
+}
+
+// Join adds a new player with the given name to an existing room and returns
+// the generated player ID. Returns an error if the room does not exist.
+func Join(store *Store, roomCode, playerName string) (string, error) {
+	playerID, err := generateUUID()
+	if err != nil {
+		return "", fmt.Errorf("generate player ID: %w", err)
+	}
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	state, ok := store.rooms[roomCode]
+	if !ok {
+		return "", fmt.Errorf("%w: %s", ErrRoomNotFound, roomCode)
+	}
+
+	for _, p := range state.Players {
+		if p.Name == playerName {
+			return "", fmt.Errorf("%w: %q is already in room %s", ErrPlayerDuplicate, playerName, roomCode)
+		}
+	}
+
+	player := Player{
+		ID:          playerID,
+		Name:        playerName,
+		Hand:        []Card{},
+		WordBoard:   buildWordBoard(state.Variation),
+		IsReady:     false,
+		IsConnected: false,
+	}
+	state.Players = append(state.Players, player)
+	return playerID, nil
 }
 
 // generateRoomCode returns a 6-character uppercase alphanumeric room code.
