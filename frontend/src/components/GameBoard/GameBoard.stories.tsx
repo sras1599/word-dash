@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { fn } from 'storybook/test'
 
 import { GameBoard } from './GameBoard'
-import type { GameBoardPlayer, GameBoardTurn, GameBoardVariation } from './GameBoard'
+import type { GameBoardLocalPlayer, GameBoardOpponentPlayer, GameBoardTurn, GameBoardVariation } from './GameBoard'
 import type { CardData } from '../Card/Card'
 
 // ─── Shared fixtures ────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ function emptyWordBoard(variation: GameBoardVariation) {
 
 const DISCARD_TOP: CardData = { id: 'cx', letter: 'X' }
 
-function makeLocalPlayer(variation: GameBoardVariation, id = 'local'): GameBoardPlayer {
+function makeLocalPlayer(variation: GameBoardVariation, id = 'local'): GameBoardLocalPlayer {
     const handSize = variation.wordLengths.reduce((sum, n) => sum + n, 0)
     return {
         id,
@@ -51,14 +51,14 @@ function makeOpponent(
     variation: GameBoardVariation,
     id: string,
     name: string,
-    overrides?: Partial<GameBoardPlayer>,
-): GameBoardPlayer {
+    overrides?: Partial<GameBoardOpponentPlayer>,
+): GameBoardOpponentPlayer {
     const handSize = variation.wordLengths.reduce((sum, n) => sum + n, 0)
     return {
         id,
         name,
         isConnected: true,
-        hand: makeHand(handSize),
+        handCount: handSize,
         wordBoard: emptyWordBoard(variation),
         ...overrides,
     }
@@ -78,9 +78,8 @@ const meta = {
     },
     tags: ['autodocs'],
     args: {
-        localPlayerId: 'local',
-        players: [
-            makeLocalPlayer(VARIATION_345, 'local'),
+        localPlayer: makeLocalPlayer(VARIATION_345, 'local'),
+        opponents: [
             makeOpponent(VARIATION_345, 'opp-1', 'Bob'),
             makeOpponent(VARIATION_345, 'opp-2', 'Carol'),
         ],
@@ -151,7 +150,8 @@ export const TimerUrgent: Story = {
 /** No opponents — single player or solo debug view. */
 export const NoOpponents: Story = {
     args: {
-        players: [makeLocalPlayer(VARIATION_345, 'local')],
+        localPlayer: makeLocalPlayer(VARIATION_345, 'local'),
+        opponents: [],
     },
 }
 
@@ -165,8 +165,8 @@ export const EmptyDrawPile: Story = {
 /** Disconnected opponent — muted style and disconnected badge. */
 export const DisconnectedOpponent: Story = {
     args: {
-        players: [
-            makeLocalPlayer(VARIATION_345, 'local'),
+        localPlayer: makeLocalPlayer(VARIATION_345, 'local'),
+        opponents: [
             makeOpponent(VARIATION_345, 'opp-1', 'Bob', { isConnected: false }),
             makeOpponent(VARIATION_345, 'opp-2', 'Carol'),
         ],
@@ -179,8 +179,8 @@ export const DisconnectedOpponent: Story = {
 export const Variation56: Story = {
     args: {
         variation: VARIATION_56,
-        players: [
-            makeLocalPlayer(VARIATION_56, 'local'),
+        localPlayer: makeLocalPlayer(VARIATION_56, 'local'),
+        opponents: [
             makeOpponent(VARIATION_56, 'opp-1', 'Bob'),
             makeOpponent(VARIATION_56, 'opp-2', 'Carol'),
         ],
@@ -191,8 +191,8 @@ export const Variation56: Story = {
 export const Variation8: Story = {
     args: {
         variation: VARIATION_8,
-        players: [
-            makeLocalPlayer(VARIATION_8, 'local'),
+        localPlayer: makeLocalPlayer(VARIATION_8, 'local'),
+        opponents: [
             makeOpponent(VARIATION_8, 'opp-1', 'Bob'),
             makeOpponent(VARIATION_8, 'opp-2', 'Carol'),
         ],
@@ -203,8 +203,8 @@ export const Variation8: Story = {
 export const Variation444: Story = {
     args: {
         variation: VARIATION_444,
-        players: [
-            makeLocalPlayer(VARIATION_444, 'local'),
+        localPlayer: makeLocalPlayer(VARIATION_444, 'local'),
+        opponents: [
             makeOpponent(VARIATION_444, 'opp-1', 'Bob'),
             makeOpponent(VARIATION_444, 'opp-2', 'Carol'),
         ],

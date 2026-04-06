@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createWsClient, WsClient } from '../../lib/ws'
 import { session } from '../../lib/session'
-import { GameBoard, type GameBoardPlayer, type GameBoardTurn, type GameBoardVariation } from '../../components/GameBoard/GameBoard'
+import { GameBoard, type GameBoardLocalPlayer, type GameBoardOpponentPlayer, type GameBoardTurn, type GameBoardVariation } from '../../components/GameBoard/GameBoard'
 import { WordRow } from '../../components/WordRow/WordRow'
 import type { WordRowState } from '../../components/WordRow/WordRow'
 import type { CardData } from '../../components/Card/Card'
@@ -33,7 +33,8 @@ type Turn = {
 type Player = {
     id: string
     name: string
-    hand: Card[]
+    handCount: number
+    hand?: Card[]
     wordBoard: WordBoardState
     isReady: boolean
     isConnected: boolean
@@ -106,8 +107,11 @@ export function Game() {
                 if (!prev) return prev
                 const players = prev.players.map((p) => {
                     if (p.id !== playerId) return p
-                    const newCard = card ?? { id: `unknown-${Date.now()}`, letter: '?' }
-                    return { ...p, hand: [...p.hand, newCard] }
+                    if (p.id === localPlayerId) {
+                        const newCard = card ?? { id: `unknown-${Date.now()}`, letter: '?' }
+                        return { ...p, handCount: p.handCount + 1, hand: [...(p.hand ?? []), newCard] }
+                    }
+                    return { ...p, handCount: p.handCount + 1 }
                 })
                 return {
                     ...prev,
@@ -252,13 +256,25 @@ export function Game() {
         )
     }
 
-    const boardPlayers: GameBoardPlayer[] = gameState.players.map((p) => ({
-        id: p.id,
-        name: p.name,
-        isConnected: p.isConnected,
-        hand: p.hand,
-        wordBoard: p.wordBoard,
-    }))
+    const localPlayerData = gameState.players.find((p) => p.id === localPlayerId) ?? null
+    const boardLocalPlayer: GameBoardLocalPlayer | null = localPlayerData
+        ? {
+            id: localPlayerData.id,
+            name: localPlayerData.name,
+            isConnected: localPlayerData.isConnected,
+            hand: localPlayerData.hand ?? [],
+            wordBoard: localPlayerData.wordBoard,
+        }
+        : null
+    const boardOpponents: GameBoardOpponentPlayer[] = gameState.players
+        .filter((p) => p.id !== localPlayerId)
+        .map((p) => ({
+            id: p.id,
+            name: p.name,
+            isConnected: p.isConnected,
+            handCount: p.handCount,
+            wordBoard: p.wordBoard,
+        }))
 
     const boardTurn: GameBoardTurn = {
         currentPlayerId: gameState.turn.currentPlayerId,
@@ -278,8 +294,8 @@ export function Game() {
     return (
         <main className="page-game">
             <GameBoard
-                localPlayerId={localPlayerId}
-                players={boardPlayers}
+                localPlayer={boardLocalPlayer}
+                opponents={boardOpponents}
                 turn={boardTurn}
                 variation={boardVariation}
                 discardTopCard={gameState.discardPileTop}

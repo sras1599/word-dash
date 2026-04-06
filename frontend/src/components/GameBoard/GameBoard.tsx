@@ -7,11 +7,19 @@ import { TurnTimer } from '../TurnTimer/TurnTimer'
 import { WordBoard, type WordBoardState } from '../WordBoard/WordBoard'
 import type { CardData } from '../Card/Card'
 
-export interface GameBoardPlayer {
+export interface GameBoardLocalPlayer {
     id: string
     name: string
     isConnected: boolean
     hand: CardData[]
+    wordBoard: WordBoardState
+}
+
+export interface GameBoardOpponentPlayer {
+    id: string
+    name: string
+    isConnected: boolean
+    handCount: number
     wordBoard: WordBoardState
 }
 
@@ -27,10 +35,10 @@ export interface GameBoardVariation {
 }
 
 export interface GameBoardProps {
-    /** ID of the local (human) player. */
-    localPlayerId: string
-    /** All players in the game (local + opponents). */
-    players: GameBoardPlayer[]
+    /** The local (human) player. Null while the game state is loading. */
+    localPlayer: GameBoardLocalPlayer | null
+    /** All opponent players. */
+    opponents: GameBoardOpponentPlayer[]
     /** Current turn state. */
     turn: GameBoardTurn
     /** Game variation (word lengths). */
@@ -50,8 +58,8 @@ export interface GameBoardProps {
 }
 
 export function GameBoard({
-    localPlayerId,
-    players,
+    localPlayer,
+    opponents,
     turn,
     variation,
     discardTopCard,
@@ -61,17 +69,17 @@ export function GameBoard({
     onUnplace,
     onDiscard,
 }: GameBoardProps) {
-    const localPlayer = players.find((p) => p.id === localPlayerId) ?? null
-    const opponents = players.filter((p) => p.id !== localPlayerId)
-
-    const isActiveTurn = turn.currentPlayerId === localPlayerId
+    const isActiveTurn = localPlayer !== null && turn.currentPlayerId === localPlayer.id
     const isArrangingPhase = isActiveTurn && turn.phase === 'arrange'
     const isDrawPhase = isActiveTurn && turn.phase === 'draw'
 
-    const currentPlayer = players.find((p) => p.id === turn.currentPlayerId) ?? {
-        id: turn.currentPlayerId,
-        name: 'Unknown',
-    }
+    const currentPlayer =
+        localPlayer?.id === turn.currentPlayerId
+            ? { id: localPlayer.id, name: localPlayer.name }
+            : opponents.find((p) => p.id === turn.currentPlayerId) ?? {
+                id: turn.currentPlayerId,
+                name: 'Unknown',
+            }
 
     const drawPileProps: CardPileProps = {
         type: 'draw',
@@ -122,7 +130,7 @@ export function GameBoard({
                             id: opponent.id,
                             name: opponent.name,
                             isConnected: opponent.isConnected,
-                            hand: opponent.hand,
+                            handCount: opponent.handCount,
                             wordBoard: {
                                 rows: opponent.wordBoard.rows.map((r) => ({
                                     isComplete: r.isComplete,

@@ -21,7 +21,7 @@ function makePlayer(overrides?: {
         id: 'player-2',
         name,
         isConnected,
-        hand: Array.from({ length: handCount }, (_, i) => ({ id: `card-${i}`, letter: 'A' })),
+        handCount,
         wordBoard: {
             rows: VARIATION.wordLengths.map((_, i) => ({ isComplete: i < completeCount })),
         },

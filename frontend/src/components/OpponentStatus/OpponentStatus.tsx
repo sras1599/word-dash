@@ -4,7 +4,7 @@ export interface OpponentStatusPlayer {
     id: string
     name: string
     isConnected: boolean
-    hand: unknown[]
+    handCount: number
     wordBoard: {
         rows: { isComplete: boolean }[]
     }
@@ -34,7 +34,7 @@ export function OpponentStatus({
     const totalWords = variation.wordLengths.length
     const wordsComplete = player.wordBoard.rows.filter((r) => r.isComplete).length
     const progressPct = totalWords > 0 ? (wordsComplete / totalWords) * 100 : 0
-    const handCount = player.hand.length
+    const handCount = player.handCount
 
     const className = [
         'opponent-status',
