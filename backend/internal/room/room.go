@@ -7,10 +7,13 @@ import (
 	"sync"
 )
 
-// Sentinel errors returned by Join.
+// Sentinel errors returned by Join and StartGame.
 var (
-	ErrRoomNotFound    = errors.New("room not found")
-	ErrPlayerDuplicate = errors.New("player already in room")
+	ErrRoomNotFound       = errors.New("room not found")
+	ErrPlayerDuplicate    = errors.New("player already in room")
+	ErrNotHost            = errors.New("only the host can start the game")
+	ErrGameAlreadyStarted = errors.New("game already in progress")
+	ErrNotAllReady        = errors.New("not all players are ready")
 )
 
 // --- Domain types ---
@@ -81,6 +84,10 @@ type GameState struct {
 	Turn           Turn
 	Phase          GamePhase
 	WinnerID       *string
+
+	// Internal server-side state — never sent to clients.
+	DrawPile    []Card `json:"-"`
+	DiscardPile []Card `json:"-"`
 }
 
 // --- In-memory store ---
@@ -151,6 +158,62 @@ func (s *Store) MarkPlayerReady(roomCode, playerID string) (GameState, error) {
 	if !found {
 		return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
 	}
+	return *state, nil
+}
+
+// StartGame transitions the room from waiting to playing. playerID must be the
+// host (Players[0].ID). drawPile is a pre-shuffled deck; cards are dealt from
+// the front. Returns the updated game state after initialization.
+func (s *Store) StartGame(roomCode, playerID string, drawPile []Card) (GameState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return GameState{}, fmt.Errorf("%w: %s", ErrRoomNotFound, roomCode)
+	}
+	if len(state.Players) == 0 || state.Players[0].ID != playerID {
+		return GameState{}, ErrNotHost
+	}
+	if state.Phase != GamePhaseWaiting {
+		return GameState{}, ErrGameAlreadyStarted
+	}
+	for _, p := range state.Players {
+		if !p.IsReady {
+			return GameState{}, ErrNotAllReady
+		}
+	}
+
+	// Compute hand size: each player starts with enough cards to fill their board.
+	handSize := 0
+	for _, l := range state.Variation.WordLengths {
+		handSize += l
+	}
+
+	// Work from a local copy of the draw pile slice.
+	pile := make([]Card, len(drawPile))
+	copy(pile, drawPile)
+
+	// Deal cards to each player.
+	for i := range state.Players {
+		state.Players[i].Hand = make([]Card, handSize)
+		copy(state.Players[i].Hand, pile[:handSize])
+		pile = pile[handSize:]
+	}
+
+	state.DrawPile = pile
+	state.DiscardPile = []Card{}
+	state.DrawPileCount = len(pile)
+	state.DiscardPileTop = nil
+
+	// Set up the first turn.
+	state.Turn = Turn{
+		CurrentPlayerID: state.Players[0].ID,
+		Phase:           TurnPhaseDraw,
+		TimeRemainingMs: 60000,
+	}
+	state.Phase = GamePhasePlaying
+
 	return *state, nil
 }
 

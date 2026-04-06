@@ -2,11 +2,13 @@ package ws
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"sync"
 
 	"github.com/gorilla/websocket"
+	"github.com/sras1599/wordit/backend/internal/deck"
 	"github.com/sras1599/wordit/backend/internal/room"
 )
 
@@ -114,6 +116,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 			h.handleLobbyJoin(c, roomCode, playerID)
 		case "lobby:player_ready":
 			h.handleLobbyPlayerReady(c, roomCode, playerID)
+		case "lobby:start_game":
+			h.handleLobbyStartGame(c, roomCode, playerID)
 		}
 	}
 }
@@ -244,6 +248,183 @@ func (h *Hub) handleLobbyPlayerReady(c *client, roomCode, playerID string) {
 	for _, other := range targets {
 		other.send("lobby:player_ready", payload)
 	}
+}
+
+// --- lobby:start_game ---
+
+type cardJSON struct {
+	ID     string `json:"id"`
+	Letter string `json:"letter"`
+}
+
+type wordSlotJSON struct {
+	SlotIndex int       `json:"slotIndex"`
+	Card      *cardJSON `json:"card"`
+}
+
+type wordRowJSON struct {
+	TargetLength int            `json:"targetLength"`
+	Slots        []wordSlotJSON `json:"slots"`
+	IsComplete   bool           `json:"isComplete"`
+}
+
+type wordBoardJSON struct {
+	Rows        []wordRowJSON `json:"rows"`
+	AllComplete bool          `json:"allComplete"`
+}
+
+type gamePlayerJSON struct {
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	HandCount   int           `json:"handCount"`
+	Hand        []cardJSON    `json:"hand,omitempty"`
+	WordBoard   wordBoardJSON `json:"wordBoard"`
+	IsReady     bool          `json:"isReady"`
+	IsConnected bool          `json:"isConnected"`
+}
+
+type turnJSON struct {
+	CurrentPlayerID string `json:"currentPlayerId"`
+	Phase           string `json:"phase"`
+	TimeRemainingMs int    `json:"timeRemainingMs"`
+}
+
+type gameStatePayload struct {
+	RoomCode       string           `json:"roomCode"`
+	Variation      variationJSON    `json:"variation"`
+	Players        []gamePlayerJSON `json:"players"`
+	DrawPileCount  int              `json:"drawPileCount"`
+	DiscardPileTop *cardJSON        `json:"discardPileTop"`
+	Turn           turnJSON         `json:"turn"`
+	Phase          string           `json:"phase"`
+}
+
+func (h *Hub) handleLobbyStartGame(c *client, roomCode, playerID string) {
+	// Create and shuffle the deck.
+	drawPile, err := deck.New()
+	if err != nil {
+		c.send("game:error", map[string]string{
+			"code":    "INTERNAL_ERROR",
+			"message": "failed to create deck",
+		})
+		return
+	}
+
+	// Validate, deal cards, and transition the room to playing.
+	state, err := h.store.StartGame(roomCode, playerID, drawPile)
+	if err != nil {
+		code := "INTERNAL_ERROR"
+		switch {
+		case errors.Is(err, room.ErrNotHost):
+			code = "FORBIDDEN"
+		case errors.Is(err, room.ErrGameAlreadyStarted):
+			code = "INVALID_PHASE"
+		case errors.Is(err, room.ErrNotAllReady):
+			code = "NOT_ALL_READY"
+		case errors.Is(err, room.ErrRoomNotFound):
+			code = "ROOM_NOT_FOUND"
+		}
+		c.send("game:error", map[string]string{
+			"code":    code,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Snapshot connected clients for this room under a single lock acquisition.
+	h.mu.RLock()
+	playerClients := make(map[string]*client, len(state.Players))
+	for _, p := range state.Players {
+		if cl, ok := h.conns[p.ID]; ok {
+			playerClients[p.ID] = cl
+		}
+	}
+	h.mu.RUnlock()
+
+	// Broadcast lobby:game_starting to all connected players.
+	gameStartingPayload := map[string]string{"roomCode": roomCode}
+	for _, cl := range playerClients {
+		cl.send("lobby:game_starting", gameStartingPayload)
+	}
+
+	// Send a personalised game:state to each player (own hand visible; others hidden).
+	for _, p := range state.Players {
+		cl, ok := playerClients[p.ID]
+		if !ok {
+			continue
+		}
+		cl.send("game:state", buildGameStatePayload(&state, p.ID))
+	}
+
+	// Broadcast game:turn_started to all connected players.
+	turnStartedPayload := map[string]any{
+		"currentPlayerId": state.Turn.CurrentPlayerID,
+		"timeRemainingMs": state.Turn.TimeRemainingMs,
+	}
+	for _, cl := range playerClients {
+		cl.send("game:turn_started", turnStartedPayload)
+	}
+}
+
+func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStatePayload {
+	players := make([]gamePlayerJSON, len(state.Players))
+	for i, p := range state.Players {
+		var hand []cardJSON
+		if p.ID == forPlayerID {
+			hand = make([]cardJSON, len(p.Hand))
+			for j, card := range p.Hand {
+				hand[j] = cardJSON{ID: card.ID, Letter: card.Letter}
+			}
+		}
+		players[i] = gamePlayerJSON{
+			ID:          p.ID,
+			Name:        p.Name,
+			HandCount:   len(p.Hand),
+			Hand:        hand,
+			WordBoard:   buildWordBoardJSON(p.WordBoard),
+			IsReady:     p.IsReady,
+			IsConnected: p.IsConnected,
+		}
+	}
+
+	var discardPileTop *cardJSON
+	if state.DiscardPileTop != nil {
+		discardPileTop = &cardJSON{ID: state.DiscardPileTop.ID, Letter: state.DiscardPileTop.Letter}
+	}
+
+	return gameStatePayload{
+		RoomCode:       state.RoomCode,
+		Variation:      variationJSON{WordLengths: state.Variation.WordLengths},
+		Players:        players,
+		DrawPileCount:  state.DrawPileCount,
+		DiscardPileTop: discardPileTop,
+		Turn: turnJSON{
+			CurrentPlayerID: state.Turn.CurrentPlayerID,
+			Phase:           string(state.Turn.Phase),
+			TimeRemainingMs: state.Turn.TimeRemainingMs,
+		},
+		Phase: string(state.Phase),
+	}
+}
+
+func buildWordBoardJSON(wb room.WordBoard) wordBoardJSON {
+	rows := make([]wordRowJSON, len(wb.Rows))
+	for i, row := range wb.Rows {
+		slots := make([]wordSlotJSON, len(row.Slots))
+		for j, slot := range row.Slots {
+			var card *cardJSON
+			if slot.Card != nil {
+				card = &cardJSON{ID: slot.Card.ID, Letter: slot.Card.Letter}
+			}
+			slots[j] = wordSlotJSON{SlotIndex: slot.SlotIndex, Card: card}
+		}
+		rows[i] = wordRowJSON{
+			TargetLength: row.TargetLength,
+			Slots:        slots,
+			IsComplete:   row.IsComplete,
+		}
+	}
+	return wordBoardJSON{Rows: rows, AllComplete: wb.AllComplete}
 }
 
 // --- helpers ---
