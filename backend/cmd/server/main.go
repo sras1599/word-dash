@@ -30,7 +30,7 @@ func main() {
 	}
 
 	wsMux := http.NewServeMux()
-	hub := internalws.NewHub()
+	hub := internalws.NewHub(store)
 	apiws.RegisterRoutes(wsMux, hub)
 	wsServer := &http.Server{
 		Addr:    cfg.WSAddr(),
