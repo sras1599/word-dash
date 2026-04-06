@@ -1,0 +1,144 @@
+/* ─────────────────────────────────────────────
+   Game page – custom properties
+───────────────────────────────────────────── */
+.page-game {
+    --page-game-bg: #1a1a1a;
+    --page-game-text: #ffffff;
+    --page-game-overlay-bg: rgba(0, 0, 0, 0.75);
+    --page-game-card-bg: #1e1e2e;
+    --page-game-card-border: rgba(255, 255, 255, 0.12);
+    --page-game-card-radius: 16px;
+    --page-game-teal: #2db89c;
+    --page-game-red: #e8231a;
+    --page-game-gap: 1.5rem;
+
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    background-color: var(--page-game-bg);
+    color: var(--page-game-text);
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* ─────────────────────────────────────────────
+   Loading / error states
+───────────────────────────────────────────── */
+.page-game--loading {
+    align-items: center;
+    justify-content: center;
+}
+
+.page-game__loading-text {
+    font-size: 1.125rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: sans-serif;
+}
+
+.page-game__error {
+    padding: 2rem;
+    text-align: center;
+    color: var(--page-game-red);
+    font-family: sans-serif;
+}
+
+/* ─────────────────────────────────────────────
+   Win overlay
+───────────────────────────────────────────── */
+.page-game__overlay {
+    position: fixed;
+    inset: 0;
+    background-color: var(--page-game-overlay-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: page-game-overlay-in 250ms ease-out both;
+}
+
+@keyframes page-game-overlay-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.page-game__overlay-card {
+    background-color: var(--page-game-card-bg);
+    border: 1px solid var(--page-game-card-border);
+    border-radius: var(--page-game-card-radius);
+    padding: 2.5rem 2rem;
+    max-width: 480px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--page-game-gap);
+    animation: page-game-card-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes page-game-card-in {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.page-game__overlay-heading {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    font-family: sans-serif;
+}
+
+.page-game__overlay-words {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+/* ─────────────────────────────────────────────
+   Overlay action buttons
+───────────────────────────────────────────── */
+.page-game__overlay-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+.page-game__btn {
+    padding: 0.625rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: sans-serif;
+    transition: opacity 150ms ease;
+}
+
+.page-game__btn:hover {
+    opacity: 0.85;
+}
+
+.page-game__btn--primary {
+    background-color: var(--page-game-teal);
+    color: #ffffff;
+}
+
+.page-game__btn--secondary {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
