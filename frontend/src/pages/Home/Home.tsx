@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createRoom } from '../../lib/api'
+import { createRoom, joinRoom } from '../../lib/api'
 import { session } from '../../lib/session'
 import './Home.css'
 
@@ -70,12 +70,17 @@ export function Home() {
 
         setJoinLoading(true)
         try {
-            // TODO: call server to join an existing room — expects { roomCode: string; playerId: string }
-            // On invalid room code the server should throw so the catch block fires
             const roomCode = joinRoomCode.trim().toUpperCase()
-            navigate(`/lobby/${roomCode}`)
-        } catch {
-            setJoinRoomCodeError('Invalid room code. Please try again.')
+            const { roomCode: rc, playerId } = await joinRoom(roomCode, joinName.trim())
+            session.setPlayerId(playerId)
+            session.setRoomCode(rc)
+            navigate(`/lobby/${rc}`)
+        } catch (err) {
+            if (err instanceof Error && err.message.includes('409')) {
+                setJoinNameError('That name is already taken in this room.')
+            } else {
+                setJoinRoomCodeError('Invalid room code. Please try again.')
+            }
             setJoinLoading(false)
         }
     }

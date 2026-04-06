@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { createWsClient, WsClient } from '../../lib/ws'
+import { session } from '../../lib/session'
 import './Lobby.css'
 
 type Variation = {
@@ -28,13 +30,12 @@ export function Lobby() {
     const { roomCode } = useParams<{ roomCode: string }>()
     const navigate = useNavigate()
 
-    // TODO: replace with proper session/auth layer
-    const localPlayerId = sessionStorage.getItem('playerId') ?? ''
+    const localPlayerId = session.getPlayerId() ?? ''
 
     const [lobby, setLobby] = useState<LobbyState | null>(null)
     const [isReady, setIsReady] = useState(false)
 
-    const wsRef = useRef<WebSocket | null>(null)
+    const wsRef = useRef<WsClient | null>(null)
 
     const isHost = lobby !== null && lobby.hostPlayerId === localPlayerId
     const canStart =
@@ -43,78 +44,63 @@ export function Lobby() {
         lobby.players.every((p) => p.isReady)
 
     useEffect(() => {
-        if (!roomCode) return
+        if (!roomCode || !localPlayerId) return
 
-        const ws = new WebSocket(
-            `ws://${window.location.hostname}:3000/ws?roomCode=${encodeURIComponent(roomCode)}&playerId=${encodeURIComponent(localPlayerId)}`,
-        )
+        const ws = createWsClient(roomCode, localPlayerId)
         wsRef.current = ws
 
-        ws.onmessage = (event: MessageEvent<string>) => {
-            const msg = JSON.parse(event.data) as { type: string; payload: unknown }
-            switch (msg.type) {
-                case 'lobby:state':
-                    setLobby(msg.payload as LobbyState)
-                    break
-                case 'lobby:player_joined': {
-                    const { player } = msg.payload as { player: LobbyPlayer }
-                    setLobby((prev) =>
-                        prev ? { ...prev, players: [...prev.players, player] } : prev,
-                    )
-                    break
-                }
-                case 'lobby:player_ready': {
-                    const { playerId } = msg.payload as { playerId: string }
-                    setLobby((prev) =>
-                        prev
-                            ? {
-                                ...prev,
-                                players: prev.players.map((p) =>
-                                    p.id === playerId ? { ...p, isReady: true } : p,
-                                ),
-                            }
-                            : prev,
-                    )
-                    break
-                }
-                case 'lobby:variation_changed': {
-                    const { variation } = msg.payload as { variation: Variation }
-                    setLobby((prev) => (prev ? { ...prev, variation } : prev))
-                    break
-                }
-                case 'lobby:game_starting': {
-                    const { roomCode: rc } = msg.payload as { roomCode: string }
-                    navigate(`/game/${rc}`)
-                    break
-                }
-            }
-        }
+        ws.send('lobby:join')
+
+        ws.on('lobby:state', (payload) => {
+            setLobby(payload as LobbyState)
+        })
+        ws.on('lobby:player_joined', (payload) => {
+            const { player } = payload as { player: LobbyPlayer }
+            setLobby((prev) =>
+                prev ? { ...prev, players: [...prev.players, player] } : prev,
+            )
+        })
+        ws.on('lobby:player_ready', (payload) => {
+            const { playerId } = payload as { playerId: string }
+            setLobby((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        players: prev.players.map((p) =>
+                            p.id === playerId ? { ...p, isReady: true } : p,
+                        ),
+                    }
+                    : prev,
+            )
+        })
+        ws.on('lobby:variation_changed', (payload) => {
+            const { variation } = payload as { variation: Variation }
+            setLobby((prev) => (prev ? { ...prev, variation } : prev))
+        })
+        ws.on('lobby:game_starting', (payload) => {
+            const { roomCode: rc } = payload as { roomCode: string }
+            navigate(`/game/${rc}`)
+        })
 
         return () => {
             ws.close()
         }
     }, [roomCode, localPlayerId, navigate])
 
-    function send(type: string, payload?: unknown) {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type, payload }))
-        }
-    }
-
     function handleReady() {
-        send('lobby:player_ready')
+        wsRef.current?.send('lobby:player_ready')
         setIsReady(true)
     }
 
     function handleStart() {
-        send('lobby:start_game')
+        wsRef.current?.send('lobby:start_game')
     }
 
     function handleAddLength() {
         if (!lobby || lobby.variation.wordLengths.length >= MAX_VARIATION_LENGTHS) return
         const next = (lobby.variation.wordLengths.at(-1) ?? 3) + 1
         const newVariation: Variation = { wordLengths: [...lobby.variation.wordLengths, next] }
-        send('lobby:variation_changed', { variation: newVariation })
+        wsRef.current?.send('lobby:variation_changed', { variation: newVariation })
         setLobby({ ...lobby, variation: newVariation })
     }
 
@@ -123,7 +109,7 @@ export function Lobby() {
         const newVariation: Variation = {
             wordLengths: lobby.variation.wordLengths.slice(0, -1),
         }
-        send('lobby:variation_changed', { variation: newVariation })
+        wsRef.current?.send('lobby:variation_changed', { variation: newVariation })
         setLobby({ ...lobby, variation: newVariation })
     }
 
