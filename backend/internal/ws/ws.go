@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sras1599/wordit/backend/internal/deck"
+	"github.com/sras1599/wordit/backend/internal/game"
 	"github.com/sras1599/wordit/backend/internal/room"
 )
 
@@ -120,6 +121,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 			h.handleLobbyStartGame(c, roomCode, playerID)
 		case "game:player_connected":
 			h.handleGamePlayerConnected(c, roomCode, playerID)
+		case "game:draw_card":
+			h.handleGameDrawCard(c, roomCode, playerID, msg.Payload)
 		}
 	}
 }
@@ -369,6 +372,92 @@ func (h *Hub) handleGamePlayerConnected(c *client, roomCode, playerID string) {
 		return
 	}
 	c.send("game:state", buildGameStatePayload(state, playerID))
+}
+
+// --- game:draw_card ---
+
+type drawCardRequest struct {
+	Source string `json:"source"`
+}
+
+type cardDrawnPayload struct {
+	PlayerID       string    `json:"playerId"`
+	Source         string    `json:"source"`
+	Card           *cardJSON `json:"card"`
+	DrawPileCount  int       `json:"drawPileCount"`
+	DiscardPileTop *cardJSON `json:"discardPileTop"`
+}
+
+func (h *Hub) handleGameDrawCard(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
+	var req drawCardRequest
+	if err := json.Unmarshal(rawPayload, &req); err != nil {
+		c.send("game:error", map[string]string{
+			"code":    "INVALID_PAYLOAD",
+			"message": "invalid draw_card payload",
+		})
+		return
+	}
+
+	state, ok := h.store.Get(roomCode)
+	if !ok {
+		c.send("game:error", map[string]string{
+			"code":    "ROOM_NOT_FOUND",
+			"message": "room not found",
+		})
+		return
+	}
+
+	drawnCard, err := game.DrawCard(state, playerID, req.Source)
+	if err != nil {
+		code := "INTERNAL_ERROR"
+		switch {
+		case errors.Is(err, game.ErrNotYourTurn):
+			code = "NOT_YOUR_TURN"
+		case errors.Is(err, game.ErrInvalidPhase):
+			code = "INVALID_PHASE"
+		case errors.Is(err, game.ErrEmptyDeck):
+			code = "EMPTY_DECK"
+		}
+		c.send("game:error", map[string]string{
+			"code":    code,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Build shared payload pieces.
+	var discardPileTop *cardJSON
+	if state.DiscardPileTop != nil {
+		discardPileTop = &cardJSON{ID: state.DiscardPileTop.ID, Letter: state.DiscardPileTop.Letter}
+	}
+
+	// Snapshot connected clients for this room.
+	h.mu.RLock()
+	playerClients := make(map[string]*client)
+	for _, p := range state.Players {
+		if cl, ok := h.conns[p.ID]; ok {
+			playerClients[p.ID] = cl
+		}
+	}
+	h.mu.RUnlock()
+
+	// Broadcast game:card_drawn to everyone.
+	// Only the drawing player sees the card details if it's from the draw pile.
+	// If it's from the discard pile, everyone sees it (it was already visible).
+	for pid, cl := range playerClients {
+		var broadcastCard *cardJSON
+		if pid == playerID || req.Source == "discard" {
+			broadcastCard = &cardJSON{ID: drawnCard.ID, Letter: drawnCard.Letter}
+		}
+
+		cl.send("game:card_drawn", cardDrawnPayload{
+			PlayerID:       playerID,
+			Source:         req.Source,
+			Card:           broadcastCard,
+			DrawPileCount:  state.DrawPileCount,
+			DiscardPileTop: discardPileTop,
+		})
+	}
 }
 
 func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStatePayload {
