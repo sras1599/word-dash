@@ -118,6 +118,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 			h.handleLobbyPlayerReady(c, roomCode, playerID)
 		case "lobby:start_game":
 			h.handleLobbyStartGame(c, roomCode, playerID)
+		case "game:player_connected":
+			h.handleGamePlayerConnected(c, roomCode, playerID)
 		}
 	}
 }
@@ -346,24 +348,27 @@ func (h *Hub) handleLobbyStartGame(c *client, roomCode, playerID string) {
 	for _, cl := range playerClients {
 		cl.send("lobby:game_starting", gameStartingPayload)
 	}
+}
 
-	// Send a personalised game:state to each player (own hand visible; others hidden).
-	for _, p := range state.Players {
-		cl, ok := playerClients[p.ID]
-		if !ok {
-			continue
-		}
-		cl.send("game:state", buildGameStatePayload(&state, p.ID))
-	}
+// --- game:player_connected ---
 
-	// Broadcast game:turn_started to all connected players.
-	turnStartedPayload := map[string]any{
-		"currentPlayerId": state.Turn.CurrentPlayerID,
-		"timeRemainingMs": state.Turn.TimeRemainingMs,
+func (h *Hub) handleGamePlayerConnected(c *client, roomCode, playerID string) {
+	state, ok := h.store.Get(roomCode)
+	if !ok {
+		c.send("game:error", map[string]string{
+			"code":    "ROOM_NOT_FOUND",
+			"message": "room not found",
+		})
+		return
 	}
-	for _, cl := range playerClients {
-		cl.send("game:turn_started", turnStartedPayload)
+	if state.Phase != room.GamePhasePlaying {
+		c.send("game:error", map[string]string{
+			"code":    "INVALID_PHASE",
+			"message": "game is not in progress",
+		})
+		return
 	}
+	c.send("game:state", buildGameStatePayload(state, playerID))
 }
 
 func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStatePayload {
