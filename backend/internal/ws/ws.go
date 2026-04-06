@@ -112,6 +112,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 		switch msg.Event {
 		case "lobby:join":
 			h.handleLobbyJoin(c, roomCode, playerID)
+		case "lobby:player_ready":
+			h.handleLobbyPlayerReady(c, roomCode, playerID)
 		}
 	}
 }
@@ -208,6 +210,39 @@ func (h *Hub) handleLobbyJoin(c *client, roomCode, playerID string) {
 
 	for _, other := range targets {
 		other.send("lobby:player_joined", joinedPayload)
+	}
+}
+
+// --- lobby:player_ready ---
+
+type lobbyPlayerReadyPayload struct {
+	PlayerID string `json:"playerId"`
+}
+
+func (h *Hub) handleLobbyPlayerReady(c *client, roomCode, playerID string) {
+	state, err := h.store.MarkPlayerReady(roomCode, playerID)
+	if err != nil {
+		c.send("game:error", map[string]string{
+			"code":    "ROOM_NOT_FOUND",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	payload := lobbyPlayerReadyPayload{PlayerID: playerID}
+
+	// Broadcast lobby:player_ready to all connected players in the room (including the sender).
+	h.mu.RLock()
+	targets := make([]*client, 0, len(state.Players))
+	for _, p := range state.Players {
+		if other, ok := h.conns[p.ID]; ok {
+			targets = append(targets, other)
+		}
+	}
+	h.mu.RUnlock()
+
+	for _, other := range targets {
+		other.send("lobby:player_ready", payload)
 	}
 }
 

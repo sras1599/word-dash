@@ -131,6 +131,29 @@ func (s *Store) MarkPlayerConnected(roomCode, playerID string) (GameState, error
 	return *state, nil
 }
 
+// MarkPlayerReady sets the given player's IsReady flag to true and returns a
+// shallow copy of the game state after the update.
+func (s *Store) MarkPlayerReady(roomCode, playerID string) (GameState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return GameState{}, fmt.Errorf("room %s not found", roomCode)
+	}
+	found := false
+	for i := range state.Players {
+		if state.Players[i].ID == playerID {
+			state.Players[i].IsReady = true
+			found = true
+			break
+		}
+	}
+	if !found {
+		return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
+	}
+	return *state, nil
+}
+
 // IsPlayerConnected reports whether the given player is currently marked as
 // connected in the given room. Returns false if the room or player is not found.
 func (s *Store) IsPlayerConnected(roomCode, playerID string) bool {
