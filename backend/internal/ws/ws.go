@@ -611,8 +611,6 @@ func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPaylo
 	if err := game.PlaceCard(state, playerID, req.CardID, req.RowIndex, req.SlotIndex, h.dict); err != nil {
 		code := "INTERNAL_ERROR"
 		switch {
-		case errors.Is(err, game.ErrNotYourTurn):
-			code = "NOT_YOUR_TURN"
 		case errors.Is(err, game.ErrInvalidPhase):
 			code = "INVALID_PHASE"
 		case errors.Is(err, game.ErrInvalidCard):

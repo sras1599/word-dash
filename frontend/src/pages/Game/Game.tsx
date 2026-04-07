@@ -64,6 +64,12 @@ export function Game() {
     const [gameState, setGameState] = useState<GameState | null>(null)
     const wsRef = useRef<WsClient | null>(null)
 
+    const canPlaceCard = (state: GameState | null) => {
+        if (!state) return false
+        if (state.phase !== 'playing') return false
+        return state.turn.phase === 'draw' || state.turn.phase === 'arrange'
+    }
+
     useEffect(() => {
         if (!roomCode || !localPlayerId) return
 
@@ -255,8 +261,14 @@ export function Game() {
     }
 
     function handlePlace(cardId: string, rowIndex: number, slotIndex: number) {
+        if (!canPlaceCard(gameState)) {
+            return
+        }
+
         setGameState((prev) => {
             if (!prev) return prev
+            if (prev.phase !== 'playing') return prev
+            if (prev.turn.phase !== 'draw' && prev.turn.phase !== 'arrange') return prev
             return {
                 ...prev,
                 players: prev.players.map((p) => {

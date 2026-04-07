@@ -70,6 +70,7 @@ export function GameBoard({
     onDiscard,
 }: GameBoardProps) {
     const isActiveTurn = localPlayer !== null && turn.currentPlayerId === localPlayer.id
+    const canPlaceInCurrentPhase = turn.phase === 'draw' || turn.phase === 'arrange'
     const isArrangingPhase = isActiveTurn && turn.phase === 'arrange'
     const isDrawPhase = isActiveTurn && turn.phase === 'draw'
 
@@ -161,12 +162,12 @@ export function GameBoard({
                 <section className="game-board__local-player" aria-label="Your area">
                     <WordBoard
                         wordBoard={localPlayer.wordBoard}
-                        onPlace={isArrangingPhase ? onPlace : undefined}
-                        onUnplace={isArrangingPhase ? onUnplace : undefined}
+                        onPlace={canPlaceInCurrentPhase ? onPlace : undefined}
+                        onUnplace={canPlaceInCurrentPhase ? onUnplace : undefined}
                     />
                     <PlayerHand
                         hand={localPlayer.hand}
-                        isDraggable={isArrangingPhase}
+                        isDraggable={canPlaceInCurrentPhase}
                         onDiscard={isArrangingPhase ? onDiscard : undefined}
                     />
                 </section>

@@ -83,10 +83,7 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 	if state.Phase != room.GamePhasePlaying {
 		return fmt.Errorf("game not in playing phase")
 	}
-	if state.Turn.CurrentPlayerID != playerID {
-		return ErrNotYourTurn
-	}
-	if state.Turn.Phase != room.TurnPhaseArrange {
+	if state.Turn.Phase != room.TurnPhaseDraw && state.Turn.Phase != room.TurnPhaseArrange {
 		return ErrInvalidPhase
 	}
 
