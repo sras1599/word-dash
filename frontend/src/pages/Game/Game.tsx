@@ -54,6 +54,8 @@ type GameState = {
     hostPlayerId: string
 }
 
+const LOCAL_COUNTDOWN_STEP_MS = 1000
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function Game() {
@@ -162,22 +164,34 @@ export function Game() {
             )
         })
 
-        ws.on('game:timer_tick', (payload) => {
-            const { timeRemainingMs } = payload as { timeRemainingMs: number }
+        ws.on('game:timer_warning', (payload) => {
+            const { currentPlayerId, timeRemainingMs } = payload as {
+                currentPlayerId?: string
+                timeRemainingMs: number
+            }
+
             setGameState((prev) =>
                 prev
-                    ? { ...prev, turn: { ...prev.turn, timeRemainingMs } }
+                    ? {
+                        ...prev,
+                        turn: {
+                            ...prev.turn,
+                            currentPlayerId: currentPlayerId ?? prev.turn.currentPlayerId,
+                            timeRemainingMs: Math.max(0, timeRemainingMs),
+                        },
+                    }
                     : prev,
             )
         })
 
         ws.on('game:turn_ended', (payload) => {
-            const { nextPlayerId, discardPileTop } = payload as {
+            const { nextPlayerId, discardPileTop, timeRemainingMs } = payload as {
                 playerId: string
                 reason: 'discarded' | 'timeout'
                 discardedCard: Card
                 discardPileTop: Card
                 nextPlayerId: string
+                timeRemainingMs?: number
             }
             setGameState((prev) => {
                 if (!prev) return prev
@@ -188,6 +202,10 @@ export function Game() {
                         ...prev.turn,
                         currentPlayerId: nextPlayerId,
                         phase: 'draw' as TurnPhase,
+                        timeRemainingMs:
+                            typeof timeRemainingMs === 'number'
+                                ? timeRemainingMs
+                                : prev.turn.timeRemainingMs,
                         drawnCard: null,
                     },
                 }
@@ -195,7 +213,12 @@ export function Game() {
         })
 
         ws.on('game:turn_skipped', (payload) => {
-            const { playerId } = payload as { playerId: string; reason: string }
+            const { playerId, nextPlayerId, timeRemainingMs } = payload as {
+                playerId: string
+                reason: string
+                nextPlayerId?: string
+                timeRemainingMs?: number
+            }
             setGameState((prev) => {
                 if (!prev) return prev
                 // Find the next player so we can update currentPlayerId optimistically.
@@ -206,8 +229,12 @@ export function Game() {
                     ...prev,
                     turn: {
                         ...prev.turn,
-                        currentPlayerId: prev.players[nextIdx].id,
+                        currentPlayerId: nextPlayerId ?? prev.players[nextIdx].id,
                         phase: 'draw' as TurnPhase,
+                        timeRemainingMs:
+                            typeof timeRemainingMs === 'number'
+                                ? timeRemainingMs
+                                : prev.turn.timeRemainingMs,
                         drawnCard: null,
                     },
                 }
@@ -255,6 +282,29 @@ export function Game() {
             ws.close()
         }
     }, [roomCode, localPlayerId])
+
+    useEffect(() => {
+        const timerId = window.setInterval(() => {
+            setGameState((prev) => {
+                if (!prev) return prev
+                if (prev.phase !== 'playing') return prev
+                if (prev.turn.phase === 'idle') return prev
+                if (prev.turn.timeRemainingMs <= 0) return prev
+
+                return {
+                    ...prev,
+                    turn: {
+                        ...prev.turn,
+                        timeRemainingMs: Math.max(0, prev.turn.timeRemainingMs - LOCAL_COUNTDOWN_STEP_MS),
+                    },
+                }
+            })
+        }, LOCAL_COUNTDOWN_STEP_MS)
+
+        return () => {
+            window.clearInterval(timerId)
+        }
+    }, [])
 
     function handleDraw(source: 'draw' | 'discard') {
         wsRef.current?.send('game:draw_card', { source })

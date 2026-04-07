@@ -314,6 +314,8 @@ type gameStatePayload struct {
 	Phase          string           `json:"phase"`
 }
 
+var timerWarningThresholdsMs = []int{10_000, 5_000, 1_000}
+
 func (h *Hub) handleLobbyStartGame(c *client, roomCode, playerID string) {
 	// Create and shuffle the deck.
 	drawPile, err := deck.New()
@@ -368,14 +370,17 @@ func (h *Hub) handleLobbyStartGame(c *client, roomCode, playerID string) {
 
 // --- Turn timer ---
 
-type timerTickPayload struct {
+type timerWarningPayload struct {
 	RoomCode        string `json:"roomCode"`
+	CurrentPlayerID string `json:"currentPlayerId"`
 	TimeRemainingMs int    `json:"timeRemainingMs"`
 }
 
 type turnSkippedPayload struct {
-	PlayerID string `json:"playerId"`
-	Reason   string `json:"reason"`
+	PlayerID        string `json:"playerId"`
+	Reason          string `json:"reason"`
+	NextPlayerID    string `json:"nextPlayerId"`
+	TimeRemainingMs int    `json:"timeRemainingMs"`
 }
 
 func (h *Hub) startTurnTimer(roomCode string) {
@@ -403,6 +408,10 @@ func (h *Hub) stopTurnTimer(roomCode string) {
 func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
+	previousRemaining := 0
+	if state, ok := h.store.Get(roomCode); ok {
+		previousRemaining = state.Turn.TimeRemainingMs
+	}
 
 	for {
 		select {
@@ -416,14 +425,35 @@ func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
 				return
 			}
 
-			h.broadcastToRoom(roomCode, "game:timer_tick", timerTickPayload{
-				RoomCode:        roomCode,
-				TimeRemainingMs: remaining,
-			})
+			state, ok := h.store.Get(roomCode)
+			if !ok {
+				log.Printf("timer: room %s not found after tick, stopping", roomCode)
+				h.stopTurnTimer(roomCode)
+				return
+			}
+
+			if state.Phase != room.GamePhasePlaying {
+				previousRemaining = state.Turn.TimeRemainingMs
+				continue
+			}
+
+			if shouldBroadcastTimerWarning(previousRemaining, remaining) {
+				h.broadcastToRoom(roomCode, "game:timer_warning", timerWarningPayload{
+					RoomCode:        roomCode,
+					CurrentPlayerID: state.Turn.CurrentPlayerID,
+					TimeRemainingMs: remaining,
+				})
+			}
 
 			if remaining == 0 {
 				h.handleTurnTimeout(roomCode)
+				if nextState, nextOK := h.store.Get(roomCode); nextOK {
+					previousRemaining = nextState.Turn.TimeRemainingMs
+				}
+				continue
 			}
+
+			previousRemaining = remaining
 		}
 	}
 }
@@ -441,8 +471,10 @@ func (h *Hub) handleTurnTimeout(roomCode string) {
 	}
 
 	h.broadcastToRoom(roomCode, "game:turn_skipped", turnSkippedPayload{
-		PlayerID: skippedPlayerID,
-		Reason:   "timeout",
+		PlayerID:        skippedPlayerID,
+		Reason:          "timeout",
+		NextPlayerID:    nextState.Turn.CurrentPlayerID,
+		TimeRemainingMs: nextState.Turn.TimeRemainingMs,
 	})
 
 	// Sync each player with the new game state.
@@ -601,6 +633,7 @@ type turnEndedPayload struct {
 	DiscardedCard  cardJSON `json:"discardedCard"`
 	DiscardPileTop cardJSON `json:"discardPileTop"`
 	NextPlayerID   string   `json:"nextPlayerId"`
+	TimeRemainingMs int     `json:"timeRemainingMs"`
 }
 
 type playerWonPayload struct {
@@ -782,8 +815,23 @@ func (h *Hub) handleGameDiscardCard(c *client, roomCode, playerID string, rawPay
 		DiscardedCard:  cardJSON{ID: discarded.ID, Letter: discarded.Letter},
 		DiscardPileTop: cardJSON{ID: discarded.ID, Letter: discarded.Letter},
 		NextPlayerID:   nextPlayerID,
+		TimeRemainingMs: state.Turn.TimeRemainingMs,
 	}
 	h.broadcastToRoom(roomCode, "game:turn_ended", payload)
+}
+
+func shouldBroadcastTimerWarning(previousRemaining, currentRemaining int) bool {
+	if currentRemaining <= 0 {
+		return false
+	}
+
+	for _, threshold := range timerWarningThresholdsMs {
+		if previousRemaining > threshold && currentRemaining <= threshold {
+			return true
+		}
+	}
+
+	return false
 }
 
 func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStatePayload {
