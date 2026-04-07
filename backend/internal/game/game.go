@@ -17,6 +17,21 @@ var (
 	ErrInvalidSlot  = errors.New("INVALID_SLOT")
 )
 
+type cardLocation int
+
+const (
+	cardLocationHand cardLocation = iota
+	cardLocationBoard
+)
+
+type locatedCard struct {
+	card      room.Card
+	location  cardLocation
+	handIndex int
+	rowIndex  int
+	slotIndex int
+}
+
 // DrawCard draws a card from the specified source for the player.
 func DrawCard(state *room.GameState, playerID string, source string) (*room.Card, error) {
 	if state.Phase != room.GamePhasePlaying {
@@ -73,9 +88,9 @@ func DrawCard(state *room.GameState, playerID string, source string) (*room.Card
 	return &drawnCard, nil
 }
 
-// PlaceCard moves a card from the player's hand onto the specified slot on
-// their word board. If the target slot already holds a card, that card is
-// swapped back into the hand in place of the placed card.
+// PlaceCard moves a card from the player's hand or board onto the specified
+// slot on their word board. If the target slot already holds a card, that card
+// is swapped back into the hand.
 //
 // After the placement the affected row's IsComplete flag and the board's
 // AllComplete flag are recomputed using dict.
@@ -108,27 +123,40 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 		return ErrInvalidSlot
 	}
 
-	// Locate the card in the player's hand.
-	cardIdx := -1
-	for i, c := range player.Hand {
-		if c.ID == cardID {
-			cardIdx = i
-			break
-		}
-	}
-	if cardIdx == -1 {
-		return ErrInvalidCard
+	cardRef, err := locatePlayerCard(player, cardID)
+	if err != nil {
+		return err
 	}
 
-	card := player.Hand[cardIdx]
+	if cardRef.location == cardLocationBoard && cardRef.rowIndex == rowIndex && cardRef.slotIndex == slotIndex {
+		// No-op move to the same slot.
+		return nil
+	}
+
+	card := cardRef.card
 	slot := &player.WordBoard.Rows[rowIndex].Slots[slotIndex]
 
-	if slot.Card != nil {
-		// Swap: put the existing slot card back in the hand at the same index.
-		player.Hand[cardIdx] = *slot.Card
-	} else {
-		// No card in slot: remove the card from the hand.
-		player.Hand = append(player.Hand[:cardIdx], player.Hand[cardIdx+1:]...)
+	switch cardRef.location {
+	case cardLocationHand:
+		if slot.Card != nil {
+			// Swap: put the existing slot card back in the hand at the same index.
+			player.Hand[cardRef.handIndex] = *slot.Card
+		} else {
+			// No card in slot: remove the card from the hand.
+			player.Hand = append(player.Hand[:cardRef.handIndex], player.Hand[cardRef.handIndex+1:]...)
+		}
+	case cardLocationBoard:
+		if slot.Card != nil {
+			displaced := *slot.Card
+			if _, err := removeCardFromBoard(player, cardRef.rowIndex, cardRef.slotIndex); err != nil {
+				return err
+			}
+			player.Hand = append(player.Hand, displaced)
+		} else {
+			if _, err := removeCardFromBoard(player, cardRef.rowIndex, cardRef.slotIndex); err != nil {
+				return err
+			}
+		}
 	}
 
 	// Place the card in the slot.
@@ -143,8 +171,8 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 	return nil
 }
 
-// DiscardCard removes a card from the active player's hand, pushes it to the
-// discard pile, and advances the turn to the next player.
+// DiscardCard removes a card from the active player's hand or board, pushes it
+// to the discard pile, and advances the turn to the next player.
 func DiscardCard(state *room.GameState, playerID, cardID string) (*room.Card, string, error) {
 	if state.Phase != room.GamePhasePlaying {
 		return nil, "", fmt.Errorf("game not in playing phase")
@@ -170,21 +198,22 @@ func DiscardCard(state *room.GameState, playerID, cardID string) (*room.Card, st
 		return nil, "", fmt.Errorf("player not found")
 	}
 
-	hand := state.Players[playerIdx].Hand
-	cardIdx := -1
-	var discarded room.Card
-	for i, c := range hand {
-		if c.ID == cardID {
-			cardIdx = i
-			discarded = c
-			break
-		}
-	}
-	if cardIdx == -1 {
-		return nil, "", ErrInvalidCard
+	player := &state.Players[playerIdx]
+	cardRef, err := locatePlayerCard(player, cardID)
+	if err != nil {
+		return nil, "", err
 	}
 
-	state.Players[playerIdx].Hand = append(hand[:cardIdx], hand[cardIdx+1:]...)
+	discarded := cardRef.card
+	switch cardRef.location {
+	case cardLocationHand:
+		player.Hand = append(player.Hand[:cardRef.handIndex], player.Hand[cardRef.handIndex+1:]...)
+	case cardLocationBoard:
+		if _, err := removeCardFromBoard(player, cardRef.rowIndex, cardRef.slotIndex); err != nil {
+			return nil, "", err
+		}
+	}
+
 	state.DiscardPile = append(state.DiscardPile, discarded)
 	state.DiscardPileTop = &room.Card{ID: discarded.ID, Letter: discarded.Letter}
 
@@ -196,6 +225,59 @@ func DiscardCard(state *room.GameState, playerID, cardID string) (*room.Card, st
 	state.Turn.DrawnCard = nil
 
 	return &discarded, nextPlayerID, nil
+}
+
+func locatePlayerCard(player *room.Player, cardID string) (locatedCard, error) {
+	for i, c := range player.Hand {
+		if c.ID == cardID {
+			return locatedCard{
+				card:      c,
+				location:  cardLocationHand,
+				handIndex: i,
+				rowIndex:  -1,
+				slotIndex: -1,
+			}, nil
+		}
+	}
+
+	for rowIdx := range player.WordBoard.Rows {
+		row := &player.WordBoard.Rows[rowIdx]
+		for slotIdx := range row.Slots {
+			slot := &row.Slots[slotIdx]
+			if slot.Card != nil && slot.Card.ID == cardID {
+				return locatedCard{
+					card:      *slot.Card,
+					location:  cardLocationBoard,
+					handIndex: -1,
+					rowIndex:  rowIdx,
+					slotIndex: slotIdx,
+				}, nil
+			}
+		}
+	}
+
+	return locatedCard{}, ErrInvalidCard
+}
+
+func removeCardFromBoard(player *room.Player, rowIndex, slotIndex int) (room.Card, error) {
+	if rowIndex < 0 || rowIndex >= len(player.WordBoard.Rows) {
+		return room.Card{}, ErrInvalidSlot
+	}
+	if slotIndex < 0 || slotIndex >= len(player.WordBoard.Rows[rowIndex].Slots) {
+		return room.Card{}, ErrInvalidSlot
+	}
+
+	slot := &player.WordBoard.Rows[rowIndex].Slots[slotIndex]
+	if slot.Card == nil {
+		return room.Card{}, ErrInvalidCard
+	}
+
+	removed := *slot.Card
+	slot.Card = nil
+	player.WordBoard.Rows[rowIndex].IsComplete = false
+	player.WordBoard.AllComplete = computeBoardAllComplete(player.WordBoard)
+
+	return removed, nil
 }
 
 // DeclareWinnerIfComplete marks the game as finished when playerID has all

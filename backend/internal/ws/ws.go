@@ -740,6 +740,42 @@ func (h *Hub) handleGameDiscardCard(c *client, roomCode, playerID string, rawPay
 		return
 	}
 
+	// Find the updated board and hand for the acting player.
+	var (
+		updatedBoard room.WordBoard
+		updatedHand  []cardJSON
+	)
+	for _, p := range state.Players {
+		if p.ID == playerID {
+			updatedBoard = p.WordBoard
+			updatedHand = buildHandJSON(p.Hand)
+			break
+		}
+	}
+
+	// Snapshot connected clients for this room.
+	h.mu.RLock()
+	playerClients := make(map[string]*client, len(state.Players))
+	for _, p := range state.Players {
+		if cl, ok := h.conns[p.ID]; ok {
+			playerClients[p.ID] = cl
+		}
+	}
+	h.mu.RUnlock()
+
+	// Broadcast board/hand reconciliation first, then end the turn.
+	for pid, cl := range playerClients {
+		boardPayload := boardUpdatedPayload{
+			PlayerID:  playerID,
+			WordBoard: buildWordBoardJSON(updatedBoard),
+			HandCount: len(updatedHand),
+		}
+		if pid == playerID {
+			boardPayload.Hand = updatedHand
+		}
+		cl.send("game:board_updated", boardPayload)
+	}
+
 	payload := turnEndedPayload{
 		PlayerID:       playerID,
 		Reason:         "discarded",
