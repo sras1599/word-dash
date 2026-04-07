@@ -603,6 +603,12 @@ type turnEndedPayload struct {
 	NextPlayerID   string   `json:"nextPlayerId"`
 }
 
+type playerWonPayload struct {
+	WinnerID         string        `json:"winnerId"`
+	WinnerName       string        `json:"winnerName"`
+	WinningWordBoard wordBoardJSON `json:"winningWordBoard"`
+}
+
 func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
 	var req placeCardRequest
 	if err := json.Unmarshal(rawPayload, &req); err != nil || req.CardID == "" {
@@ -652,6 +658,15 @@ func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPaylo
 		}
 	}
 
+	winner, won, err := game.DeclareWinnerIfComplete(state, playerID)
+	if err != nil {
+		c.send("game:error", map[string]string{
+			"code":    "INTERNAL_ERROR",
+			"message": err.Error(),
+		})
+		return
+	}
+
 	// Snapshot connected clients for this room.
 	h.mu.RLock()
 	playerClients := make(map[string]*client, len(state.Players))
@@ -674,6 +689,15 @@ func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPaylo
 			payload.Hand = updatedHand
 		}
 		cl.send("game:board_updated", payload)
+	}
+
+	if won {
+		h.stopTurnTimer(roomCode)
+		h.broadcastToRoom(roomCode, "game:player_won", playerWonPayload{
+			WinnerID:         winner.ID,
+			WinnerName:       winner.Name,
+			WinningWordBoard: buildWordBoardJSON(winner.WordBoard),
+		})
 	}
 }
 

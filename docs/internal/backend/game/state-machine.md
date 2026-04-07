@@ -29,6 +29,6 @@ idle -> draw -> arrange -> (discard) -> idle (next player)
 
 - Turn order: Clockwise; determined by `players[]` index order, set at game start.
 - Hand size invariant: After the discard phase, `len(player.hand)` must equal `sum(variation.wordLengths)`.
-- Win check: Immediately after a successful discard, the server checks whether all `WordRow.isComplete` flags are `true` for the active player. Win requires all word slots filled and every word validated by the dictionary simultaneously.
+- Win check: Immediately after a successful `game:place_card`, the server checks whether all `WordRow.isComplete` flags are `true` for the active player. If yes, the server declares the winner and transitions to `finished` immediately (no discard required).
 - Draw pile exhaustion: If the draw pile is empty when a player attempts to draw, the discard pile (excluding its top card) is shuffled and becomes the new draw pile.
 - Board validation: `WordRow.isComplete` is computed exclusively server-side after each place or unplace action. The client never computes it.

@@ -198,6 +198,35 @@ func DiscardCard(state *room.GameState, playerID, cardID string) (*room.Card, st
 	return &discarded, nextPlayerID, nil
 }
 
+// DeclareWinnerIfComplete marks the game as finished when playerID has all
+// rows complete after a successful turn action.
+func DeclareWinnerIfComplete(state *room.GameState, playerID string) (room.Player, bool, error) {
+	if state.Phase != room.GamePhasePlaying {
+		return room.Player{}, false, fmt.Errorf("game not in playing phase")
+	}
+
+	for i := range state.Players {
+		if state.Players[i].ID != playerID {
+			continue
+		}
+
+		if !state.Players[i].WordBoard.AllComplete {
+			return room.Player{}, false, nil
+		}
+
+		winnerID := state.Players[i].ID
+		state.Phase = room.GamePhaseFinished
+		state.WinnerID = &winnerID
+		state.Turn.Phase = room.TurnPhaseIdle
+		state.Turn.TimeRemainingMs = 0
+		state.Turn.DrawnCard = nil
+
+		return state.Players[i], true, nil
+	}
+
+	return room.Player{}, false, fmt.Errorf("player not found")
+}
+
 // computeRowComplete reports whether all slots in the row are filled and the
 // resulting word is valid according to dict.
 func computeRowComplete(row *room.WordRow, dict dictionary.DictionaryChecker) bool {
