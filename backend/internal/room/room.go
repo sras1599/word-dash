@@ -84,6 +84,7 @@ type GameState struct {
 	Turn           Turn
 	Phase          GamePhase
 	WinnerID       *string
+	TurnDurationMs int
 
 	// Internal server-side state — never sent to clients.
 	DrawPile    []Card `json:"-"`
@@ -206,15 +207,70 @@ func (s *Store) StartGame(roomCode, playerID string, drawPile []Card) (GameState
 	state.DrawPileCount = len(pile)
 	state.DiscardPileTop = nil
 
-	// Set up the first turn.
+	// Set up the first turn using the room's configured duration.
 	state.Turn = Turn{
 		CurrentPlayerID: state.Players[0].ID,
 		Phase:           TurnPhaseDraw,
-		TimeRemainingMs: 60000,
+		TimeRemainingMs: state.TurnDurationMs,
 	}
 	state.Phase = GamePhasePlaying
 
 	return *state, nil
+}
+
+// NextTurn rotates the turn to the next player in the Players slice (wrapping
+// around), resets the phase to draw, and resets TimeRemainingMs to the room's
+// configured TurnDurationMs.
+func (s *Store) NextTurn(roomCode string) (GameState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return GameState{}, fmt.Errorf("room %s not found", roomCode)
+	}
+
+	currentIndex := -1
+	for i, p := range state.Players {
+		if p.ID == state.Turn.CurrentPlayerID {
+			currentIndex = i
+			break
+		}
+	}
+	if currentIndex == -1 {
+		return GameState{}, fmt.Errorf("current player not found in room %s", roomCode)
+	}
+
+	nextIndex := (currentIndex + 1) % len(state.Players)
+	state.Turn = Turn{
+		CurrentPlayerID: state.Players[nextIndex].ID,
+		Phase:           TurnPhaseDraw,
+		TimeRemainingMs: state.TurnDurationMs,
+	}
+
+	return *state, nil
+}
+
+// TickTimer decrements the current turn's TimeRemainingMs by one second and
+// returns the new value. Returns 0 without error when the game is not playing.
+func (s *Store) TickTimer(roomCode string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return 0, fmt.Errorf("room %s not found", roomCode)
+	}
+	if state.Phase != GamePhasePlaying {
+		return 0, nil
+	}
+
+	if state.Turn.TimeRemainingMs > 1000 {
+		state.Turn.TimeRemainingMs -= 1000
+	} else {
+		state.Turn.TimeRemainingMs = 0
+	}
+	return state.Turn.TimeRemainingMs, nil
 }
 
 // IsPlayerConnected reports whether the given player is currently marked as
@@ -238,9 +294,9 @@ func (s *Store) IsPlayerConnected(roomCode, playerID string) bool {
 
 const roomCodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-// Create creates a new room with the given host name and variation.
-// It returns the generated roomCode and the host player ID.
-func Create(store *Store, hostName string, variation Variation) (roomCode string, playerID string, err error) {
+// Create creates a new room with the given host name, variation, and per-turn
+// duration. It returns the generated roomCode and the host player ID.
+func Create(store *Store, hostName string, variation Variation, turnDurationMs int) (roomCode string, playerID string, err error) {
 	roomCode, err = generateRoomCode()
 	if err != nil {
 		return "", "", fmt.Errorf("generate room code: %w", err)
@@ -261,10 +317,11 @@ func Create(store *Store, hostName string, variation Variation) (roomCode string
 	}
 
 	state := &GameState{
-		RoomCode:  roomCode,
-		Variation: variation,
-		Players:   []Player{host},
-		Phase:     GamePhaseWaiting,
+		RoomCode:       roomCode,
+		Variation:      variation,
+		Players:        []Player{host},
+		Phase:          GamePhaseWaiting,
+		TurnDurationMs: turnDurationMs,
 	}
 
 	store.Put(state)

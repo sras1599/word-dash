@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/sras1599/wordit/backend/config"
 	"github.com/sras1599/wordit/backend/internal/room"
 )
 
@@ -49,6 +50,7 @@ func handleCreateRoom(w http.ResponseWriter, r *http.Request, store *room.Store)
 		Variation struct {
 			WordLengths []int `json:"wordLengths"`
 		} `json:"variation"`
+		TurnDurationMs int `json:"turnDurationMs"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -60,12 +62,18 @@ func handleCreateRoom(w http.ResponseWriter, r *http.Request, store *room.Store)
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name is required"})
 		return
 	}
-	if len(body.Variation.WordLengths) == 0 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "variation.wordLengths is required and must not be empty"})
-		return
+
+	wordLengths := body.Variation.WordLengths
+	if len(wordLengths) == 0 {
+		wordLengths = config.Cfg.DefaultWordLengths
 	}
 
-	roomCode, playerID, err := room.Create(store, body.Name, room.Variation{WordLengths: body.Variation.WordLengths})
+	turnDurationMs := body.TurnDurationMs
+	if turnDurationMs <= 0 {
+		turnDurationMs = config.Cfg.TurnDurationMS
+	}
+
+	roomCode, playerID, err := room.Create(store, body.Name, room.Variation{WordLengths: wordLengths}, turnDurationMs)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create room"})
 		return

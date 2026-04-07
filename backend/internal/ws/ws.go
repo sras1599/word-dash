@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sras1599/wordit/backend/internal/deck"
@@ -41,15 +42,17 @@ func (c *client) send(event string, payload any) {
 
 // Hub manages all active WebSocket connections and routes lobby events.
 type Hub struct {
-	store *room.Store
-	mu    sync.RWMutex
-	conns map[string]*client // playerID -> client
+	store        *room.Store
+	mu           sync.RWMutex
+	conns        map[string]*client      // playerID -> client
+	activeTimers map[string]chan struct{} // roomCode -> stop channel
 }
 
 func NewHub(store *room.Store) *Hub {
 	return &Hub{
-		store: store,
-		conns: make(map[string]*client),
+		store:        store,
+		conns:        make(map[string]*client),
+		activeTimers: make(map[string]chan struct{}),
 	}
 }
 
@@ -346,10 +349,116 @@ func (h *Hub) handleLobbyStartGame(c *client, roomCode, playerID string) {
 	}
 	h.mu.RUnlock()
 
+	// Start the per-room turn timer.
+	h.startTurnTimer(roomCode)
+
 	// Broadcast lobby:game_starting to all connected players.
 	gameStartingPayload := map[string]string{"roomCode": roomCode}
 	for _, cl := range playerClients {
 		cl.send("lobby:game_starting", gameStartingPayload)
+	}
+}
+
+// --- Turn timer ---
+
+type timerTickPayload struct {
+	RoomCode        string `json:"roomCode"`
+	TimeRemainingMs int    `json:"timeRemainingMs"`
+}
+
+type turnSkippedPayload struct {
+	PlayerID string `json:"playerId"`
+	Reason   string `json:"reason"`
+}
+
+func (h *Hub) startTurnTimer(roomCode string) {
+	h.mu.Lock()
+	if _, ok := h.activeTimers[roomCode]; ok {
+		h.mu.Unlock()
+		return
+	}
+	stopCh := make(chan struct{})
+	h.activeTimers[roomCode] = stopCh
+	h.mu.Unlock()
+
+	go h.timerLoop(roomCode, stopCh)
+}
+
+func (h *Hub) stopTurnTimer(roomCode string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if stopCh, ok := h.activeTimers[roomCode]; ok {
+		close(stopCh)
+		delete(h.activeTimers, roomCode)
+	}
+}
+
+func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-stopCh:
+			return
+		case <-ticker.C:
+			remaining, err := h.store.TickTimer(roomCode)
+			if err != nil {
+				log.Printf("timer: room %s not found, stopping", roomCode)
+				h.stopTurnTimer(roomCode)
+				return
+			}
+
+			h.broadcastToRoom(roomCode, "game:timer_tick", timerTickPayload{
+				RoomCode:        roomCode,
+				TimeRemainingMs: remaining,
+			})
+
+			if remaining == 0 {
+				h.handleTurnTimeout(roomCode)
+			}
+		}
+	}
+}
+
+func (h *Hub) handleTurnTimeout(roomCode string) {
+	skippedPlayerID := ""
+	if state, ok := h.store.Get(roomCode); ok {
+		skippedPlayerID = state.Turn.CurrentPlayerID
+	}
+
+	nextState, err := h.store.NextTurn(roomCode)
+	if err != nil {
+		log.Printf("timer: failed to rotate turn for room %s: %v", roomCode, err)
+		return
+	}
+
+	h.broadcastToRoom(roomCode, "game:turn_skipped", turnSkippedPayload{
+		PlayerID: skippedPlayerID,
+		Reason:   "timeout",
+	})
+
+	// Sync each player with the new game state.
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, p := range nextState.Players {
+		if cl, ok := h.conns[p.ID]; ok {
+			cl.send("game:state", buildGameStatePayload(&nextState, p.ID))
+		}
+	}
+}
+
+func (h *Hub) broadcastToRoom(roomCode, event string, payload any) {
+	state, ok := h.store.Get(roomCode)
+	if !ok {
+		return
+	}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, p := range state.Players {
+		if cl, ok := h.conns[p.ID]; ok {
+			cl.send(event, payload)
+		}
 	}
 }
 
