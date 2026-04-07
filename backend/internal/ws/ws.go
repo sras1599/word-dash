@@ -131,6 +131,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 			h.handleGameDrawCard(c, roomCode, playerID, msg.Payload)
 		case "game:place_card":
 			h.handleGamePlaceCard(c, roomCode, playerID, msg.Payload)
+		case "game:unplace_card":
+			h.handleGameUnplaceCard(c, roomCode, playerID, msg.Payload)
 		case "game:discard_card":
 			h.handleGameDiscardCard(c, roomCode, playerID, msg.Payload)
 		}
@@ -616,6 +618,11 @@ type placeCardRequest struct {
 	SlotIndex int    `json:"slotIndex"`
 }
 
+type unplaceCardRequest struct {
+	RowIndex  int `json:"rowIndex"`
+	SlotIndex int `json:"slotIndex"`
+}
+
 type boardUpdatedPayload struct {
 	PlayerID  string        `json:"playerId"`
 	WordBoard wordBoardJSON `json:"wordBoard"`
@@ -731,6 +738,84 @@ func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPaylo
 			WinnerName:       winner.Name,
 			WinningWordBoard: buildWordBoardJSON(winner.WordBoard),
 		})
+	}
+}
+
+// --- game:unplace_card ---
+
+func (h *Hub) handleGameUnplaceCard(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
+	var req unplaceCardRequest
+	if err := json.Unmarshal(rawPayload, &req); err != nil {
+		c.send("game:error", map[string]string{
+			"code":    "INVALID_PAYLOAD",
+			"message": "invalid unplace_card payload",
+		})
+		return
+	}
+
+	state, ok := h.store.Get(roomCode)
+	if !ok {
+		c.send("game:error", map[string]string{
+			"code":    "ROOM_NOT_FOUND",
+			"message": "room not found",
+		})
+		return
+	}
+
+	if err := game.UnplaceCard(state, playerID, req.RowIndex, req.SlotIndex); err != nil {
+		code := "INTERNAL_ERROR"
+		switch {
+		case errors.Is(err, game.ErrNotYourTurn):
+			code = "NOT_YOUR_TURN"
+		case errors.Is(err, game.ErrInvalidPhase):
+			code = "INVALID_PHASE"
+		case errors.Is(err, game.ErrInvalidCard):
+			code = "INVALID_CARD"
+		case errors.Is(err, game.ErrInvalidSlot):
+			code = "INVALID_SLOT"
+		}
+		c.send("game:error", map[string]string{
+			"code":    code,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Find the updated board and hand for the acting player.
+	var (
+		updatedBoard room.WordBoard
+		updatedHand  []cardJSON
+	)
+	for _, p := range state.Players {
+		if p.ID == playerID {
+			updatedBoard = p.WordBoard
+			updatedHand = buildHandJSON(p.Hand)
+			break
+		}
+	}
+
+	// Snapshot connected clients for this room.
+	h.mu.RLock()
+	playerClients := make(map[string]*client, len(state.Players))
+	for _, p := range state.Players {
+		if cl, ok := h.conns[p.ID]; ok {
+			playerClients[p.ID] = cl
+		}
+	}
+	h.mu.RUnlock()
+
+	// Broadcast board update to all players.
+	// Only the acting player receives their full updated hand.
+	for pid, cl := range playerClients {
+		payload := boardUpdatedPayload{
+			PlayerID:  playerID,
+			WordBoard: buildWordBoardJSON(updatedBoard),
+			HandCount: len(updatedHand),
+		}
+		if pid == playerID {
+			payload.Hand = updatedHand
+		}
+		cl.send("game:board_updated", payload)
 	}
 }
 

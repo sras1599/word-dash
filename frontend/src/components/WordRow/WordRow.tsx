@@ -22,6 +22,10 @@ export interface WordRowProps {
     onPlace?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a card is dragged out of a slot. */
     onUnplace?: (rowIndex: number, slotIndex: number) => void
+    /** Called when drag starts from a slot, with source coordinates. */
+    onCardDragStart?: (cardId: string, rowIndex: number, slotIndex: number) => void
+    /** Called when a drag operation from a slot ends. */
+    onCardDragEnd?: () => void
     /** Called when a placed card is clicked (keyboard-based move support). */
     onCardSelected?: (card: CardData, rowIndex: number, slotIndex: number) => void
 }
@@ -38,6 +42,8 @@ export function WordRow({
     rowIndex,
     onPlace,
     onUnplace,
+    onCardDragStart,
+    onCardDragEnd,
     onCardSelected,
 }: WordRowProps) {
     const isValid = deriveIsValid(rowState)
@@ -65,6 +71,8 @@ export function WordRow({
                     card={slot.card}
                     onPlace={onPlace}
                     onUnplace={onUnplace}
+                    onCardDragStart={onCardDragStart}
+                    onCardDragEnd={onCardDragEnd}
                     onCardSelected={onCardSelected}
                 />
             ))}

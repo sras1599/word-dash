@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import './PlayerHand.css'
 import { Card, type CardData } from '../Card/Card'
 
@@ -16,6 +17,8 @@ export interface PlayerHandProps {
     onDragStart?: (cardId: string) => void
     /** Called when a drag ends (success or failure). */
     onDragEnd?: () => void
+    /** Called when a card is dropped onto the hand area. */
+    onDropOnHand?: (cardId: string) => void
     /** Called when the selected card should be discarded. */
     onDiscard?: (cardId: string) => void
 }
@@ -28,18 +31,61 @@ export function PlayerHand({
     onCardClick,
     onDragStart,
     onDragEnd,
+    onDropOnHand,
     onDiscard,
 }: PlayerHandProps) {
+    const [isDragOver, setIsDragOver] = useState(false)
+
     const handleCardClick = (cardId: string) => {
         onCardClick?.(cardId)
+    }
+
+    const canDropOnHand = isDraggable && !!onDropOnHand
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        if (!canDropOnHand) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        setIsDragOver(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setIsDragOver(false)
+        }
+    }
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        if (!canDropOnHand) return
+        e.preventDefault()
+        setIsDragOver(false)
+        const cardId = e.dataTransfer.getData('text/plain')
+        if (cardId) {
+            onDropOnHand?.(cardId)
+        }
     }
 
     const handleDiscardClick = () => {
         if (selectedCardId) onDiscard?.(selectedCardId)
     }
 
+    const className = [
+        'player-hand',
+        canDropOnHand && 'player-hand--drop-target',
+        isDragOver && 'player-hand--drag-over',
+    ]
+        .filter(Boolean)
+        .join(' ')
+
     return (
-        <div className="player-hand" role="region" aria-label="Your hand">
+        <div
+            className={className}
+            role="region"
+            aria-label="Your hand"
+            onDragOver={canDropOnHand ? handleDragOver : undefined}
+            onDragLeave={canDropOnHand ? handleDragLeave : undefined}
+            onDrop={canDropOnHand ? handleDrop : undefined}
+        >
             <div className="player-hand__cards">
                 {hand.map((card) => (
                     <Card

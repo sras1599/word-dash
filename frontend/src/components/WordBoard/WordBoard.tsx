@@ -15,11 +15,22 @@ export interface WordBoardProps {
     onPlace?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a card is dragged out of a slot. */
     onUnplace?: (rowIndex: number, slotIndex: number) => void
+    /** Called when drag starts from a slot, with source coordinates. */
+    onCardDragStart?: (cardId: string, rowIndex: number, slotIndex: number) => void
+    /** Called when a drag operation from a slot ends. */
+    onCardDragEnd?: () => void
     /** Called when a placed card is clicked (keyboard-based move support). */
     onCardSelected?: (card: CardData, rowIndex: number, slotIndex: number) => void
 }
 
-export function WordBoard({ wordBoard, onPlace, onUnplace, onCardSelected }: WordBoardProps) {
+export function WordBoard({
+    wordBoard,
+    onPlace,
+    onUnplace,
+    onCardDragStart,
+    onCardDragEnd,
+    onCardSelected,
+}: WordBoardProps) {
     const className = [
         'word-board',
         wordBoard.allComplete && 'word-board--complete',
@@ -39,6 +50,8 @@ export function WordBoard({ wordBoard, onPlace, onUnplace, onCardSelected }: Wor
                         rowIndex={index}
                         onPlace={onPlace}
                         onUnplace={onUnplace}
+                        onCardDragStart={onCardDragStart}
+                        onCardDragEnd={onCardDragEnd}
                         onCardSelected={onCardSelected}
                     />
                 </div>

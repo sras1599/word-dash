@@ -171,6 +171,41 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 	return nil
 }
 
+// UnplaceCard removes a card from the specified board slot and returns it to
+// the active player's hand.
+func UnplaceCard(state *room.GameState, playerID string, rowIndex, slotIndex int) error {
+	if state.Phase != room.GamePhasePlaying {
+		return fmt.Errorf("game not in playing phase")
+	}
+	if state.Turn.CurrentPlayerID != playerID {
+		return ErrNotYourTurn
+	}
+	if state.Turn.Phase != room.TurnPhaseArrange {
+		return ErrInvalidPhase
+	}
+
+	playerIdx := -1
+	for i := range state.Players {
+		if state.Players[i].ID == playerID {
+			playerIdx = i
+			break
+		}
+	}
+	if playerIdx == -1 {
+		return fmt.Errorf("player not found")
+	}
+
+	player := &state.Players[playerIdx]
+	card, err := removeCardFromBoard(player, rowIndex, slotIndex)
+	if err != nil {
+		return err
+	}
+
+	player.Hand = append(player.Hand, card)
+
+	return nil
+}
+
 // DiscardCard removes a card from the active player's hand or board, pushes it
 // to the discard pile, and advances the turn to the next player.
 func DiscardCard(state *room.GameState, playerID, cardID string) (*room.Card, string, error) {

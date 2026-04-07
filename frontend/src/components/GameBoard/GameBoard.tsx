@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import './GameBoard.css'
 import { CardPile, type CardPileProps } from '../CardPile/CardPile'
 import { OpponentStatus, type OpponentStatusPlayer } from '../OpponentStatus/OpponentStatus'
@@ -32,6 +33,12 @@ export interface GameBoardTurn {
 
 export interface GameBoardVariation {
     wordLengths: number[]
+}
+
+type BoardDragSource = {
+    cardId: string
+    rowIndex: number
+    slotIndex: number
 }
 
 export interface GameBoardProps {
@@ -69,10 +76,30 @@ export function GameBoard({
     onUnplace,
     onDiscard,
 }: GameBoardProps) {
+    const boardDragSourceRef = useRef<BoardDragSource | null>(null)
+
     const isActiveTurn = localPlayer !== null && turn.currentPlayerId === localPlayer.id
     const canPlaceInCurrentPhase = turn.phase === 'draw' || turn.phase === 'arrange'
     const isArrangingPhase = isActiveTurn && turn.phase === 'arrange'
     const isDrawPhase = isActiveTurn && turn.phase === 'draw'
+
+    const handleBoardCardDragStart = (cardId: string, rowIndex: number, slotIndex: number) => {
+        boardDragSourceRef.current = { cardId, rowIndex, slotIndex }
+    }
+
+    const handleBoardCardDragEnd = () => {
+        boardDragSourceRef.current = null
+    }
+
+    const handleDropOnHand = (cardId: string) => {
+        const source = boardDragSourceRef.current
+        boardDragSourceRef.current = null
+        if (!source || source.cardId !== cardId) {
+            return
+        }
+
+        onUnplace?.(source.rowIndex, source.slotIndex)
+    }
 
     const currentPlayer =
         localPlayer?.id === turn.currentPlayerId
@@ -163,11 +190,13 @@ export function GameBoard({
                     <WordBoard
                         wordBoard={localPlayer.wordBoard}
                         onPlace={canPlaceInCurrentPhase ? onPlace : undefined}
-                        onUnplace={canPlaceInCurrentPhase ? onUnplace : undefined}
+                        onCardDragStart={canPlaceInCurrentPhase ? handleBoardCardDragStart : undefined}
+                        onCardDragEnd={canPlaceInCurrentPhase ? handleBoardCardDragEnd : undefined}
                     />
                     <PlayerHand
                         hand={localPlayer.hand}
                         isDraggable={canPlaceInCurrentPhase}
+                        onDropOnHand={canPlaceInCurrentPhase ? handleDropOnHand : undefined}
                         onDiscard={isArrangingPhase ? onDiscard : undefined}
                     />
                 </section>

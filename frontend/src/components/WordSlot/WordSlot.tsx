@@ -14,6 +14,10 @@ export interface WordSlotProps {
     onPlace?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when the card in this slot begins being dragged away. */
     onUnplace?: (rowIndex: number, slotIndex: number) => void
+    /** Called when drag starts from this slot, with source coordinates. */
+    onCardDragStart?: (cardId: string, rowIndex: number, slotIndex: number) => void
+    /** Called when a drag operation from this slot ends. */
+    onCardDragEnd?: () => void
     /** Called when the placed card is clicked (keyboard-based move support). */
     onCardSelected?: (card: CardData, rowIndex: number, slotIndex: number) => void
 }
@@ -23,7 +27,9 @@ export function WordSlot({
     rowIndex,
     card,
     onPlace,
-    onUnplace,
+    onUnplace: _onUnplace,
+    onCardDragStart,
+    onCardDragEnd,
     onCardSelected,
 }: WordSlotProps) {
     const [isDragOver, setIsDragOver] = useState(false)
@@ -51,10 +57,14 @@ export function WordSlot({
     }
 
     const handleCardDragStart = (cardId: string) => {
-        onUnplace?.(rowIndex, slotIndex)
+        onCardDragStart?.(cardId, rowIndex, slotIndex)
         // Pass cardId through dataTransfer so other slots can receive it
         // (handled by Card's own onDragStart + HTML5 drag API)
         void cardId
+    }
+
+    const handleCardDragEnd = () => {
+        onCardDragEnd?.()
     }
 
     const handleCardClick = () => {
@@ -92,6 +102,7 @@ export function WordSlot({
                     readOnly={false}
                     onClick={handleCardClick}
                     onDragStart={handleCardDragStart}
+                    onDragEnd={handleCardDragEnd}
                 />
             ) : (
                 <div className="word-slot__placeholder" aria-hidden="true" />
