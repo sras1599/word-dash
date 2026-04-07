@@ -176,6 +176,26 @@ export function Game() {
             })
         })
 
+        ws.on('game:turn_skipped', (payload) => {
+            const { playerId } = payload as { playerId: string; reason: string }
+            setGameState((prev) => {
+                if (!prev) return prev
+                // Find the next player so we can update currentPlayerId optimistically.
+                // The full game:state broadcast that follows will reconcile any drift.
+                const idx = prev.players.findIndex((p) => p.id === playerId)
+                const nextIdx = idx === -1 ? 0 : (idx + 1) % prev.players.length
+                return {
+                    ...prev,
+                    turn: {
+                        ...prev.turn,
+                        currentPlayerId: prev.players[nextIdx].id,
+                        phase: 'draw' as TurnPhase,
+                        drawnCard: null,
+                    },
+                }
+            })
+        })
+
         ws.on('game:player_won', (payload) => {
             const { winnerId } = payload as { winnerId: string; winnerName: string; winningWordBoard: WordBoardState }
             setGameState((prev) =>
