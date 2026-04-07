@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sras1599/wordit/backend/internal/deck"
+	"github.com/sras1599/wordit/backend/internal/dictionary"
 	"github.com/sras1599/wordit/backend/internal/game"
 	"github.com/sras1599/wordit/backend/internal/room"
 )
@@ -43,14 +44,16 @@ func (c *client) send(event string, payload any) {
 // Hub manages all active WebSocket connections and routes lobby events.
 type Hub struct {
 	store        *room.Store
+	dict         dictionary.DictionaryChecker
 	mu           sync.RWMutex
-	conns        map[string]*client      // playerID -> client
+	conns        map[string]*client       // playerID -> client
 	activeTimers map[string]chan struct{} // roomCode -> stop channel
 }
 
 func NewHub(store *room.Store) *Hub {
 	return &Hub{
 		store:        store,
+		dict:         dictionary.NopChecker{},
 		conns:        make(map[string]*client),
 		activeTimers: make(map[string]chan struct{}),
 	}
@@ -126,6 +129,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 			h.handleGamePlayerConnected(c, roomCode, playerID)
 		case "game:draw_card":
 			h.handleGameDrawCard(c, roomCode, playerID, msg.Payload)
+		case "game:place_card":
+			h.handleGamePlaceCard(c, roomCode, playerID, msg.Payload)
 		}
 	}
 }
@@ -567,6 +572,72 @@ func (h *Hub) handleGameDrawCard(c *client, roomCode, playerID string, rawPayloa
 			DiscardPileTop: discardPileTop,
 		})
 	}
+}
+
+// --- game:place_card ---
+
+type placeCardRequest struct {
+	CardID    string `json:"cardId"`
+	RowIndex  int    `json:"rowIndex"`
+	SlotIndex int    `json:"slotIndex"`
+}
+
+type boardUpdatedPayload struct {
+	PlayerID  string        `json:"playerId"`
+	WordBoard wordBoardJSON `json:"wordBoard"`
+}
+
+func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
+	var req placeCardRequest
+	if err := json.Unmarshal(rawPayload, &req); err != nil || req.CardID == "" {
+		c.send("game:error", map[string]string{
+			"code":    "INVALID_PAYLOAD",
+			"message": "invalid place_card payload",
+		})
+		return
+	}
+
+	state, ok := h.store.Get(roomCode)
+	if !ok {
+		c.send("game:error", map[string]string{
+			"code":    "ROOM_NOT_FOUND",
+			"message": "room not found",
+		})
+		return
+	}
+
+	if err := game.PlaceCard(state, playerID, req.CardID, req.RowIndex, req.SlotIndex, h.dict); err != nil {
+		code := "INTERNAL_ERROR"
+		switch {
+		case errors.Is(err, game.ErrNotYourTurn):
+			code = "NOT_YOUR_TURN"
+		case errors.Is(err, game.ErrInvalidPhase):
+			code = "INVALID_PHASE"
+		case errors.Is(err, game.ErrInvalidCard):
+			code = "INVALID_CARD"
+		case errors.Is(err, game.ErrInvalidSlot):
+			code = "INVALID_SLOT"
+		}
+		c.send("game:error", map[string]string{
+			"code":    code,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Find the updated board for the acting player.
+	var updatedBoard room.WordBoard
+	for _, p := range state.Players {
+		if p.ID == playerID {
+			updatedBoard = p.WordBoard
+			break
+		}
+	}
+
+	h.broadcastToRoom(roomCode, "game:board_updated", boardUpdatedPayload{
+		PlayerID:  playerID,
+		WordBoard: buildWordBoardJSON(updatedBoard),
+	})
 }
 
 func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStatePayload {

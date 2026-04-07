@@ -3,7 +3,9 @@ package game
 import (
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/sras1599/wordit/backend/internal/dictionary"
 	"github.com/sras1599/wordit/backend/internal/room"
 )
 
@@ -11,6 +13,8 @@ var (
 	ErrNotYourTurn  = errors.New("NOT_YOUR_TURN")
 	ErrInvalidPhase = errors.New("INVALID_PHASE")
 	ErrEmptyDeck    = errors.New("EMPTY_DECK")
+	ErrInvalidCard  = errors.New("INVALID_CARD")
+	ErrInvalidSlot  = errors.New("INVALID_SLOT")
 )
 
 // DrawCard draws a card from the specified source for the player.
@@ -67,4 +71,107 @@ func DrawCard(state *room.GameState, playerID string, source string) (*room.Card
 	state.Turn.DrawnCard = &drawnCard
 
 	return &drawnCard, nil
+}
+
+// PlaceCard moves a card from the player's hand onto the specified slot on
+// their word board. If the target slot already holds a card, that card is
+// swapped back into the hand in place of the placed card.
+//
+// After the placement the affected row's IsComplete flag and the board's
+// AllComplete flag are recomputed using dict.
+func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotIndex int, dict dictionary.DictionaryChecker) error {
+	if state.Phase != room.GamePhasePlaying {
+		return fmt.Errorf("game not in playing phase")
+	}
+	if state.Turn.CurrentPlayerID != playerID {
+		return ErrNotYourTurn
+	}
+	if state.Turn.Phase != room.TurnPhaseArrange {
+		return ErrInvalidPhase
+	}
+
+	// Locate the player.
+	playerIdx := -1
+	for i := range state.Players {
+		if state.Players[i].ID == playerID {
+			playerIdx = i
+			break
+		}
+	}
+	if playerIdx == -1 {
+		return fmt.Errorf("player not found")
+	}
+	player := &state.Players[playerIdx]
+
+	// Validate row and slot indices.
+	if rowIndex < 0 || rowIndex >= len(player.WordBoard.Rows) {
+		return ErrInvalidSlot
+	}
+	if slotIndex < 0 || slotIndex >= len(player.WordBoard.Rows[rowIndex].Slots) {
+		return ErrInvalidSlot
+	}
+
+	// Locate the card in the player's hand.
+	cardIdx := -1
+	for i, c := range player.Hand {
+		if c.ID == cardID {
+			cardIdx = i
+			break
+		}
+	}
+	if cardIdx == -1 {
+		return ErrInvalidCard
+	}
+
+	card := player.Hand[cardIdx]
+	slot := &player.WordBoard.Rows[rowIndex].Slots[slotIndex]
+
+	if slot.Card != nil {
+		// Swap: put the existing slot card back in the hand at the same index.
+		player.Hand[cardIdx] = *slot.Card
+	} else {
+		// No card in slot: remove the card from the hand.
+		player.Hand = append(player.Hand[:cardIdx], player.Hand[cardIdx+1:]...)
+	}
+
+	// Place the card in the slot.
+	placed := card
+	slot.Card = &placed
+
+	// Recompute completeness flags.
+	row := &player.WordBoard.Rows[rowIndex]
+	row.IsComplete = computeRowComplete(row, dict)
+	player.WordBoard.AllComplete = computeBoardAllComplete(player.WordBoard)
+
+	return nil
+}
+
+// computeRowComplete reports whether all slots in the row are filled and the
+// resulting word is valid according to dict.
+func computeRowComplete(row *room.WordRow, dict dictionary.DictionaryChecker) bool {
+	letters := make([]byte, len(row.Slots))
+	for i, slot := range row.Slots {
+		if slot.Card == nil {
+			return false
+		}
+		if len(slot.Card.Letter) == 0 {
+			return false
+		}
+		letters[i] = slot.Card.Letter[0]
+	}
+	word := strings.ToLower(string(letters))
+	return dict.IsValidWord(word)
+}
+
+// computeBoardAllComplete reports whether every row in the board is complete.
+func computeBoardAllComplete(board room.WordBoard) bool {
+	if len(board.Rows) == 0 {
+		return false
+	}
+	for _, row := range board.Rows {
+		if !row.IsComplete {
+			return false
+		}
+	}
+	return true
 }
