@@ -35,13 +35,13 @@ Displays remaining time as `M:SS`. An optional circular or linear progress bar s
 ## Interactions
 
 - This is a display-only component. It does not fire events.
-- The parent (game page) passes the `timeRemainingMs` from `GameState.turn.timeRemainingMs`, which is updated by the server via WebSocket ticks.
+- The parent (game page) passes `timeRemainingMs` from `GameState.turn.timeRemainingMs`, maintained by a local one-second countdown and corrected by sparse server sync events.
 
 ---
 
 ## Key Behaviours
 
 - **Urgency threshold:** When `timeRemainingMs ≤ 15000` (15 seconds), the timer turns red and the text pulses with a CSS animation.
-- **Sync:** The server sends periodic `game:timer_tick` events with the authoritative `timeRemainingMs`. The client may interpolate between ticks for smooth display, but the server value is always the source of truth.
+- **Sync:** The server remains authoritative and sends sparse sync events (for example `game:timer_warning` and turn transition events). The client updates the visible countdown every second locally between those sync points.
 - **Zero:** When `timeRemainingMs` reaches 0, the timer shows `0:00` and the component enters an expired state (solid red, no pulse). The server handles the actual turn transition.
 - **Idle state:** When `isActive` is false (between turns), the timer is hidden or shows a neutral/empty state — it should not show the previous player's final time.

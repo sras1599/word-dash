@@ -66,12 +66,15 @@ Events received outside their valid phase, or from a player who is not the curre
 | `game:turn_started`        | `{ currentPlayerId, timeRemainingMs: 60000 }` |
 | `game:card_drawn`          | `{ playerId, source, card: Card \| null, drawPileCount, discardPileTop }`. `card` is `null` for non-drawing players. |
 | `game:board_updated`       | `{ playerId, wordBoard: WordBoard }`. Broadcast to all players after every `place` or `unplace` action. |
-| `game:timer_tick`          | `{ timeRemainingMs }`. Emitted every second during the arrange phase. |
-| `game:turn_ended`          | `{ playerId, reason: "discarded" \| "timeout", discardedCard: Card, discardPileTop: Card, nextPlayerId }` |
+| `game:timer_warning`       | `{ currentPlayerId, timeRemainingMs }`. Emitted only when remaining time crosses warning thresholds (`10s`, `5s`, `1s`). |
+| `game:turn_ended`          | `{ playerId, reason: "discarded", discardedCard: Card, discardPileTop: Card, nextPlayerId, timeRemainingMs }` |
+| `game:turn_skipped`        | `{ playerId, reason: "timeout", nextPlayerId, timeRemainingMs }` |
 | `game:player_won`          | `{ winnerId, winnerName, winningWordBoard: WordBoard }` |
 | `game:player_disconnected` | `{ playerId }` |
 | `game:player_reconnected`  | `{ playerId }` |
 | `game:error`               | `{ code, message }` - sent only to the offending player. |
+
+Clients should render a local one-second countdown between server events. The server remains authoritative for timeout enforcement.
 
 ## Error Codes
 
