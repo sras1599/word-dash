@@ -131,6 +131,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 			h.handleGameDrawCard(c, roomCode, playerID, msg.Payload)
 		case "game:place_card":
 			h.handleGamePlaceCard(c, roomCode, playerID, msg.Payload)
+		case "game:discard_card":
+			h.handleGameDiscardCard(c, roomCode, playerID, msg.Payload)
 		}
 	}
 }
@@ -589,6 +591,18 @@ type boardUpdatedPayload struct {
 	Hand      []cardJSON    `json:"hand,omitempty"`
 }
 
+type discardCardRequest struct {
+	CardID string `json:"cardId"`
+}
+
+type turnEndedPayload struct {
+	PlayerID       string   `json:"playerId"`
+	Reason         string   `json:"reason"`
+	DiscardedCard  cardJSON `json:"discardedCard"`
+	DiscardPileTop cardJSON `json:"discardPileTop"`
+	NextPlayerID   string   `json:"nextPlayerId"`
+}
+
 func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
 	var req placeCardRequest
 	if err := json.Unmarshal(rawPayload, &req); err != nil || req.CardID == "" {
@@ -661,6 +675,55 @@ func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPaylo
 		}
 		cl.send("game:board_updated", payload)
 	}
+}
+
+// --- game:discard_card ---
+
+func (h *Hub) handleGameDiscardCard(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
+	var req discardCardRequest
+	if err := json.Unmarshal(rawPayload, &req); err != nil || req.CardID == "" {
+		c.send("game:error", map[string]string{
+			"code":    "INVALID_PAYLOAD",
+			"message": "invalid discard_card payload",
+		})
+		return
+	}
+
+	state, ok := h.store.Get(roomCode)
+	if !ok {
+		c.send("game:error", map[string]string{
+			"code":    "ROOM_NOT_FOUND",
+			"message": "room not found",
+		})
+		return
+	}
+
+	discarded, nextPlayerID, err := game.DiscardCard(state, playerID, req.CardID)
+	if err != nil {
+		code := "INTERNAL_ERROR"
+		switch {
+		case errors.Is(err, game.ErrNotYourTurn):
+			code = "NOT_YOUR_TURN"
+		case errors.Is(err, game.ErrInvalidPhase):
+			code = "INVALID_PHASE"
+		case errors.Is(err, game.ErrInvalidCard):
+			code = "INVALID_CARD"
+		}
+		c.send("game:error", map[string]string{
+			"code":    code,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	payload := turnEndedPayload{
+		PlayerID:       playerID,
+		Reason:         "discarded",
+		DiscardedCard:  cardJSON{ID: discarded.ID, Letter: discarded.Letter},
+		DiscardPileTop: cardJSON{ID: discarded.ID, Letter: discarded.Letter},
+		NextPlayerID:   nextPlayerID,
+	}
+	h.broadcastToRoom(roomCode, "game:turn_ended", payload)
 }
 
 func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStatePayload {

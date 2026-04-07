@@ -143,6 +143,61 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 	return nil
 }
 
+// DiscardCard removes a card from the active player's hand, pushes it to the
+// discard pile, and advances the turn to the next player.
+func DiscardCard(state *room.GameState, playerID, cardID string) (*room.Card, string, error) {
+	if state.Phase != room.GamePhasePlaying {
+		return nil, "", fmt.Errorf("game not in playing phase")
+	}
+	if state.Turn.CurrentPlayerID != playerID {
+		return nil, "", ErrNotYourTurn
+	}
+	if state.Turn.Phase != room.TurnPhaseArrange {
+		return nil, "", ErrInvalidPhase
+	}
+	if len(state.Players) == 0 {
+		return nil, "", fmt.Errorf("no players in game")
+	}
+
+	playerIdx := -1
+	for i := range state.Players {
+		if state.Players[i].ID == playerID {
+			playerIdx = i
+			break
+		}
+	}
+	if playerIdx == -1 {
+		return nil, "", fmt.Errorf("player not found")
+	}
+
+	hand := state.Players[playerIdx].Hand
+	cardIdx := -1
+	var discarded room.Card
+	for i, c := range hand {
+		if c.ID == cardID {
+			cardIdx = i
+			discarded = c
+			break
+		}
+	}
+	if cardIdx == -1 {
+		return nil, "", ErrInvalidCard
+	}
+
+	state.Players[playerIdx].Hand = append(hand[:cardIdx], hand[cardIdx+1:]...)
+	state.DiscardPile = append(state.DiscardPile, discarded)
+	state.DiscardPileTop = &room.Card{ID: discarded.ID, Letter: discarded.Letter}
+
+	nextIdx := (playerIdx + 1) % len(state.Players)
+	nextPlayerID := state.Players[nextIdx].ID
+	state.Turn.CurrentPlayerID = nextPlayerID
+	state.Turn.Phase = room.TurnPhaseDraw
+	state.Turn.TimeRemainingMs = state.TurnDurationMs
+	state.Turn.DrawnCard = nil
+
+	return &discarded, nextPlayerID, nil
+}
+
 // computeRowComplete reports whether all slots in the row are filled and the
 // resulting word is valid according to dict.
 func computeRowComplete(row *room.WordRow, dict dictionary.DictionaryChecker) bool {
