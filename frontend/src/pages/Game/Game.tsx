@@ -128,16 +128,28 @@ export function Game() {
         })
 
         ws.on('game:board_updated', (payload) => {
-            const { playerId, wordBoard } = payload as {
+            const { playerId, wordBoard, handCount, hand } = payload as {
                 playerId: string
                 wordBoard: WordBoardState
+                handCount: number
+                hand?: Card[]
             }
             setGameState((prev) =>
                 prev
                     ? {
                         ...prev,
                         players: prev.players.map((p) =>
-                            p.id === playerId ? { ...p, wordBoard } : p,
+                            p.id === playerId
+                                ? {
+                                    ...p,
+                                    wordBoard,
+                                    handCount,
+                                    hand:
+                                        p.id === localPlayerId && hand
+                                            ? hand
+                                            : p.hand,
+                                }
+                                : p,
                         ),
                     }
                     : prev,
@@ -243,6 +255,34 @@ export function Game() {
     }
 
     function handlePlace(cardId: string, rowIndex: number, slotIndex: number) {
+        setGameState((prev) => {
+            if (!prev) return prev
+            return {
+                ...prev,
+                players: prev.players.map((p) => {
+                    if (p.id !== localPlayerId) return p
+
+                    const hand = p.hand ?? []
+                    const cardIndex = hand.findIndex((card) => card.id === cardId)
+                    if (cardIndex === -1) return p
+
+                    const swappedCard = p.wordBoard.rows[rowIndex]?.slots[slotIndex]?.card ?? null
+                    const nextHand = [...hand]
+                    if (swappedCard) {
+                        nextHand[cardIndex] = swappedCard
+                    } else {
+                        nextHand.splice(cardIndex, 1)
+                    }
+
+                    return {
+                        ...p,
+                        hand: nextHand,
+                        handCount: nextHand.length,
+                    }
+                }),
+            }
+        })
+
         wsRef.current?.send('game:place_card', { cardId, rowIndex, slotIndex })
     }
 

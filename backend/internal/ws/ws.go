@@ -585,6 +585,8 @@ type placeCardRequest struct {
 type boardUpdatedPayload struct {
 	PlayerID  string        `json:"playerId"`
 	WordBoard wordBoardJSON `json:"wordBoard"`
+	HandCount int           `json:"handCount"`
+	Hand      []cardJSON    `json:"hand,omitempty"`
 }
 
 func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
@@ -625,19 +627,42 @@ func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPaylo
 		return
 	}
 
-	// Find the updated board for the acting player.
-	var updatedBoard room.WordBoard
+	// Find the updated board and hand for the acting player.
+	var (
+		updatedBoard room.WordBoard
+		updatedHand  []cardJSON
+	)
 	for _, p := range state.Players {
 		if p.ID == playerID {
 			updatedBoard = p.WordBoard
+			updatedHand = buildHandJSON(p.Hand)
 			break
 		}
 	}
 
-	h.broadcastToRoom(roomCode, "game:board_updated", boardUpdatedPayload{
-		PlayerID:  playerID,
-		WordBoard: buildWordBoardJSON(updatedBoard),
-	})
+	// Snapshot connected clients for this room.
+	h.mu.RLock()
+	playerClients := make(map[string]*client, len(state.Players))
+	for _, p := range state.Players {
+		if cl, ok := h.conns[p.ID]; ok {
+			playerClients[p.ID] = cl
+		}
+	}
+	h.mu.RUnlock()
+
+	// Broadcast board update to all players.
+	// Only the acting player receives their full updated hand.
+	for pid, cl := range playerClients {
+		payload := boardUpdatedPayload{
+			PlayerID:  playerID,
+			WordBoard: buildWordBoardJSON(updatedBoard),
+			HandCount: len(updatedHand),
+		}
+		if pid == playerID {
+			payload.Hand = updatedHand
+		}
+		cl.send("game:board_updated", payload)
+	}
 }
 
 func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStatePayload {
@@ -645,10 +670,7 @@ func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStateP
 	for i, p := range state.Players {
 		var hand []cardJSON
 		if p.ID == forPlayerID {
-			hand = make([]cardJSON, len(p.Hand))
-			for j, card := range p.Hand {
-				hand[j] = cardJSON{ID: card.ID, Letter: card.Letter}
-			}
+			hand = buildHandJSON(p.Hand)
 		}
 		players[i] = gamePlayerJSON{
 			ID:          p.ID,
@@ -679,6 +701,14 @@ func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStateP
 		},
 		Phase: string(state.Phase),
 	}
+}
+
+func buildHandJSON(hand []room.Card) []cardJSON {
+	out := make([]cardJSON, len(hand))
+	for i, card := range hand {
+		out[i] = cardJSON{ID: card.ID, Letter: card.Letter}
+	}
+	return out
 }
 
 func buildWordBoardJSON(wb room.WordBoard) wordBoardJSON {
