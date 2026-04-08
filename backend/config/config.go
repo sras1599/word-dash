@@ -9,7 +9,7 @@ import (
 const (
 	defaultPort           = "8080"
 	defaultWSPort         = "8081"
-	defaultTurnDurationMS = 60_000
+	defaultTurnDurationMS = 90_000
 	defaultCORSOrigin     = "http://localhost:5173"
 )
 

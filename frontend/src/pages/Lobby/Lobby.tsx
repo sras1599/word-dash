@@ -19,12 +19,60 @@ type LobbyState = {
     roomCode: string
     hostPlayerId: string
     variation: Variation
+    turnDurationMs: number
     players: LobbyPlayer[]
 }
 
 const MAX_PLAYERS = 4
-const MIN_VARIATION_LENGTHS = 2
-const MAX_VARIATION_LENGTHS = 4
+
+type VariationPresetGroup = {
+    difficulty: string
+    presets: { label: string; wordLengths: number[] }[]
+}
+
+const VARIATION_PRESET_GROUPS: VariationPresetGroup[] = [
+    {
+        difficulty: 'Easy',
+        presets: [
+            { label: '4, 4, 4', wordLengths: [4, 4, 4] },
+            { label: '4, 5', wordLengths: [4, 5] },
+        ],
+    },
+    {
+        difficulty: 'Medium',
+        presets: [
+            { label: '3, 4, 5', wordLengths: [3, 4, 5] },
+            { label: '5, 6', wordLengths: [5, 6] },
+        ],
+    },
+    {
+        difficulty: 'Hard',
+        presets: [{ label: '5, 6, 7, 8', wordLengths: [5, 6, 7, 8] }],
+    },
+]
+
+function parseCustomVariation(input: string): number[] | null {
+    const parts = input
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    if (parts.length < 2) return null
+    const lengths = parts.map((p) => parseInt(p, 10))
+    if (lengths.some((n) => isNaN(n) || n < 1)) return null
+    return lengths
+}
+
+function getPresetDisplayLabel(wordLengths: number[]): string {
+    const key = JSON.stringify(wordLengths)
+    for (const group of VARIATION_PRESET_GROUPS) {
+        for (const preset of group.presets) {
+            if (JSON.stringify(preset.wordLengths) === key) {
+                return `${preset.label} (${group.difficulty})`
+            }
+        }
+    }
+    return `${wordLengths.join(', ')} (Custom)`
+}
 
 export function Lobby() {
     const { roomCode } = useParams<{ roomCode: string }>()
@@ -34,6 +82,11 @@ export function Lobby() {
 
     const [lobby, setLobby] = useState<LobbyState | null>(null)
     const [isReady, setIsReady] = useState(false)
+    const [customInput, setCustomInput] = useState('')
+    const [customVariationError, setCustomVariationError] = useState('')
+    const [variationOpen, setVariationOpen] = useState(false)
+    const [turnMinutes, setTurnMinutes] = useState('1')
+    const [turnSeconds, setTurnSeconds] = useState('30')
 
     const wsRef = useRef<WsClient | null>(null)
 
@@ -52,7 +105,10 @@ export function Lobby() {
         ws.send('lobby:join')
 
         ws.on('lobby:state', (payload) => {
-            setLobby(payload as LobbyState)
+            const state = payload as LobbyState
+            setLobby(state)
+            setTurnMinutes(String(Math.floor(state.turnDurationMs / 60_000)))
+            setTurnSeconds(String(Math.round((state.turnDurationMs % 60_000) / 1_000)))
         })
         ws.on('lobby:player_joined', (payload) => {
             const { player } = payload as { player: LobbyPlayer }
@@ -73,9 +129,11 @@ export function Lobby() {
                     : prev,
             )
         })
-        ws.on('lobby:variation_changed', (payload) => {
-            const { variation } = payload as { variation: Variation }
-            setLobby((prev) => (prev ? { ...prev, variation } : prev))
+        ws.on('lobby:settings_changed', (payload) => {
+            const { variation, turnDurationMs } = payload as { variation: Variation; turnDurationMs: number }
+            setLobby((prev) => (prev ? { ...prev, variation, turnDurationMs } : prev))
+            setTurnMinutes(String(Math.floor(turnDurationMs / 60_000)))
+            setTurnSeconds(String(Math.round((turnDurationMs % 60_000) / 1_000)))
         })
         ws.on('lobby:game_starting', (payload) => {
             const { roomCode: rc } = payload as { roomCode: string }
@@ -96,21 +154,55 @@ export function Lobby() {
         wsRef.current?.send('lobby:start_game')
     }
 
-    function handleAddLength() {
-        if (!lobby || lobby.variation.wordLengths.length >= MAX_VARIATION_LENGTHS) return
-        const next = (lobby.variation.wordLengths.at(-1) ?? 3) + 1
-        const newVariation: Variation = { wordLengths: [...lobby.variation.wordLengths, next] }
-        wsRef.current?.send('lobby:variation_changed', { variation: newVariation })
-        setLobby({ ...lobby, variation: newVariation })
+    function handlePresetClick(wordLengths: number[]) {
+        const newVariation: Variation = { wordLengths }
+        const m = Math.min(5, Math.max(1, parseInt(turnMinutes, 10) || 1))
+        const s = m === 5 ? 0 : Math.min(59, Math.max(0, parseInt(turnSeconds, 10) || 0))
+        wsRef.current?.send('lobby:settings_changed', { variation: newVariation, turnDurationMs: (m * 60 + s) * 1_000 })
+        setLobby((prev) => (prev ? { ...prev, variation: newVariation } : prev))
+        setCustomInput('')
+        setCustomVariationError('')
+        setVariationOpen(false)
     }
 
-    function handleRemoveLength() {
-        if (!lobby || lobby.variation.wordLengths.length <= MIN_VARIATION_LENGTHS) return
-        const newVariation: Variation = {
-            wordLengths: lobby.variation.wordLengths.slice(0, -1),
+    function handleCustomInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+        setCustomInput(e.target.value.replace(/[^0-9,\s]/g, ''))
+        setCustomVariationError('')
+    }
+
+    function handleCustomApply() {
+        const wordLengths = parseCustomVariation(customInput)
+        if (!wordLengths) {
+            setCustomVariationError('Enter at least 2 comma-separated numbers, e.g. 4,7')
+            return
         }
-        wsRef.current?.send('lobby:variation_changed', { variation: newVariation })
-        setLobby({ ...lobby, variation: newVariation })
+        const newVariation: Variation = { wordLengths }
+        const m = Math.min(5, Math.max(1, parseInt(turnMinutes, 10) || 1))
+        const s = m === 5 ? 0 : Math.min(59, Math.max(0, parseInt(turnSeconds, 10) || 0))
+        wsRef.current?.send('lobby:settings_changed', { variation: newVariation, turnDurationMs: (m * 60 + s) * 1_000 })
+        setLobby((prev) => (prev ? { ...prev, variation: newVariation } : prev))
+        setCustomInput('')
+        setCustomVariationError('')
+        setVariationOpen(false)
+    }
+
+    function handleTurnMinutesChange(e: React.ChangeEvent<HTMLInputElement>) {
+        setTurnMinutes(e.target.value.replace(/[^0-9]/g, ''))
+    }
+
+    function handleTurnSecondsChange(e: React.ChangeEvent<HTMLInputElement>) {
+        setTurnSeconds(e.target.value.replace(/[^0-9]/g, ''))
+    }
+
+    function handleTurnLengthBlur() {
+        const m = Math.min(5, Math.max(1, parseInt(turnMinutes, 10) || 1))
+        const s = m === 5 ? 0 : Math.min(59, Math.max(0, parseInt(turnSeconds, 10) || 0))
+        setTurnMinutes(String(m))
+        setTurnSeconds(String(s))
+        wsRef.current?.send('lobby:settings_changed', {
+            variation: lobby!.variation,
+            turnDurationMs: (m * 60 + s) * 1_000,
+        })
     }
 
     function handleCopyLink() {
@@ -150,43 +242,174 @@ export function Lobby() {
 
             <section className="page-lobby__settings" aria-label="Game settings">
                 <h2 className="page-lobby__section-title">Game Settings</h2>
-                <div className="page-lobby__variation">
-                    <span className="page-lobby__variation-label">Variation:</span>
-                    <div className="page-lobby__variation-lengths" role="list">
-                        {lobby.variation.wordLengths.map((len, i) => (
-                            <span
-                                key={i}
-                                className="page-lobby__variation-chip"
-                                role="listitem"
+
+                {/* ── Variation ── */}
+                <div className="page-lobby__setting-row">
+                    <span className="page-lobby__setting-label">Variation</span>
+                    <div className="page-lobby__variation-picker">
+                        <button
+                            className="page-lobby__setting-trigger"
+                            onClick={() => isHost && setVariationOpen((o) => !o)}
+                            aria-expanded={variationOpen}
+                            aria-haspopup="listbox"
+                            disabled={!isHost}
+                        >
+                            <span>{getPresetDisplayLabel(lobby.variation.wordLengths)}</span>
+                            <svg
+                                className="page-lobby__setting-chevron"
+                                aria-hidden="true"
+                                width="12"
+                                height="12"
+                                viewBox="0 0 12 12"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
                             >
-                                {len}
-                            </span>
-                        ))}
+                                {variationOpen ? (
+                                    <path
+                                        d="M10 8L6 4L2 8"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                ) : (
+                                    <path
+                                        d="M2 4L6 8L10 4"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                )}
+                            </svg>
+                        </button>
+                        {variationOpen && (
+                            <div
+                                className="page-lobby__variation-panel"
+                                role="listbox"
+                                aria-label="Variation presets"
+                            >
+                                {VARIATION_PRESET_GROUPS.map((group) => (
+                                    <div
+                                        key={group.difficulty}
+                                        className="page-lobby__variation-group"
+                                    >
+                                        <span className="page-lobby__variation-group-label">
+                                            {group.difficulty}
+                                        </span>
+                                        <div className="page-lobby__variation-options">
+                                            {group.presets.map((preset) => {
+                                                const isSelected =
+                                                    JSON.stringify(preset.wordLengths) ===
+                                                    JSON.stringify(lobby.variation.wordLengths)
+                                                return (
+                                                    <button
+                                                        key={preset.label}
+                                                        className={[
+                                                            'page-lobby__variation-option',
+                                                            isSelected &&
+                                                            'page-lobby__variation-option--selected',
+                                                        ]
+                                                            .filter(Boolean)
+                                                            .join(' ')}
+                                                        onClick={() =>
+                                                            handlePresetClick(preset.wordLengths)
+                                                        }
+                                                        role="option"
+                                                        aria-selected={isSelected}
+                                                    >
+                                                        {preset.label}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="page-lobby__variation-group">
+                                    <span className="page-lobby__variation-group-label">
+                                        Custom
+                                    </span>
+                                    <div className="page-lobby__custom-variation-row">
+                                        <input
+                                            id="variation-custom"
+                                            className="page-lobby__custom-input"
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="e.g. 4,7"
+                                            maxLength={20}
+                                            value={customInput}
+                                            onChange={handleCustomInputChange}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleCustomApply()
+                                            }}
+                                            aria-label="Custom variation"
+                                            aria-describedby={
+                                                customVariationError
+                                                    ? 'custom-variation-error'
+                                                    : undefined
+                                            }
+                                        />
+                                        <button
+                                            className="page-lobby__custom-apply-btn"
+                                            onClick={handleCustomApply}
+                                        >
+                                            Apply
+                                        </button>
+                                    </div>
+                                    {customVariationError && (
+                                        <p
+                                            id="custom-variation-error"
+                                            className="page-lobby__custom-error"
+                                            role="alert"
+                                        >
+                                            {customVariationError}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
-                    {isHost && (
-                        <div className="page-lobby__variation-controls">
-                            <button
-                                className="page-lobby__variation-btn"
-                                onClick={handleAddLength}
-                                disabled={
-                                    lobby.variation.wordLengths.length >= MAX_VARIATION_LENGTHS
-                                }
-                                aria-label="Add word length"
-                            >
-                                +
-                            </button>
-                            <button
-                                className="page-lobby__variation-btn"
-                                onClick={handleRemoveLength}
-                                disabled={
-                                    lobby.variation.wordLengths.length <= MIN_VARIATION_LENGTHS
-                                }
-                                aria-label="Remove word length"
-                            >
-                                −
-                            </button>
+                </div>
+
+                {/* ── Turn Length ── */}
+                <div className="page-lobby__setting-row">
+                    <span className="page-lobby__setting-label">Turn Length</span>
+                    <div className="page-lobby__turn-length">
+                        <div className="page-lobby__turn-field">
+                            <input
+                                id="turn-minutes"
+                                className="page-lobby__turn-input"
+                                type="number"
+                                min={1}
+                                max={5}
+                                value={turnMinutes}
+                                onChange={handleTurnMinutesChange}
+                                onBlur={handleTurnLengthBlur}
+                                disabled={!isHost}
+                                aria-label="Turn length minutes"
+                            />
+                            <label htmlFor="turn-minutes" className="page-lobby__turn-unit">
+                                min
+                            </label>
                         </div>
-                    )}
+                        <div className="page-lobby__turn-field">
+                            <input
+                                id="turn-seconds"
+                                className="page-lobby__turn-input"
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={turnSeconds}
+                                onChange={handleTurnSecondsChange}
+                                onBlur={handleTurnLengthBlur}
+                                disabled={!isHost}
+                                aria-label="Turn length seconds"
+                            />
+                            <label htmlFor="turn-seconds" className="page-lobby__turn-unit">
+                                sec
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </section>
 

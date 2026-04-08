@@ -273,6 +273,28 @@ func (s *Store) TickTimer(roomCode string) (int, error) {
 	return state.Turn.TimeRemainingMs, nil
 }
 
+// UpdateLobbySettings updates the variation and turn duration for a room that
+// is still in the waiting phase. playerID must be the host (Players[0].ID).
+func (s *Store) UpdateLobbySettings(roomCode, playerID string, variation Variation, turnDurationMs int) (GameState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return GameState{}, fmt.Errorf("%w: %s", ErrRoomNotFound, roomCode)
+	}
+	if len(state.Players) == 0 || state.Players[0].ID != playerID {
+		return GameState{}, ErrNotHost
+	}
+	if state.Phase != GamePhaseWaiting {
+		return GameState{}, ErrGameAlreadyStarted
+	}
+
+	state.Variation = variation
+	state.TurnDurationMs = turnDurationMs
+	return *state, nil
+}
+
 // IsPlayerConnected reports whether the given player is currently marked as
 // connected in the given room. Returns false if the room or player is not found.
 func (s *Store) IsPlayerConnected(roomCode, playerID string) bool {

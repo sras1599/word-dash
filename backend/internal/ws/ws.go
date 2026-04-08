@@ -123,6 +123,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 			h.handleLobbyJoin(c, roomCode, playerID)
 		case "lobby:player_ready":
 			h.handleLobbyPlayerReady(c, roomCode, playerID)
+		case "lobby:settings_changed":
+			h.handleLobbySettingsChanged(c, roomCode, playerID, msg.Payload)
 		case "lobby:start_game":
 			h.handleLobbyStartGame(c, roomCode, playerID)
 		case "game:player_connected":
@@ -153,10 +155,11 @@ type lobbyPlayerJSON struct {
 }
 
 type lobbyStatePayload struct {
-	RoomCode     string            `json:"roomCode"`
-	HostPlayerID string            `json:"hostPlayerId"`
-	Variation    variationJSON     `json:"variation"`
-	Players      []lobbyPlayerJSON `json:"players"`
+	RoomCode       string            `json:"roomCode"`
+	HostPlayerID   string            `json:"hostPlayerId"`
+	Variation      variationJSON     `json:"variation"`
+	TurnDurationMs int               `json:"turnDurationMs"`
+	Players        []lobbyPlayerJSON `json:"players"`
 }
 
 type lobbyPlayerJoinedPayload struct {
@@ -186,10 +189,11 @@ func (h *Hub) handleLobbyJoin(c *client, roomCode, playerID string) {
 		}
 	}
 	c.send("lobby:state", lobbyStatePayload{
-		RoomCode:     state.RoomCode,
-		HostPlayerID: state.Players[0].ID,
-		Variation:    variationJSON{WordLengths: state.Variation.WordLengths},
-		Players:      players,
+		RoomCode:       state.RoomCode,
+		HostPlayerID:   state.Players[0].ID,
+		Variation:      variationJSON{WordLengths: state.Variation.WordLengths},
+		TurnDurationMs: state.TurnDurationMs,
+		Players:        players,
 	})
 
 	// Reconnecting players have already re-synced via lobby:state above; skip
@@ -231,6 +235,87 @@ func (h *Hub) handleLobbyJoin(c *client, roomCode, playerID string) {
 
 	for _, other := range targets {
 		other.send("lobby:player_joined", joinedPayload)
+	}
+}
+
+// --- lobby:settings_changed ---
+
+const (
+	minTurnDurationMs = 60_000  // 1 minute
+	maxTurnDurationMs = 300_000 // 5 minutes
+)
+
+type lobbySettingsChangedPayload struct {
+	Variation      variationJSON `json:"variation"`
+	TurnDurationMs int           `json:"turnDurationMs"`
+}
+
+type lobbySettingsChangedRequest struct {
+	Variation      variationJSON `json:"variation"`
+	TurnDurationMs int           `json:"turnDurationMs"`
+}
+
+func (h *Hub) handleLobbySettingsChanged(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
+	var req lobbySettingsChangedRequest
+	if err := json.Unmarshal(rawPayload, &req); err != nil {
+		c.send("game:error", map[string]string{
+			"code":    "INVALID_PAYLOAD",
+			"message": "invalid settings_changed payload",
+		})
+		return
+	}
+
+	if req.TurnDurationMs < minTurnDurationMs || req.TurnDurationMs > maxTurnDurationMs {
+		c.send("game:error", map[string]string{
+			"code":    "INVALID_PAYLOAD",
+			"message": "turnDurationMs must be between 60000 and 300000",
+		})
+		return
+	}
+
+	if len(req.Variation.WordLengths) == 0 {
+		c.send("game:error", map[string]string{
+			"code":    "INVALID_PAYLOAD",
+			"message": "variation must have at least one word length",
+		})
+		return
+	}
+
+	variation := room.Variation{WordLengths: req.Variation.WordLengths}
+	state, err := h.store.UpdateLobbySettings(roomCode, playerID, variation, req.TurnDurationMs)
+	if err != nil {
+		code := "INTERNAL_ERROR"
+		switch {
+		case errors.Is(err, room.ErrNotHost):
+			code = "FORBIDDEN"
+		case errors.Is(err, room.ErrGameAlreadyStarted):
+			code = "INVALID_PHASE"
+		case errors.Is(err, room.ErrRoomNotFound):
+			code = "ROOM_NOT_FOUND"
+		}
+		c.send("game:error", map[string]string{
+			"code":    code,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	payload := lobbySettingsChangedPayload{
+		Variation:      variationJSON{WordLengths: state.Variation.WordLengths},
+		TurnDurationMs: state.TurnDurationMs,
+	}
+
+	h.mu.RLock()
+	targets := make([]*client, 0, len(state.Players))
+	for _, p := range state.Players {
+		if other, ok := h.conns[p.ID]; ok {
+			targets = append(targets, other)
+		}
+	}
+	h.mu.RUnlock()
+
+	for _, other := range targets {
+		other.send("lobby:settings_changed", payload)
 	}
 }
 
