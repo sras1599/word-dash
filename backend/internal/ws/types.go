@@ -1,0 +1,178 @@
+package ws
+
+import "encoding/json"
+
+// incomingMessage is the wire format for all client→server messages.
+type incomingMessage struct {
+	Event   string          `json:"event"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+// --- Shared ---
+
+type variationJSON struct {
+	WordLengths []int `json:"wordLengths"`
+}
+
+type cardJSON struct {
+	ID     string `json:"id"`
+	Letter string `json:"letter"`
+}
+
+// --- Lobby ---
+
+type lobbyPlayerJSON struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	IsReady     bool   `json:"isReady"`
+	IsConnected bool   `json:"isConnected"`
+}
+
+type lobbyStatePayload struct {
+	RoomCode       string            `json:"roomCode"`
+	HostPlayerID   string            `json:"hostPlayerId"`
+	Variation      variationJSON     `json:"variation"`
+	TurnDurationMs int               `json:"turnDurationMs"`
+	Players        []lobbyPlayerJSON `json:"players"`
+}
+
+type lobbyPlayerJoinedPayload struct {
+	Player lobbyPlayerJSON `json:"player"`
+}
+
+type lobbyPlayerReadyPayload struct {
+	PlayerID string `json:"playerId"`
+}
+
+type lobbyPlayerUnreadyPayload struct {
+	PlayerID string `json:"playerId"`
+}
+
+type lobbyPlayerDisconnectedPayload struct {
+	PlayerID     string `json:"playerId"`
+	HostPlayerID string `json:"hostPlayerId"`
+}
+
+type lobbySettingsChangedPayload struct {
+	Variation      variationJSON `json:"variation"`
+	TurnDurationMs int           `json:"turnDurationMs"`
+}
+
+type lobbySettingsChangedRequest struct {
+	Variation      variationJSON `json:"variation"`
+	TurnDurationMs int           `json:"turnDurationMs"`
+}
+
+// --- Game board ---
+
+type wordSlotJSON struct {
+	SlotIndex int       `json:"slotIndex"`
+	Card      *cardJSON `json:"card"`
+}
+
+type wordRowJSON struct {
+	TargetLength int            `json:"targetLength"`
+	Slots        []wordSlotJSON `json:"slots"`
+	IsComplete   bool           `json:"isComplete"`
+}
+
+type wordBoardJSON struct {
+	Rows        []wordRowJSON `json:"rows"`
+	AllComplete bool          `json:"allComplete"`
+}
+
+type gamePlayerJSON struct {
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	HandCount   int           `json:"handCount"`
+	Hand        []cardJSON    `json:"hand,omitempty"`
+	WordBoard   wordBoardJSON `json:"wordBoard"`
+	IsReady     bool          `json:"isReady"`
+	IsConnected bool          `json:"isConnected"`
+}
+
+type turnJSON struct {
+	CurrentPlayerID string `json:"currentPlayerId"`
+	Phase           string `json:"phase"`
+	TimeRemainingMs int    `json:"timeRemainingMs"`
+}
+
+type gameStatePayload struct {
+	RoomCode       string           `json:"roomCode"`
+	Variation      variationJSON    `json:"variation"`
+	Players        []gamePlayerJSON `json:"players"`
+	DrawPileCount  int              `json:"drawPileCount"`
+	DiscardPileTop *cardJSON        `json:"discardPileTop"`
+	Turn           turnJSON         `json:"turn"`
+	Phase          string           `json:"phase"`
+}
+
+// --- Game events ---
+
+type playerEventPayload struct {
+	PlayerID string `json:"playerId"`
+}
+
+type timerWarningPayload struct {
+	RoomCode        string `json:"roomCode"`
+	CurrentPlayerID string `json:"currentPlayerId"`
+	TimeRemainingMs int    `json:"timeRemainingMs"`
+}
+
+type turnSkippedPayload struct {
+	PlayerID        string `json:"playerId"`
+	Reason          string `json:"reason"`
+	NextPlayerID    string `json:"nextPlayerId"`
+	TimeRemainingMs int    `json:"timeRemainingMs"`
+}
+
+type boardUpdatedPayload struct {
+	PlayerID  string        `json:"playerId"`
+	WordBoard wordBoardJSON `json:"wordBoard"`
+	HandCount int           `json:"handCount"`
+	Hand      []cardJSON    `json:"hand,omitempty"`
+}
+
+type turnEndedPayload struct {
+	PlayerID        string   `json:"playerId"`
+	Reason          string   `json:"reason"`
+	DiscardedCard   cardJSON `json:"discardedCard"`
+	DiscardPileTop  cardJSON `json:"discardPileTop"`
+	NextPlayerID    string   `json:"nextPlayerId"`
+	TimeRemainingMs int      `json:"timeRemainingMs"`
+}
+
+type playerWonPayload struct {
+	WinnerID         string        `json:"winnerId"`
+	WinnerName       string        `json:"winnerName"`
+	WinningWordBoard wordBoardJSON `json:"winningWordBoard"`
+}
+
+// --- Requests ---
+
+type drawCardRequest struct {
+	Source string `json:"source"`
+}
+
+type cardDrawnPayload struct {
+	PlayerID       string    `json:"playerId"`
+	Source         string    `json:"source"`
+	Card           *cardJSON `json:"card"`
+	DrawPileCount  int       `json:"drawPileCount"`
+	DiscardPileTop *cardJSON `json:"discardPileTop"`
+}
+
+type placeCardRequest struct {
+	CardID    string `json:"cardId"`
+	RowIndex  int    `json:"rowIndex"`
+	SlotIndex int    `json:"slotIndex"`
+}
+
+type unplaceCardRequest struct {
+	RowIndex  int `json:"rowIndex"`
+	SlotIndex int `json:"slotIndex"`
+}
+
+type discardCardRequest struct {
+	CardID string `json:"cardId"`
+}
