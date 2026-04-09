@@ -81,7 +81,6 @@ export function Lobby() {
     const localPlayerId = session.getPlayerId() ?? ''
 
     const [lobby, setLobby] = useState<LobbyState | null>(null)
-    const [isReady, setIsReady] = useState(false)
     const [customInput, setCustomInput] = useState('')
     const [customVariationError, setCustomVariationError] = useState('')
     const [variationOpen, setVariationOpen] = useState(false)
@@ -102,8 +101,6 @@ export function Lobby() {
         const ws = createWsClient(roomCode, localPlayerId)
         wsRef.current = ws
 
-        ws.send('lobby:join')
-
         ws.on('lobby:state', (payload) => {
             const state = payload as LobbyState
             setLobby(state)
@@ -113,7 +110,16 @@ export function Lobby() {
         ws.on('lobby:player_joined', (payload) => {
             const { player } = payload as { player: LobbyPlayer }
             setLobby((prev) =>
-                prev ? { ...prev, players: [...prev.players, player] } : prev,
+                prev
+                    ? {
+                        ...prev,
+                        players: prev.players.some((existing) => existing.id === player.id)
+                            ? prev.players.map((existing) =>
+                                existing.id === player.id ? player : existing,
+                            )
+                            : [...prev.players, player],
+                    }
+                    : prev,
             )
         })
         ws.on('lobby:player_ready', (payload) => {
@@ -125,6 +131,34 @@ export function Lobby() {
                         players: prev.players.map((p) =>
                             p.id === playerId ? { ...p, isReady: true } : p,
                         ),
+                    }
+                    : prev,
+            )
+        })
+        ws.on('lobby:player_unready', (payload) => {
+            const { playerId } = payload as { playerId: string }
+            setLobby((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        players: prev.players.map((p) =>
+                            p.id === playerId ? { ...p, isReady: false } : p,
+                        ),
+                    }
+                    : prev,
+            )
+        })
+        ws.on('lobby:player_disconnected', (payload) => {
+            const { playerId, hostPlayerId } = payload as {
+                playerId: string
+                hostPlayerId: string
+            }
+            setLobby((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        hostPlayerId,
+                        players: prev.players.filter((player) => player.id !== playerId),
                     }
                     : prev,
             )
@@ -145,9 +179,11 @@ export function Lobby() {
         }
     }, [roomCode, localPlayerId, navigate])
 
+    const localPlayer = lobby?.players.find((player) => player.id === localPlayerId) ?? null
+    const isLocalReady = localPlayer?.isReady ?? false
+
     function handleReady() {
-        wsRef.current?.send('lobby:player_ready')
-        setIsReady(true)
+        wsRef.current?.send(isLocalReady ? 'lobby:player_unready' : 'lobby:player_ready')
     }
 
     function handleStart() {
@@ -474,9 +510,9 @@ export function Lobby() {
                 <button
                     className="page-lobby__ready-btn"
                     onClick={handleReady}
-                    disabled={isReady}
+                    disabled={localPlayer === null}
                 >
-                    {isReady ? 'Ready ✓' : 'Ready'}
+                    {isLocalReady ? 'Not Ready' : 'Ready'}
                 </button>
                 {isHost && (
                     <button

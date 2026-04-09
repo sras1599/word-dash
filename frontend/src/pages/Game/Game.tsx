@@ -221,8 +221,8 @@ export function Game() {
             }
             setGameState((prev) => {
                 if (!prev) return prev
-                // Find the next player so we can update currentPlayerId optimistically.
-                // The full game:state broadcast that follows will reconcile any drift.
+                // Advance the local turn cursor immediately; reconnect sync still
+                // comes from game:state when needed.
                 const idx = prev.players.findIndex((p) => p.id === playerId)
                 const nextIdx = idx === -1 ? 0 : (idx + 1) % prev.players.length
                 return {
@@ -275,8 +275,6 @@ export function Game() {
                     : prev,
             )
         })
-
-        ws.send('game:player_connected')
 
         return () => {
             ws.close()
