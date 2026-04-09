@@ -28,22 +28,25 @@ All messages in both directions are JSON objects with the shape:
 | Event                     | Host only | Payload                      |
 |---------------------------|-----------|------------------------------|
 | `lobby:join`              | No        | _(none)_                     |
-| `lobby:variation_changed` | Yes       | `{ "variation": Variation }` |
+| `lobby:settings_changed`  | Yes       | `{ "variation": Variation, "turnDurationMs": number }` |
 | `lobby:player_ready`      | No        | _(none)_                     |
+| `lobby:player_unready`    | No        | _(none)_                     |
 | `lobby:start_game`        | Yes       | _(none)_                     |
 
 ### Server -> Client
 
 | Event                     | Payload |
 |---------------------------|---------|
-| `lobby:state`             | `{ roomCode, hostPlayerId, variation, players: [{ id, name, isReady, isConnected }] }` |
+| `lobby:state`             | `{ roomCode, hostPlayerId, variation, turnDurationMs, players: [{ id, name, isReady, isConnected }] }` |
 | `lobby:player_joined`     | `{ player: { id, name, isReady, isConnected } }` |
 | `lobby:player_ready`      | `{ playerId }` |
-| `lobby:variation_changed` | `{ variation }` |
+| `lobby:player_unready`    | `{ playerId }` |
+| `lobby:player_disconnected` | `{ playerId, hostPlayerId }` |
+| `lobby:settings_changed`  | `{ variation, turnDurationMs }` |
 | `lobby:game_starting`     | `{ roomCode }` |
 | `lobby:restart`           | _(none)_ - host-only trigger; all clients navigate back to lobby (Play Again flow) |
 
-`lobby:state` is sent to a player immediately after a successful `lobby:join`, and to all players when the variation changes.
+`lobby:state` is sent immediately after a successful WebSocket connect. `lobby:join` remains an idempotent manual re-sync event.
 
 ## Game Events
 
@@ -68,7 +71,7 @@ Events received outside their valid phase, or from a player who is not the curre
 | `game:board_updated`       | `{ playerId, wordBoard: WordBoard }`. Broadcast to all players after every `place` or `unplace` action. |
 | `game:timer_warning`       | `{ currentPlayerId, timeRemainingMs }`. Emitted only when remaining time crosses warning thresholds (`10s`, `5s`, `1s`). |
 | `game:turn_ended`          | `{ playerId, reason: "discarded", discardedCard: Card, discardPileTop: Card, nextPlayerId, timeRemainingMs }` |
-| `game:turn_skipped`        | `{ playerId, reason: "timeout", nextPlayerId, timeRemainingMs }` |
+| `game:turn_skipped`        | `{ playerId, reason: "timeout" | "disconnected", nextPlayerId, timeRemainingMs }` |
 | `game:player_won`          | `{ winnerId, winnerName, winningWordBoard: WordBoard }` |
 | `game:player_disconnected` | `{ playerId }` |
 | `game:player_reconnected`  | `{ playerId }` |
