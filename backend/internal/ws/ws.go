@@ -187,7 +187,7 @@ func (h *Hub) handleClientDisconnected(roomCode, playerID string) {
 			return
 		}
 		h.broadcastToRoom(roomCode, "lobby:player_disconnected", lobbyPlayerDisconnectedPayload{
-			PlayerID:    playerID,
+			PlayerID:     playerID,
 			HostPlayerID: nextState.Players[0].ID,
 		})
 	case room.GamePhasePlaying, room.GamePhaseFinished:
@@ -388,7 +388,7 @@ type lobbyPlayerUnreadyPayload struct {
 }
 
 type lobbyPlayerDisconnectedPayload struct {
-	PlayerID    string `json:"playerId"`
+	PlayerID     string `json:"playerId"`
 	HostPlayerID string `json:"hostPlayerId"`
 }
 
@@ -876,12 +876,12 @@ type discardCardRequest struct {
 }
 
 type turnEndedPayload struct {
-	PlayerID       string   `json:"playerId"`
-	Reason         string   `json:"reason"`
-	DiscardedCard  cardJSON `json:"discardedCard"`
-	DiscardPileTop cardJSON `json:"discardPileTop"`
-	NextPlayerID   string   `json:"nextPlayerId"`
-	TimeRemainingMs int     `json:"timeRemainingMs"`
+	PlayerID        string   `json:"playerId"`
+	Reason          string   `json:"reason"`
+	DiscardedCard   cardJSON `json:"discardedCard"`
+	DiscardPileTop  cardJSON `json:"discardPileTop"`
+	NextPlayerID    string   `json:"nextPlayerId"`
+	TimeRemainingMs int      `json:"timeRemainingMs"`
 }
 
 type playerWonPayload struct {
@@ -1136,11 +1136,11 @@ func (h *Hub) handleGameDiscardCard(c *client, roomCode, playerID string, rawPay
 	}
 
 	payload := turnEndedPayload{
-		PlayerID:       playerID,
-		Reason:         "discarded",
-		DiscardedCard:  cardJSON{ID: discarded.ID, Letter: discarded.Letter},
-		DiscardPileTop: cardJSON{ID: discarded.ID, Letter: discarded.Letter},
-		NextPlayerID:   nextPlayerID,
+		PlayerID:        playerID,
+		Reason:          "discarded",
+		DiscardedCard:   cardJSON{ID: discarded.ID, Letter: discarded.Letter},
+		DiscardPileTop:  cardJSON{ID: discarded.ID, Letter: discarded.Letter},
+		NextPlayerID:    nextPlayerID,
 		TimeRemainingMs: state.Turn.TimeRemainingMs,
 	}
 	h.broadcastToRoom(roomCode, "game:turn_ended", payload)
