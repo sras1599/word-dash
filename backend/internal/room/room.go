@@ -139,6 +139,25 @@ func (s *Store) MarkPlayerConnected(roomCode, playerID string) (GameState, error
 	return *state, nil
 }
 
+// MarkPlayerDisconnected sets the given player's IsConnected flag to false,
+// clears their ready state, and returns a shallow copy of the updated room.
+func (s *Store) MarkPlayerDisconnected(roomCode, playerID string) (GameState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return GameState{}, fmt.Errorf("room %s not found", roomCode)
+	}
+	for i := range state.Players {
+		if state.Players[i].ID == playerID {
+			state.Players[i].IsConnected = false
+			state.Players[i].IsReady = false
+			return *state, nil
+		}
+	}
+	return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
+}
+
 // MarkPlayerReady sets the given player's IsReady flag to true and returns a
 // shallow copy of the game state after the update.
 func (s *Store) MarkPlayerReady(roomCode, playerID string) (GameState, error) {
@@ -160,6 +179,55 @@ func (s *Store) MarkPlayerReady(roomCode, playerID string) (GameState, error) {
 		return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
 	}
 	return *state, nil
+}
+
+// MarkPlayerUnready sets the given player's IsReady flag to false and returns
+// a shallow copy of the updated room state.
+func (s *Store) MarkPlayerUnready(roomCode, playerID string) (GameState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return GameState{}, fmt.Errorf("room %s not found", roomCode)
+	}
+	for i := range state.Players {
+		if state.Players[i].ID == playerID {
+			state.Players[i].IsReady = false
+			return *state, nil
+		}
+	}
+	return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
+}
+
+// RemovePlayer removes the given player from the room. If the room becomes
+// empty, it is deleted from the store and roomDeleted is returned as true.
+func (s *Store) RemovePlayer(roomCode, playerID string) (state GameState, roomDeleted bool, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	roomState, ok := s.rooms[roomCode]
+	if !ok {
+		return GameState{}, false, fmt.Errorf("room %s not found", roomCode)
+	}
+
+	playerIndex := -1
+	for i := range roomState.Players {
+		if roomState.Players[i].ID == playerID {
+			playerIndex = i
+			break
+		}
+	}
+	if playerIndex == -1 {
+		return GameState{}, false, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
+	}
+
+	roomState.Players = append(roomState.Players[:playerIndex], roomState.Players[playerIndex+1:]...)
+	if len(roomState.Players) == 0 {
+		delete(s.rooms, roomCode)
+		return GameState{RoomCode: roomCode}, true, nil
+	}
+
+	return *roomState, false, nil
 }
 
 // StartGame transitions the room from waiting to playing. playerID must be the

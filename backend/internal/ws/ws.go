@@ -95,13 +95,26 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	c := &client{conn: conn}
 
 	h.mu.Lock()
+	previousClient := h.conns[playerID]
 	h.conns[playerID] = c
 	h.mu.Unlock()
+	if previousClient != nil && previousClient != c {
+		_ = previousClient.conn.Close()
+	}
+
+	h.handleClientConnected(c, roomCode, playerID)
 
 	defer func() {
+		shouldHandleDisconnect := false
 		h.mu.Lock()
-		delete(h.conns, playerID)
+		if current, ok := h.conns[playerID]; ok && current == c {
+			delete(h.conns, playerID)
+			shouldHandleDisconnect = true
+		}
 		h.mu.Unlock()
+		if shouldHandleDisconnect {
+			h.handleClientDisconnected(roomCode, playerID)
+		}
 		conn.Close()
 	}()
 
@@ -123,6 +136,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 			h.handleLobbyJoin(c, roomCode, playerID)
 		case "lobby:player_ready":
 			h.handleLobbyPlayerReady(c, roomCode, playerID)
+		case "lobby:player_unready":
+			h.handleLobbyPlayerUnready(c, roomCode, playerID)
 		case "lobby:settings_changed":
 			h.handleLobbySettingsChanged(c, roomCode, playerID, msg.Payload)
 		case "lobby:start_game":
@@ -138,6 +153,49 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 		case "game:discard_card":
 			h.handleGameDiscardCard(c, roomCode, playerID, msg.Payload)
 		}
+	}
+}
+
+func (h *Hub) handleClientConnected(c *client, roomCode, playerID string) {
+	state, ok := h.store.Get(roomCode)
+	if !ok {
+		return
+	}
+
+	if state.Phase == room.GamePhaseWaiting {
+		h.handleLobbyJoin(c, roomCode, playerID)
+		return
+	}
+
+	h.syncGameConnection(c, roomCode, playerID)
+}
+
+func (h *Hub) handleClientDisconnected(roomCode, playerID string) {
+	state, ok := h.store.Get(roomCode)
+	if !ok {
+		return
+	}
+
+	switch state.Phase {
+	case room.GamePhaseWaiting:
+		nextState, roomDeleted, err := h.store.RemovePlayer(roomCode, playerID)
+		if err != nil {
+			log.Printf("ws: failed to remove lobby player %s from room %s: %v", playerID, roomCode, err)
+			return
+		}
+		if roomDeleted {
+			return
+		}
+		h.broadcastToRoom(roomCode, "lobby:player_disconnected", lobbyPlayerDisconnectedPayload{
+			PlayerID:    playerID,
+			HostPlayerID: nextState.Players[0].ID,
+		})
+	case room.GamePhasePlaying, room.GamePhaseFinished:
+		if _, err := h.store.MarkPlayerDisconnected(roomCode, playerID); err != nil {
+			log.Printf("ws: failed to mark player %s disconnected in room %s: %v", playerID, roomCode, err)
+			return
+		}
+		h.broadcastToRoom(roomCode, "game:player_disconnected", playerEventPayload{PlayerID: playerID})
 	}
 }
 
@@ -325,6 +383,19 @@ type lobbyPlayerReadyPayload struct {
 	PlayerID string `json:"playerId"`
 }
 
+type lobbyPlayerUnreadyPayload struct {
+	PlayerID string `json:"playerId"`
+}
+
+type lobbyPlayerDisconnectedPayload struct {
+	PlayerID    string `json:"playerId"`
+	HostPlayerID string `json:"hostPlayerId"`
+}
+
+type playerEventPayload struct {
+	PlayerID string `json:"playerId"`
+}
+
 func (h *Hub) handleLobbyPlayerReady(c *client, roomCode, playerID string) {
 	state, err := h.store.MarkPlayerReady(roomCode, playerID)
 	if err != nil {
@@ -349,6 +420,32 @@ func (h *Hub) handleLobbyPlayerReady(c *client, roomCode, playerID string) {
 
 	for _, other := range targets {
 		other.send("lobby:player_ready", payload)
+	}
+}
+
+func (h *Hub) handleLobbyPlayerUnready(c *client, roomCode, playerID string) {
+	state, err := h.store.MarkPlayerUnready(roomCode, playerID)
+	if err != nil {
+		c.send("game:error", map[string]string{
+			"code":    "ROOM_NOT_FOUND",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	payload := lobbyPlayerUnreadyPayload{PlayerID: playerID}
+
+	h.mu.RLock()
+	targets := make([]*client, 0, len(state.Players))
+	for _, p := range state.Players {
+		if other, ok := h.conns[p.ID]; ok {
+			targets = append(targets, other)
+		}
+	}
+	h.mu.RUnlock()
+
+	for _, other := range targets {
+		other.send("lobby:player_unready", payload)
 	}
 }
 
@@ -564,13 +661,54 @@ func (h *Hub) handleTurnTimeout(roomCode string) {
 		TimeRemainingMs: nextState.Turn.TimeRemainingMs,
 	})
 
-	// Sync each player with the new game state.
+	h.skipDisconnectedTurns(roomCode)
+
+	finalState, ok := h.store.Get(roomCode)
+	if !ok {
+		return
+	}
+
+	// Sync each player with the final game state after any disconnect skips.
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	for _, p := range nextState.Players {
+	for _, p := range finalState.Players {
 		if cl, ok := h.conns[p.ID]; ok {
-			cl.send("game:state", buildGameStatePayload(&nextState, p.ID))
+			cl.send("game:state", buildGameStatePayload(finalState, p.ID))
 		}
+	}
+}
+
+func (h *Hub) skipDisconnectedTurns(roomCode string) {
+	for {
+		state, ok := h.store.Get(roomCode)
+		if !ok || state.Phase != room.GamePhasePlaying || state.Turn.Phase != room.TurnPhaseDraw {
+			return
+		}
+
+		currentPlayerID := state.Turn.CurrentPlayerID
+		currentConnected := false
+		for _, p := range state.Players {
+			if p.ID == currentPlayerID {
+				currentConnected = p.IsConnected
+				break
+			}
+		}
+		if currentConnected {
+			return
+		}
+
+		nextState, err := h.store.NextTurn(roomCode)
+		if err != nil {
+			log.Printf("ws: failed to skip disconnected player %s in room %s: %v", currentPlayerID, roomCode, err)
+			return
+		}
+
+		h.broadcastToRoom(roomCode, "game:turn_skipped", turnSkippedPayload{
+			PlayerID:        currentPlayerID,
+			Reason:          "disconnected",
+			NextPlayerID:    nextState.Turn.CurrentPlayerID,
+			TimeRemainingMs: nextState.Turn.TimeRemainingMs,
+		})
 	}
 }
 
@@ -590,6 +728,23 @@ func (h *Hub) broadcastToRoom(roomCode, event string, payload any) {
 
 // --- game:player_connected ---
 
+func (h *Hub) syncGameConnection(c *client, roomCode, playerID string) {
+	alreadyConnected := h.store.IsPlayerConnected(roomCode, playerID)
+	state, err := h.store.MarkPlayerConnected(roomCode, playerID)
+	if err != nil {
+		c.send("game:error", map[string]string{
+			"code":    "ROOM_NOT_FOUND",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.send("game:state", buildGameStatePayload(&state, playerID))
+	if !alreadyConnected {
+		h.broadcastToRoom(roomCode, "game:player_reconnected", playerEventPayload{PlayerID: playerID})
+	}
+}
+
 func (h *Hub) handleGamePlayerConnected(c *client, roomCode, playerID string) {
 	state, ok := h.store.Get(roomCode)
 	if !ok {
@@ -599,14 +754,15 @@ func (h *Hub) handleGamePlayerConnected(c *client, roomCode, playerID string) {
 		})
 		return
 	}
-	if state.Phase != room.GamePhasePlaying {
+	if state.Phase == room.GamePhaseWaiting {
 		c.send("game:error", map[string]string{
 			"code":    "INVALID_PHASE",
 			"message": "game is not in progress",
 		})
 		return
 	}
-	c.send("game:state", buildGameStatePayload(state, playerID))
+
+	h.syncGameConnection(c, roomCode, playerID)
 }
 
 // --- game:draw_card ---
@@ -988,6 +1144,7 @@ func (h *Hub) handleGameDiscardCard(c *client, roomCode, playerID string, rawPay
 		TimeRemainingMs: state.Turn.TimeRemainingMs,
 	}
 	h.broadcastToRoom(roomCode, "game:turn_ended", payload)
+	h.skipDisconnectedTurns(roomCode)
 }
 
 func shouldBroadcastTimerWarning(previousRemaining, currentRemaining int) bool {
