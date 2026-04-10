@@ -2,6 +2,7 @@ package ws
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"sync"
@@ -42,14 +43,14 @@ func (c *client) send(event string, payload any) {
 
 // Hub manages all active WebSocket connections and routes lobby events.
 type Hub struct {
-	store        *room.Store
+	store        room.Store
 	dict         dictionary.DictionaryChecker
 	mu           sync.RWMutex
 	conns        map[string]*client       // playerID -> client
 	activeTimers map[string]chan struct{} // roomCode -> stop channel
 }
 
-func NewHub(store *room.Store) *Hub {
+func NewHub(store room.Store) *Hub {
 	return &Hub{
 		store:        store,
 		dict:         dictionary.NopChecker{},
@@ -69,9 +70,14 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the room and player exist before upgrading.
-	state, ok := h.store.Get(roomCode)
-	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "room not found"})
+	state, err := h.store.Get(roomCode)
+	if err != nil {
+		if errors.Is(err, room.ErrRoomNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "room not found"})
+			return
+		}
+		log.Printf("ws: failed to load room %s: %v", roomCode, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load room"})
 		return
 	}
 	if !roomHasPlayer(state, playerID) {
@@ -150,8 +156,8 @@ func (h *Hub) readLoop(c *client, roomCode, playerID string) {
 }
 
 func (h *Hub) handleClientConnected(c *client, roomCode, playerID string) {
-	state, ok := h.store.Get(roomCode)
-	if !ok {
+	state, err := h.store.Get(roomCode)
+	if err != nil {
 		return
 	}
 
@@ -164,8 +170,8 @@ func (h *Hub) handleClientConnected(c *client, roomCode, playerID string) {
 }
 
 func (h *Hub) handleClientDisconnected(roomCode, playerID string) {
-	state, ok := h.store.Get(roomCode)
-	if !ok {
+	state, err := h.store.Get(roomCode)
+	if err != nil {
 		return
 	}
 
@@ -370,7 +376,7 @@ func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	previousRemaining := 0
-	if state, ok := h.store.Get(roomCode); ok {
+	if state, err := h.store.Get(roomCode); err == nil {
 		previousRemaining = state.Turn.TimeRemainingMs
 	}
 
@@ -386,8 +392,8 @@ func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
 				return
 			}
 
-			state, ok := h.store.Get(roomCode)
-			if !ok {
+			state, err := h.store.Get(roomCode)
+			if err != nil {
 				log.Printf("timer: room %s not found after tick, stopping", roomCode)
 				h.stopTurnTimer(roomCode)
 				return
@@ -408,7 +414,7 @@ func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
 
 			if remaining == 0 {
 				h.handleTurnTimeout(roomCode)
-				if nextState, nextOK := h.store.Get(roomCode); nextOK {
+				if nextState, nextErr := h.store.Get(roomCode); nextErr == nil {
 					previousRemaining = nextState.Turn.TimeRemainingMs
 				}
 				continue
@@ -421,7 +427,7 @@ func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
 
 func (h *Hub) handleTurnTimeout(roomCode string) {
 	skippedPlayerID := ""
-	if state, ok := h.store.Get(roomCode); ok {
+	if state, err := h.store.Get(roomCode); err == nil {
 		skippedPlayerID = state.Turn.CurrentPlayerID
 	}
 
@@ -440,8 +446,8 @@ func (h *Hub) handleTurnTimeout(roomCode string) {
 
 	h.skipDisconnectedTurns(roomCode)
 
-	finalState, ok := h.store.Get(roomCode)
-	if !ok {
+	finalState, err := h.store.Get(roomCode)
+	if err != nil {
 		return
 	}
 
@@ -457,8 +463,8 @@ func (h *Hub) handleTurnTimeout(roomCode string) {
 
 func (h *Hub) skipDisconnectedTurns(roomCode string) {
 	for {
-		state, ok := h.store.Get(roomCode)
-		if !ok || state.Phase != room.GamePhasePlaying || state.Turn.Phase != room.TurnPhaseDraw {
+		state, err := h.store.Get(roomCode)
+		if err != nil || state.Phase != room.GamePhasePlaying || state.Turn.Phase != room.TurnPhaseDraw {
 			return
 		}
 
@@ -490,8 +496,8 @@ func (h *Hub) skipDisconnectedTurns(roomCode string) {
 }
 
 func (h *Hub) broadcastToRoom(roomCode, event string, payload any) {
-	state, ok := h.store.Get(roomCode)
-	if !ok {
+	state, err := h.store.Get(roomCode)
+	if err != nil {
 		return
 	}
 	h.mu.RLock()
@@ -520,9 +526,14 @@ func (h *Hub) syncGameConnection(c *client, roomCode, playerID string) {
 }
 
 func (h *Hub) handleGamePlayerConnected(c *client, roomCode, playerID string) {
-	state, ok := h.store.Get(roomCode)
-	if !ok {
-		sendErr(c, "ROOM_NOT_FOUND", "room not found")
+	state, err := h.store.Get(roomCode)
+	if err != nil {
+		if errors.Is(err, room.ErrRoomNotFound) {
+			sendErr(c, "ROOM_NOT_FOUND", "room not found")
+		} else {
+			log.Printf("ws: failed to load room %s: %v", roomCode, err)
+			sendErr(c, "INTERNAL_ERROR", "failed to load room")
+		}
 		return
 	}
 	if state.Phase == room.GamePhaseWaiting {
@@ -787,5 +798,3 @@ func (h *Hub) handleGameDiscardCard(c *client, roomCode, playerID string, rawPay
 	})
 	h.skipDisconnectedTurns(roomCode)
 }
-
-

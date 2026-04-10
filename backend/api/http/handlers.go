@@ -10,7 +10,7 @@ import (
 	"github.com/sras1599/wordit/backend/internal/room"
 )
 
-func RegisterRoutes(mux *http.ServeMux, store *room.Store) {
+func RegisterRoutes(mux *http.ServeMux, store room.Store) {
 	mux.HandleFunc("/healthz", handleHealth)
 	mux.HandleFunc("/rooms", func(w http.ResponseWriter, r *http.Request) {
 		handleCreateRoom(w, r, store)
@@ -39,7 +39,7 @@ func handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func handleCreateRoom(w http.ResponseWriter, r *http.Request, store *room.Store) {
+func handleCreateRoom(w http.ResponseWriter, r *http.Request, store room.Store) {
 	if r.Method != http.MethodPost {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		return
@@ -85,7 +85,7 @@ func handleCreateRoom(w http.ResponseWriter, r *http.Request, store *room.Store)
 	})
 }
 
-func handleJoinRoom(w http.ResponseWriter, r *http.Request, store *room.Store) {
+func handleJoinRoom(w http.ResponseWriter, r *http.Request, store room.Store) {
 	if r.Method != http.MethodPost {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		return

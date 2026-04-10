@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"sync"
 )
 
 // Sentinel errors returned by Join and StartGame.
@@ -91,293 +90,22 @@ type GameState struct {
 	DiscardPile []Card `json:"-"`
 }
 
-// --- In-memory store ---
-
-type Store struct {
-	mu    sync.RWMutex
-	rooms map[string]*GameState
-}
-
-func NewStore() *Store {
-	return &Store{rooms: make(map[string]*GameState)}
-}
-
-func (s *Store) Put(state *GameState) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.rooms[state.RoomCode] = state
-}
-
-func (s *Store) Get(roomCode string) (*GameState, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	state, ok := s.rooms[roomCode]
-	return state, ok
-}
-
-// MarkPlayerConnected sets the given player's IsConnected flag to true and
-// returns a shallow copy of the game state as it stands after the update.
-func (s *Store) MarkPlayerConnected(roomCode, playerID string) (GameState, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return GameState{}, fmt.Errorf("room %s not found", roomCode)
-	}
-	found := false
-	for i := range state.Players {
-		if state.Players[i].ID == playerID {
-			state.Players[i].IsConnected = true
-			found = true
-			break
-		}
-	}
-	if !found {
-		return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
-	}
-	// Return a value copy so callers read consistent data outside the lock.
-	return *state, nil
-}
-
-// MarkPlayerDisconnected sets the given player's IsConnected flag to false,
-// clears their ready state, and returns a shallow copy of the updated room.
-func (s *Store) MarkPlayerDisconnected(roomCode, playerID string) (GameState, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return GameState{}, fmt.Errorf("room %s not found", roomCode)
-	}
-	for i := range state.Players {
-		if state.Players[i].ID == playerID {
-			state.Players[i].IsConnected = false
-			state.Players[i].IsReady = false
-			return *state, nil
-		}
-	}
-	return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
-}
-
-// MarkPlayerReady sets the given player's IsReady flag to true and returns a
-// shallow copy of the game state after the update.
-func (s *Store) MarkPlayerReady(roomCode, playerID string) (GameState, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return GameState{}, fmt.Errorf("room %s not found", roomCode)
-	}
-	found := false
-	for i := range state.Players {
-		if state.Players[i].ID == playerID {
-			state.Players[i].IsReady = true
-			found = true
-			break
-		}
-	}
-	if !found {
-		return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
-	}
-	return *state, nil
-}
-
-// MarkPlayerUnready sets the given player's IsReady flag to false and returns
-// a shallow copy of the updated room state.
-func (s *Store) MarkPlayerUnready(roomCode, playerID string) (GameState, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return GameState{}, fmt.Errorf("room %s not found", roomCode)
-	}
-	for i := range state.Players {
-		if state.Players[i].ID == playerID {
-			state.Players[i].IsReady = false
-			return *state, nil
-		}
-	}
-	return GameState{}, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
-}
-
-// RemovePlayer removes the given player from the room. If the room becomes
-// empty, it is deleted from the store and roomDeleted is returned as true.
-func (s *Store) RemovePlayer(roomCode, playerID string) (state GameState, roomDeleted bool, err error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	roomState, ok := s.rooms[roomCode]
-	if !ok {
-		return GameState{}, false, fmt.Errorf("room %s not found", roomCode)
-	}
-
-	playerIndex := -1
-	for i := range roomState.Players {
-		if roomState.Players[i].ID == playerID {
-			playerIndex = i
-			break
-		}
-	}
-	if playerIndex == -1 {
-		return GameState{}, false, fmt.Errorf("player %s not found in room %s", playerID, roomCode)
-	}
-
-	roomState.Players = append(roomState.Players[:playerIndex], roomState.Players[playerIndex+1:]...)
-	if len(roomState.Players) == 0 {
-		delete(s.rooms, roomCode)
-		return GameState{RoomCode: roomCode}, true, nil
-	}
-
-	return *roomState, false, nil
-}
-
-// StartGame transitions the room from waiting to playing. playerID must be the
-// host (Players[0].ID). drawPile is a pre-shuffled deck; cards are dealt from
-// the front. Returns the updated game state after initialization.
-func (s *Store) StartGame(roomCode, playerID string, drawPile []Card) (GameState, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return GameState{}, fmt.Errorf("%w: %s", ErrRoomNotFound, roomCode)
-	}
-	if len(state.Players) == 0 || state.Players[0].ID != playerID {
-		return GameState{}, ErrNotHost
-	}
-	if state.Phase != GamePhaseWaiting {
-		return GameState{}, ErrGameAlreadyStarted
-	}
-	for _, p := range state.Players {
-		if !p.IsReady {
-			return GameState{}, ErrNotAllReady
-		}
-	}
-
-	// Compute hand size: each player starts with enough cards to fill their board.
-	handSize := 0
-	for _, l := range state.Variation.WordLengths {
-		handSize += l
-	}
-
-	// Work from a local copy of the draw pile slice.
-	pile := make([]Card, len(drawPile))
-	copy(pile, drawPile)
-
-	// Deal cards to each player.
-	for i := range state.Players {
-		state.Players[i].Hand = make([]Card, handSize)
-		copy(state.Players[i].Hand, pile[:handSize])
-		pile = pile[handSize:]
-	}
-
-	state.DrawPile = pile
-	state.DiscardPile = []Card{}
-	state.DrawPileCount = len(pile)
-	state.DiscardPileTop = nil
-
-	// Set up the first turn using the room's configured duration.
-	state.Turn = Turn{
-		CurrentPlayerID: state.Players[0].ID,
-		Phase:           TurnPhaseDraw,
-		TimeRemainingMs: state.TurnDurationMs,
-	}
-	state.Phase = GamePhasePlaying
-
-	return *state, nil
-}
-
-// NextTurn rotates the turn to the next player in the Players slice (wrapping
-// around), resets the phase to draw, and resets TimeRemainingMs to the room's
-// configured TurnDurationMs.
-func (s *Store) NextTurn(roomCode string) (GameState, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return GameState{}, fmt.Errorf("room %s not found", roomCode)
-	}
-
-	currentIndex := -1
-	for i, p := range state.Players {
-		if p.ID == state.Turn.CurrentPlayerID {
-			currentIndex = i
-			break
-		}
-	}
-	if currentIndex == -1 {
-		return GameState{}, fmt.Errorf("current player not found in room %s", roomCode)
-	}
-
-	nextIndex := (currentIndex + 1) % len(state.Players)
-	state.Turn = Turn{
-		CurrentPlayerID: state.Players[nextIndex].ID,
-		Phase:           TurnPhaseDraw,
-		TimeRemainingMs: state.TurnDurationMs,
-	}
-
-	return *state, nil
-}
-
-// TickTimer decrements the current turn's TimeRemainingMs by one second and
-// returns the new value. Returns 0 without error when the game is not playing.
-func (s *Store) TickTimer(roomCode string) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return 0, fmt.Errorf("room %s not found", roomCode)
-	}
-	if state.Phase != GamePhasePlaying {
-		return 0, nil
-	}
-
-	if state.Turn.TimeRemainingMs > 1000 {
-		state.Turn.TimeRemainingMs -= 1000
-	} else {
-		state.Turn.TimeRemainingMs = 0
-	}
-	return state.Turn.TimeRemainingMs, nil
-}
-
-// UpdateLobbySettings updates the variation and turn duration for a room that
-// is still in the waiting phase. playerID must be the host (Players[0].ID).
-func (s *Store) UpdateLobbySettings(roomCode, playerID string, variation Variation, turnDurationMs int) (GameState, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return GameState{}, fmt.Errorf("%w: %s", ErrRoomNotFound, roomCode)
-	}
-	if len(state.Players) == 0 || state.Players[0].ID != playerID {
-		return GameState{}, ErrNotHost
-	}
-	if state.Phase != GamePhaseWaiting {
-		return GameState{}, ErrGameAlreadyStarted
-	}
-
-	state.Variation = variation
-	state.TurnDurationMs = turnDurationMs
-	return *state, nil
-}
-
-// IsPlayerConnected reports whether the given player is currently marked as
-// connected in the given room. Returns false if the room or player is not found.
-func (s *Store) IsPlayerConnected(roomCode, playerID string) bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return false
-	}
-	for _, p := range state.Players {
-		if p.ID == playerID {
-			return p.IsConnected
-		}
-	}
-	return false
+// Store defines the persistence contract used by room orchestration and the
+// HTTP/WebSocket layers. Concrete implementations live in infrastructure
+// packages. A nil error from Get means the returned state is non-nil.
+type Store interface {
+	Put(state *GameState) error
+	Get(roomCode string) (*GameState, error)
+	MarkPlayerConnected(roomCode, playerID string) (GameState, error)
+	MarkPlayerDisconnected(roomCode, playerID string) (GameState, error)
+	MarkPlayerReady(roomCode, playerID string) (GameState, error)
+	MarkPlayerUnready(roomCode, playerID string) (GameState, error)
+	RemovePlayer(roomCode, playerID string) (GameState, bool, error)
+	StartGame(roomCode, playerID string, drawPile []Card) (GameState, error)
+	NextTurn(roomCode string) (GameState, error)
+	TickTimer(roomCode string) (int, error)
+	UpdateLobbySettings(roomCode, playerID string, variation Variation, turnDurationMs int) (GameState, error)
+	IsPlayerConnected(roomCode, playerID string) bool
 }
 
 // --- Room creation ---
@@ -386,7 +114,7 @@ const roomCodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 // Create creates a new room with the given host name, variation, and per-turn
 // duration. It returns the generated roomCode and the host player ID.
-func Create(store *Store, hostName string, variation Variation, turnDurationMs int) (roomCode string, playerID string, err error) {
+func Create(store Store, hostName string, variation Variation, turnDurationMs int) (roomCode string, playerID string, err error) {
 	roomCode, err = generateRoomCode()
 	if err != nil {
 		return "", "", fmt.Errorf("generate room code: %w", err)
@@ -414,7 +142,9 @@ func Create(store *Store, hostName string, variation Variation, turnDurationMs i
 		TurnDurationMs: turnDurationMs,
 	}
 
-	store.Put(state)
+	if err := store.Put(state); err != nil {
+		return "", "", fmt.Errorf("save room: %w", err)
+	}
 	return roomCode, playerID, nil
 }
 
@@ -432,18 +162,15 @@ func buildWordBoard(v Variation) WordBoard {
 
 // Join adds a new player with the given name to an existing room and returns
 // the generated player ID. Returns an error if the room does not exist.
-func Join(store *Store, roomCode, playerName string) (string, error) {
+func Join(store Store, roomCode, playerName string) (string, error) {
 	playerID, err := generateUUID()
 	if err != nil {
 		return "", fmt.Errorf("generate player ID: %w", err)
 	}
 
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
-	state, ok := store.rooms[roomCode]
-	if !ok {
-		return "", fmt.Errorf("%w: %s", ErrRoomNotFound, roomCode)
+	state, err := store.Get(roomCode)
+	if err != nil {
+		return "", fmt.Errorf("load room: %w", err)
 	}
 
 	for _, p := range state.Players {
@@ -461,6 +188,9 @@ func Join(store *Store, roomCode, playerName string) (string, error) {
 		IsConnected: false,
 	}
 	state.Players = append(state.Players, player)
+	if err := store.Put(state); err != nil {
+		return "", fmt.Errorf("save room: %w", err)
+	}
 	return playerID, nil
 }
 

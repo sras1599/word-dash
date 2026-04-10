@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/sras1599/wordit/backend/internal/game"
@@ -32,9 +33,14 @@ func decodePayload(c *client, raw json.RawMessage, v any) bool {
 // getRoomState looks up the room by code. If the room is not found it sends a
 // ROOM_NOT_FOUND game:error to c and returns nil, false.
 func (h *Hub) getRoomState(c *client, roomCode string) (*room.GameState, bool) {
-	state, ok := h.store.Get(roomCode)
-	if !ok {
-		sendErr(c, "ROOM_NOT_FOUND", "room not found")
+	state, err := h.store.Get(roomCode)
+	if err != nil {
+		if errors.Is(err, room.ErrRoomNotFound) {
+			sendErr(c, "ROOM_NOT_FOUND", "room not found")
+			return nil, false
+		}
+		log.Printf("ws: failed to load room %s: %v", roomCode, err)
+		sendErr(c, "INTERNAL_ERROR", "failed to load room")
 		return nil, false
 	}
 	return state, true

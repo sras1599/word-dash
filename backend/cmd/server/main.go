@@ -13,14 +13,20 @@ import (
 	apihttp "github.com/sras1599/wordit/backend/api/http"
 	apiws "github.com/sras1599/wordit/backend/api/ws"
 	"github.com/sras1599/wordit/backend/config"
-	"github.com/sras1599/wordit/backend/internal/room"
+	"github.com/sras1599/wordit/backend/internal/storage"
 	internalws "github.com/sras1599/wordit/backend/internal/ws"
 )
 
 func main() {
 	cfg := config.Load()
+	startupCtx, startupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer startupCancel()
 
-	store := room.NewStore()
+	store, cleanup, err := storage.NewFromConfig(startupCtx, cfg)
+	if err != nil {
+		log.Fatalf("failed to initialize storage: %v", err)
+	}
+	defer cleanup()
 
 	restMux := http.NewServeMux()
 	apihttp.RegisterRoutes(restMux, store)
