@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Go 1.22 or later
-- Docker and Docker Compose (for PostgreSQL)
+- Docker and Docker Compose (for Redis)
 
 ## Setup
 
@@ -14,9 +14,9 @@ cd wordit/backend
 
 # 2. Copy and configure environment variables
 cp .env.example .env
-# Edit .env with your local DB_URL if needed
+# Edit .env with your local DB_URL and REDIS_URL if needed
 
-# 3. Start PostgreSQL
+# 3. Start Redis
 docker compose up -d
 
 # 4. Run the server
@@ -24,6 +24,11 @@ go run ./cmd/server
 ```
 
 The server listens on `http://localhost:8080` by default.
+
+Use one of these Redis URLs depending on where the backend runs:
+
+- Backend running on host machine: `redis://localhost:6379`
+- Backend running in the same Compose network: `redis://redis:6379`
 
 ## Makefile Targets
 
