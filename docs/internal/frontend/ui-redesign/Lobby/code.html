@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Word Dash - Lobby</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary": "#ffffff",
+                        "outline": "#926e6a",
+                        "error-container": "#ffdad6",
+                        "tertiary-container": "#946f00",
+                        "secondary-fixed-dim": "#a4d483",
+                        "inverse-surface": "#313030",
+                        "surface-dim": "#dcd9d9",
+                        "on-background": "#1b1b1b",
+                        "background": "#fcf9f8",
+                        "tertiary-fixed-dim": "#fabd00",
+                        "primary-fixed": "#ffdad5",
+                        "on-primary-fixed": "#410001",
+                        "primary": "#bb000e",
+                        "on-secondary-container": "#456f2b",
+                        "tertiary": "#765700",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#e5e2e1",
+                        "on-tertiary-container": "#fffcff",
+                        "surface-container-highest": "#e5e2e1",
+                        "on-tertiary-fixed": "#251a00",
+                        "on-secondary-fixed": "#0a2100",
+                        "surface-tint": "#c0000f",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#29500e",
+                        "on-surface": "#1b1b1b",
+                        "surface-container-low": "#f6f3f2",
+                        "on-primary-fixed-variant": "#930008",
+                        "primary-fixed-dim": "#ffb4aa",
+                        "on-primary-container": "#fffbff",
+                        "secondary-fixed": "#c0f19d",
+                        "outline-variant": "#e7bdb7",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#fcf9f8",
+                        "tertiary-fixed": "#ffdf9d",
+                        "secondary": "#406925",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#5b4300",
+                        "on-surface-variant": "#5e3f3b",
+                        "surface": "#fcf9f8",
+                        "surface-container": "#f0eded",
+                        "primary-container": "#e51c1e",
+                        "inverse-on-surface": "#f3f0ef",
+                        "inverse-primary": "#ffb4aa",
+                        "surface-container-high": "#eae7e7",
+                        "secondary-container": "#c0f19d",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Be Vietnam Pro"],
+                        "label": ["Be Vietnam Pro"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .kinetic-letter {
+            position: absolute;
+            user-select: none;
+            z-index: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen overflow-x-hidden">
+<!-- Kinetic Background Elements -->
+<div class="fixed inset-0 overflow-hidden opacity-20 pointer-events-none">
+<div class="kinetic-letter text-8xl font-headline font-black text-primary-container/10 rotate-12 top-20 left-10 blur-[2px]">W</div>
+<div class="kinetic-letter text-9xl font-headline font-black text-secondary-container/20 -rotate-6 top-1/2 -right-10 blur-[4px]">D</div>
+<div class="kinetic-letter text-7xl font-headline font-black text-tertiary-fixed-dim/15 rotate-45 bottom-20 left-1/3 blur-[1px]">A</div>
+<div class="kinetic-letter text-6xl font-headline font-black text-primary-container/10 -rotate-12 top-1/4 right-1/4 blur-[3px]">S</div>
+<div class="kinetic-letter text-8xl font-headline font-black text-secondary-container/20 rotate-12 bottom-1/4 left-10 blur-[5px]">H</div>
+</div>
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-white/60 backdrop-blur-xl shadow-[0_20px_50px_rgba(229,28,30,0.06)]">
+<div class="flex items-center gap-4">
+<span class="text-2xl font-black text-red-600 italic font-headline tracking-tighter uppercase">Word Dash</span>
+<div class="hidden md:flex items-center gap-2 bg-surface-container-low px-4 py-2 rounded-full border-2 border-outline-variant/20">
+<span class="text-xs font-label font-bold text-on-surface-variant uppercase tracking-widest">Room Code</span>
+<span class="text-lg font-headline font-black text-primary tracking-wider">XJ92K</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="bg-primary-container text-on-primary-container font-headline font-bold px-6 py-2 rounded-full hover:scale-105 transition-transform duration-200 active:scale-95 shadow-lg shadow-primary/20">
+                Copy Link
+            </button>
+<div class="flex gap-2">
+<button class="p-2 text-zinc-500 hover:text-red-700 transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="p-2 text-zinc-500 hover:text-red-700 transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+</div>
+</div>
+</header>
+<main class="relative z-10 pt-28 pb-40 px-6 max-w-7xl mx-auto min-h-screen flex flex-col gap-8">
+<!-- Main Layout Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-grow">
+<!-- Left Column: Game Settings -->
+<section class="lg:col-span-7 flex flex-col gap-6">
+<div class="bg-surface-container-lowest/80 backdrop-blur-md rounded-xl p-8 shadow-[0_30px_60px_rgba(0,0,0,0.04)] relative overflow-hidden group h-full">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-8xl" data-icon="tune">tune</span>
+</div>
+<h2 class="text-3xl font-headline font-extrabold tracking-tight mb-8 flex items-center gap-3">
+<span class="w-2 h-8 bg-primary rounded-full"></span>
+                        Game Settings
+                    </h2>
+<!-- Variation Selector -->
+<div class="mb-10">
+<label class="block text-xs font-label font-bold text-zinc-400 uppercase tracking-[0.2em] mb-4">Variation</label>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+<button class="py-4 rounded-lg font-headline font-bold border-2 border-primary bg-primary text-on-primary shadow-xl shadow-primary/20 scale-105">Easy</button>
+<button class="py-4 rounded-lg font-headline font-bold border-2 border-outline-variant/20 hover:border-primary/50 transition-all text-on-surface hover:bg-surface-container-low">Medium</button>
+<button class="py-4 rounded-lg font-headline font-bold border-2 border-outline-variant/20 hover:border-primary/50 transition-all text-on-surface hover:bg-surface-container-low">Hard</button>
+<button class="py-4 rounded-lg font-headline font-bold border-2 border-outline-variant/20 hover:border-primary/50 transition-all text-on-surface hover:bg-surface-container-low">Custom</button>
+</div>
+<!-- Presets Container (Dynamic sub-selector) -->
+<div class="bg-primary/5 p-6 rounded-2xl border border-primary/10">
+<h4 class="text-xs font-label font-black text-primary uppercase tracking-widest mb-4">Select Word Length Preset</h4>
+<div class="flex flex-wrap gap-3">
+<!-- Easy Presets -->
+<button class="flex items-center gap-2 px-6 py-3 bg-white border-2 border-primary rounded-full shadow-md hover:scale-105 transition-transform">
+<span class="font-headline font-black text-primary tracking-tighter">3, 4, 5</span>
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</button>
+<button class="flex items-center gap-2 px-6 py-3 bg-white/50 border-2 border-transparent rounded-full hover:border-primary/30 transition-all">
+<span class="font-headline font-bold text-zinc-600 tracking-tighter">4, 4, 4</span>
+</button>
+</div>
+<!-- Custom Interface (Hidden unless Custom is selected) -->
+<div class="hidden mt-4 space-y-4">
+<p class="text-sm font-label text-on-surface-variant italic">Add custom word lengths for your dash:</p>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 bg-white rounded-full p-1 shadow-sm border border-outline-variant/20">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-xl">remove</span>
+</button>
+<span class="w-12 text-center font-headline font-black text-xl">5</span>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-xl">add</span>
+</button>
+</div>
+<button class="bg-secondary text-white font-headline font-bold px-6 py-3 rounded-full hover:brightness-110 transition-all">
+                                        Add Word
+                                    </button>
+</div>
+<div class="flex flex-wrap gap-2">
+<div class="bg-white px-4 py-2 rounded-full border border-primary/20 flex items-center gap-2">
+<span class="font-headline font-bold text-primary">5</span>
+<button class="text-zinc-300 hover:text-red-500"><span class="material-symbols-outlined text-sm">close</span></button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Turn Timer -->
+<div class="bg-surface-container-low p-6 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-6">
+<div class="flex items-center gap-4">
+<div class="bg-tertiary-fixed p-3 rounded-full text-tertiary">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg">Turn Timer</h3>
+<p class="text-sm text-on-surface-variant font-label">Time per word dash</p>
+</div>
+</div>
+<div class="flex items-center gap-2 bg-white rounded-full p-2 shadow-inner">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-primary/10 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="remove">remove</span>
+</button>
+<span class="w-24 text-center font-headline font-black text-2xl tracking-tighter">1:30</span>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-primary/10 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: Players -->
+<section class="lg:col-span-5 flex flex-col gap-6">
+<div class="bg-white/40 backdrop-blur-sm rounded-xl p-6 border-2 border-dashed border-outline-variant/30 flex-grow">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-xl font-headline font-black tracking-tighter uppercase flex items-center gap-2">
+                            Players
+                            <span class="bg-secondary-container text-secondary text-xs px-2 py-1 rounded-full">3/8</span>
+</h2>
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-background bg-secondary shadow-sm"></div>
+<div class="w-8 h-8 rounded-full border-2 border-background bg-primary shadow-sm"></div>
+<div class="w-8 h-8 rounded-full border-2 border-background bg-tertiary shadow-sm"></div>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<!-- Player Card 1 -->
+<div class="bg-white rounded-lg p-4 flex items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.03)] border-b-4 border-secondary transition-transform hover:-translate-y-1">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="vibrant 3d avatar" class="w-12 h-12 rounded-full bg-surface-container" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCXy0caP3Z52EEGRioMFHb8zygbTgvezmGFIDv9RUXfm_J0UxnFOZfhXftMwbgTS29077XN4FZ1gfd0iT9yA1arcseexFn85zH9ct327dx9dTwz1_Ru-86PZjrXRO4E43gTZA-jLcQ2noBfIyVeXdvTaVYvDpAvuSuQBO4wHCnE8-2R9b90QYX0dXYTGxhMoyeIJxjNccPUWFfw8Cdf61o_FuV0B6ni9Qz7ePnumrau76Bb7GxxtBIYdXxnJpqYK6KQtKN5mALmsX8"/>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-secondary rounded-full border-2 border-white"></div>
+</div>
+<div>
+<span class="font-headline font-bold block">WordWhiz</span>
+<span class="text-[10px] font-label font-bold text-secondary uppercase tracking-widest">READY</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<!-- Player Card 2 (Active/User) -->
+<div class="bg-primary/5 rounded-full p-4 flex items-center justify-between shadow-xl border-2 border-primary/20">
+<div class="flex items-center gap-4">
+<div class="relative">
+<img alt="vibrant 3d avatar" class="w-14 h-14 rounded-full bg-surface-container border-2 border-primary" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTHIld-ftQ9kUSMYm2w2qXEMenheNsGZm4b9ruomJULBRIjtLbuPWDe0-DkBwm5Fu5_ef6mKkb7tqxeO0a4tH7M-t7ew8gNK5Zbh77N6mOS57wjsGjv409Gf9f8VHThFDD_OGBkjto3NOVGBV8TX0_0Kra4HVgNqc1J-p7tLi6wAxhU6yHbkN0WkdR44KceKUxTDVwzH4Yc07adko95qBs3BT_Vvf1OI2obKAlCpZgs-AJoXStcOD1iYXhqFYO_DNgGQwDAPWUl2KS"/>
+<div class="absolute -bottom-1 -right-1 w-5 h-5 bg-primary rounded-full border-2 border-white flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-white" style="font-variation-settings: 'FILL' 1;">person</span>
+</div>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline font-extrabold text-lg text-primary">You</span>
+<span class="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold">HOST</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-[10px] font-label font-black text-primary/60 uppercase tracking-widest">WAITING</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary text-white text-xs font-headline font-black px-6 py-2.5 rounded-full uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30">
+                                    Ready Up
+                                </button>
+</div>
+</div>
+<!-- Player Card 3 -->
+<div class="bg-white rounded-lg p-4 flex items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.03)] border-b-4 border-secondary transition-transform hover:-translate-y-1">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="vibrant 3d avatar" class="w-12 h-12 rounded-full bg-surface-container" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmA4xmL9jwuTNlAujRYRsZuVWKgsfGj_Bt5nJ3D56vPgePSgcOybEWBq8Jr28qhASQ1KGYDsYtRO1dfbiRwK4nZ8S86Yoji9fsixeQtk8bH-CwgCAFHwDQ-BZtgvWLXZEW76yFJN1amfi7G1TXC2Ye_7mU9c9neXJJssB1bFlM_fSeXxOZXcDfcHsN5rS7P7RN3JqIiWafXrdStQS-evfS3qkcXodlQWibtn4yDneB56pUkP_7q7FNTl200VFJ3e2ZxGXAye-lnhR3"/>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-secondary rounded-full border-2 border-white"></div>
+</div>
+<div>
+<span class="font-headline font-bold block">LetterLord</span>
+<span class="text-[10px] font-label font-bold text-secondary uppercase tracking-widest">READY</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<!-- Waiting Slot -->
+<div class="bg-surface-container-low border-2 border-dashed border-outline-variant/30 rounded-lg p-6 flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-zinc-400" data-icon="add_circle">add_circle</span>
+<span class="text-xs font-label font-bold text-zinc-400 uppercase tracking-widest">Invite Friend</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-8 pb-6 pt-4 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.08)] rounded-t-[3rem]">
+<a class="flex flex-col items-center justify-center bg-red-50 text-red-600 rounded-full px-6 py-2 transition-all duration-300 translate-y-[-4px]" href="#">
+<span class="material-symbols-outlined" data-icon="Meeting_room" style="font-variation-settings: 'FILL' 1;">meeting_room</span>
+<span class="font-be-vietnam text-xs font-bold uppercase tracking-widest mt-1">Lobby</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 hover:bg-zinc-100 rounded-full px-4 py-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-be-vietnam text-xs font-bold uppercase tracking-widest mt-1">Players</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 hover:bg-zinc-100 rounded-full px-4 py-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_bag">shopping_bag</span>
+<span class="font-be-vietnam text-xs font-bold uppercase tracking-widest mt-1">Store</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 hover:bg-zinc-100 rounded-full px-4 py-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-be-vietnam text-xs font-bold uppercase tracking-widest mt-1">Profile</span>
+</a>
+</nav>
+</body></html>
