@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createRoom, joinRoom } from '../../lib/api'
 import { session } from '../../lib/session'
+import wordDashLogo from '../../assets/word-dash-logo.svg'
 import './Home.css'
 
 type Panel = 'create' | 'join' | null
@@ -86,146 +87,227 @@ export function Home() {
     }
 
     return (
-        <main className="page-home">
-            <section className="page-home__hero">
-                <h1 className="page-home__logo">WordIt!</h1>
-                <p className="page-home__tagline">Fun With Words</p>
-            </section>
+        <div className="page-home">
+            <div className="page-home__floating-bg" aria-hidden="true">
+                <div className="page-home__floating-letter page-home__floating-letter--w float-animation">
+                    <span className="page-home__floating-letter-text">W</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--a float-animation">
+                    <span className="page-home__floating-letter-text">A</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--d float-animation">
+                    <span className="page-home__floating-letter-text">D</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--s float-animation">
+                    <span className="page-home__floating-letter-text">S</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--h float-animation">
+                    <span className="page-home__floating-letter-text">H</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--o float-animation">
+                    <span className="page-home__floating-letter-text">O</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--r float-animation">
+                    <span className="page-home__floating-letter-text">R</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--d2 float-animation">
+                    <span className="page-home__floating-letter-text">D</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--a2 float-animation">
+                    <span className="page-home__floating-letter-text">A</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--s2 float-animation">
+                    <span className="page-home__floating-letter-text">S</span>
+                </div>
+                <div className="page-home__floating-letter page-home__floating-letter--h2 float-animation">
+                    <span className="page-home__floating-letter-text">H</span>
+                </div>
+            </div>
 
-            <section className="page-home__actions">
-                <button
-                    className={[
-                        'page-home__action-btn',
-                        panel === 'create' && 'page-home__action-btn--active',
-                    ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    onClick={() => openPanel(panel === 'create' ? null : 'create')}
-                    aria-expanded={panel === 'create'}
-                >
-                    Create Game
-                </button>
-
-                <button
-                    className={[
-                        'page-home__action-btn',
-                        panel === 'join' && 'page-home__action-btn--active',
-                    ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    onClick={() => openPanel(panel === 'join' ? null : 'join')}
-                    aria-expanded={panel === 'join'}
-                >
-                    Join Game
-                </button>
-            </section>
-
-            {panel === 'create' && (
-                <section className="page-home__panel" aria-label="Create game form">
-                    <form onSubmit={handleCreateSubmit} noValidate>
-                        <div className="page-home__field">
-                            <label className="page-home__label" htmlFor="create-name">
-                                Your name
-                            </label>
-                            <input
-                                id="create-name"
-                                className={[
-                                    'page-home__input',
-                                    createNameError && 'page-home__input--error',
-                                ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                type="text"
-                                value={createName}
-                                onChange={(e) => setCreateName(e.target.value)}
-                                autoComplete="nickname"
-                                aria-describedby={createNameError ? 'create-name-error' : undefined}
-                                aria-invalid={!!createNameError}
+            <main className="page-home__main">
+                <section className="page-home__hero" aria-labelledby="page-home-title">
+                    <div className="page-home__hero-title-wrap">
+                        <span className="page-home__hero-orb page-home__hero-orb--primary" aria-hidden="true" />
+                        <span className="page-home__hero-orb page-home__hero-orb--secondary" aria-hidden="true" />
+                        <h1 className="page-home__hero-title" id="page-home-title">
+                            <img
+                                src={wordDashLogo}
+                                alt="Word Dash"
+                                className="page-home__hero-logo"
                             />
-                            {createNameError && (
-                                <p id="create-name-error" className="page-home__error" role="alert">
-                                    {createNameError}
-                                </p>
-                            )}
-                        </div>
+                        </h1>
+                    </div>
+
+                    <p className="page-home__hero-tagline">
+                        Experience wordplay at the speed of thought.{' '}
+                        <span className="page-home__hero-accent page-home__hero-accent--primary">
+                            Kinetic
+                        </span>{' '}
+                        rounds,{' '}
+                        <span className="page-home__hero-accent page-home__hero-accent--secondary">
+                            dynamic
+                        </span>{' '}
+                        boards, and endless{' '}
+                        <span className="page-home__hero-accent page-home__hero-accent--tertiary">
+                            fun
+                        </span>
+                        .
+                    </p>
+
+                    <div className="page-home__cta" role="group" aria-label="Game actions">
+                        <button
+                            className={[
+                                'page-home__cta-btn',
+                                'page-home__cta-btn--primary',
+                                panel === 'create' && 'page-home__cta-btn--active',
+                            ]
+                                .filter(Boolean)
+                                .join(' ')}
+                            type="button"
+                            onClick={() => openPanel(panel === 'create' ? null : 'create')}
+                            aria-expanded={panel === 'create'}
+                            aria-controls="page-home-create-panel"
+                        >
+                            Create Game
+                        </button>
 
                         <button
-                            className="page-home__submit"
-                            type="submit"
-                            disabled={createLoading}
+                            className={[
+                                'page-home__cta-btn',
+                                'page-home__cta-btn--secondary',
+                                panel === 'join' && 'page-home__cta-btn--active',
+                            ]
+                                .filter(Boolean)
+                                .join(' ')}
+                            type="button"
+                            onClick={() => openPanel(panel === 'join' ? null : 'join')}
+                            aria-expanded={panel === 'join'}
+                            aria-controls="page-home-join-panel"
                         >
-                            {createLoading ? 'Creating…' : 'Create →'}
+                            Join Game
                         </button>
-                    </form>
-                </section>
-            )}
+                    </div>
 
-            {panel === 'join' && (
-                <section className="page-home__panel" aria-label="Join game form">
-                    <form onSubmit={handleJoinSubmit} noValidate>
-                        <div className="page-home__field">
-                            <label className="page-home__label" htmlFor="join-name">
-                                Your name
-                            </label>
-                            <input
-                                id="join-name"
-                                className={[
-                                    'page-home__input',
-                                    joinNameError && 'page-home__input--error',
-                                ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                type="text"
-                                value={joinName}
-                                onChange={(e) => setJoinName(e.target.value)}
-                                autoComplete="nickname"
-                                aria-describedby={joinNameError ? 'join-name-error' : undefined}
-                                aria-invalid={!!joinNameError}
-                            />
-                            {joinNameError && (
-                                <p id="join-name-error" className="page-home__error" role="alert">
-                                    {joinNameError}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="page-home__field">
-                            <label className="page-home__label" htmlFor="join-room-code">
-                                Room code
-                            </label>
-                            <input
-                                id="join-room-code"
-                                className={[
-                                    'page-home__input',
-                                    joinRoomCodeError && 'page-home__input--error',
-                                ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                type="text"
-                                value={joinRoomCode}
-                                onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
-                                autoComplete="off"
-                                autoCapitalize="characters"
-                                aria-describedby={joinRoomCodeError ? 'join-room-code-error' : undefined}
-                                aria-invalid={!!joinRoomCodeError}
-                            />
-                            {joinRoomCodeError && (
-                                <p id="join-room-code-error" className="page-home__error" role="alert">
-                                    {joinRoomCodeError}
-                                </p>
-                            )}
-                        </div>
-
-                        <button
-                            className="page-home__submit"
-                            type="submit"
-                            disabled={joinLoading}
+                    {panel === 'create' && (
+                        <section
+                            className="page-home__panel"
+                            id="page-home-create-panel"
+                            aria-label="Create game form"
                         >
-                            {joinLoading ? 'Joining…' : 'Join →'}
-                        </button>
-                    </form>
+                            <form className="page-home__form" onSubmit={handleCreateSubmit} noValidate>
+                                <div className="page-home__field">
+                                    <label className="page-home__label" htmlFor="create-name">
+                                        Your name
+                                    </label>
+                                    <input
+                                        id="create-name"
+                                        className={[
+                                            'page-home__input',
+                                            createNameError && 'page-home__input--error',
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' ')}
+                                        type="text"
+                                        value={createName}
+                                        onChange={(e) => setCreateName(e.target.value)}
+                                        autoComplete="nickname"
+                                        aria-describedby={createNameError ? 'create-name-error' : undefined}
+                                        aria-invalid={!!createNameError}
+                                    />
+                                    {createNameError && (
+                                        <p id="create-name-error" className="page-home__error" role="alert">
+                                            {createNameError}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <button
+                                    className="page-home__submit"
+                                    type="submit"
+                                    disabled={createLoading}
+                                >
+                                    {createLoading ? 'Creating…' : 'Create →'}
+                                </button>
+                            </form>
+                        </section>
+                    )}
+
+                    {panel === 'join' && (
+                        <section
+                            className="page-home__panel"
+                            id="page-home-join-panel"
+                            aria-label="Join game form"
+                        >
+                            <form className="page-home__form" onSubmit={handleJoinSubmit} noValidate>
+                                <div className="page-home__field">
+                                    <label className="page-home__label" htmlFor="join-name">
+                                        Your name
+                                    </label>
+                                    <input
+                                        id="join-name"
+                                        className={[
+                                            'page-home__input',
+                                            joinNameError && 'page-home__input--error',
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' ')}
+                                        type="text"
+                                        value={joinName}
+                                        onChange={(e) => setJoinName(e.target.value)}
+                                        autoComplete="nickname"
+                                        aria-describedby={joinNameError ? 'join-name-error' : undefined}
+                                        aria-invalid={!!joinNameError}
+                                    />
+                                    {joinNameError && (
+                                        <p id="join-name-error" className="page-home__error" role="alert">
+                                            {joinNameError}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="page-home__field">
+                                    <label className="page-home__label" htmlFor="join-room-code">
+                                        Room code
+                                    </label>
+                                    <input
+                                        id="join-room-code"
+                                        className={[
+                                            'page-home__input',
+                                            joinRoomCodeError && 'page-home__input--error',
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' ')}
+                                        type="text"
+                                        value={joinRoomCode}
+                                        onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
+                                        autoComplete="off"
+                                        autoCapitalize="characters"
+                                        aria-describedby={joinRoomCodeError ? 'join-room-code-error' : undefined}
+                                        aria-invalid={!!joinRoomCodeError}
+                                    />
+                                    {joinRoomCodeError && (
+                                        <p
+                                            id="join-room-code-error"
+                                            className="page-home__error"
+                                            role="alert"
+                                        >
+                                            {joinRoomCodeError}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <button
+                                    className="page-home__submit"
+                                    type="submit"
+                                    disabled={joinLoading}
+                                >
+                                    {joinLoading ? 'Joining…' : 'Join →'}
+                                </button>
+                            </form>
+                        </section>
+                    )}
                 </section>
-            )}
-        </main>
+            </main>
+        </div>
     )
 }
