@@ -87,44 +87,44 @@ export function Home() {
     }
 
     return (
-        <div className="page-home">
-            <div className="page-home__floating-bg" aria-hidden="true">
-                <div className="page-home__floating-letter page-home__floating-letter--w float-animation">
+        <div className="wd-page page-home">
+            <div className="wd-floating-bg page-home__floating-bg" aria-hidden="true">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--w float-animation">
                     <span className="page-home__floating-letter-text">W</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--a float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--a float-animation">
                     <span className="page-home__floating-letter-text">A</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--d float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--d float-animation">
                     <span className="page-home__floating-letter-text">D</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--s float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--s float-animation">
                     <span className="page-home__floating-letter-text">S</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--h float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--h float-animation">
                     <span className="page-home__floating-letter-text">H</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--o float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--o float-animation">
                     <span className="page-home__floating-letter-text">O</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--r float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--r float-animation">
                     <span className="page-home__floating-letter-text">R</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--d2 float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--d2 float-animation">
                     <span className="page-home__floating-letter-text">D</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--a2 float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--a2 float-animation">
                     <span className="page-home__floating-letter-text">A</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--s2 float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--s2 float-animation">
                     <span className="page-home__floating-letter-text">S</span>
                 </div>
-                <div className="page-home__floating-letter page-home__floating-letter--h2 float-animation">
+                <div className="wd-floating-letter wd-floating-letter--tile page-home__floating-letter page-home__floating-letter--h2 float-animation">
                     <span className="page-home__floating-letter-text">H</span>
                 </div>
             </div>
 
-            <main className="page-home__main">
+            <main className="wd-content-layer page-home__main">
                 <section className="page-home__hero" aria-labelledby="page-home-title">
                     <div className="page-home__hero-title-wrap">
                         <span className="page-home__hero-orb page-home__hero-orb--primary" aria-hidden="true" />
@@ -157,6 +157,9 @@ export function Home() {
                     <div className="page-home__cta" role="group" aria-label="Game actions">
                         <button
                             className={[
+                                'wd-btn',
+                                'wd-btn--lift',
+                                'wd-btn--primary',
                                 'page-home__cta-btn',
                                 'page-home__cta-btn--primary',
                                 panel === 'create' && 'page-home__cta-btn--active',
@@ -173,6 +176,8 @@ export function Home() {
 
                         <button
                             className={[
+                                'wd-btn',
+                                'wd-btn--lift',
                                 'page-home__cta-btn',
                                 'page-home__cta-btn--secondary',
                                 panel === 'join' && 'page-home__cta-btn--active',
@@ -222,7 +227,7 @@ export function Home() {
                                 </div>
 
                                 <button
-                                    className="page-home__submit"
+                                    className="wd-btn wd-btn--lift wd-btn--primary page-home__submit"
                                     type="submit"
                                     disabled={createLoading}
                                 >
@@ -297,7 +302,7 @@ export function Home() {
                                 </div>
 
                                 <button
-                                    className="page-home__submit"
+                                    className="wd-btn wd-btn--lift wd-btn--primary page-home__submit"
                                     type="submit"
                                     disabled={joinLoading}
                                 >

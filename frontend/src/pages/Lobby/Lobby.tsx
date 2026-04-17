@@ -263,6 +263,7 @@ export function Lobby() {
         ws.on('lobby:state', (payload) => {
             const state = payload as LobbyState
             setLobby(state)
+            setActiveVariationTab(getVariationDifficulty(state.variation.wordLengths))
             setTurnMinutes(String(Math.floor(state.turnDurationMs / 60_000)))
             setTurnSeconds(String(Math.round((state.turnDurationMs % 60_000) / 1_000)))
         })
@@ -325,6 +326,7 @@ export function Lobby() {
         ws.on('lobby:settings_changed', (payload) => {
             const { variation, turnDurationMs } = payload as { variation: Variation; turnDurationMs: number }
             setLobby((prev) => (prev ? { ...prev, variation, turnDurationMs } : prev))
+            setActiveVariationTab(getVariationDifficulty(variation.wordLengths))
             setTurnMinutes(String(Math.floor(turnDurationMs / 60_000)))
             setTurnSeconds(String(Math.round((turnDurationMs % 60_000) / 1_000)))
         })
@@ -337,12 +339,6 @@ export function Lobby() {
             ws.close()
         }
     }, [roomCode, localPlayerId, navigate])
-
-    useEffect(() => {
-        if (!lobby) return
-
-        setActiveVariationTab(getVariationDifficulty(lobby.variation.wordLengths))
-    }, [lobby?.variation])
 
     const localPlayer = lobby?.players.find((player) => player.id === localPlayerId) ?? null
     const isLocalReady = localPlayer?.isReady ?? false
@@ -361,6 +357,7 @@ export function Lobby() {
         const s = m === 5 ? 0 : Math.min(59, Math.max(0, parseInt(turnSeconds, 10) || 0))
         wsRef.current?.send('lobby:settings_changed', { variation: newVariation, turnDurationMs: (m * 60 + s) * 1_000 })
         setLobby((prev) => (prev ? { ...prev, variation: newVariation } : prev))
+        setActiveVariationTab(getVariationDifficulty(wordLengths))
         setCustomInput('')
         setCustomVariationError('')
         setVariationOpen(false)
@@ -382,6 +379,7 @@ export function Lobby() {
         const s = m === 5 ? 0 : Math.min(59, Math.max(0, parseInt(turnSeconds, 10) || 0))
         wsRef.current?.send('lobby:settings_changed', { variation: newVariation, turnDurationMs: (m * 60 + s) * 1_000 })
         setLobby((prev) => (prev ? { ...prev, variation: newVariation } : prev))
+        setActiveVariationTab(getVariationDifficulty(wordLengths))
         setCustomInput('')
         setCustomVariationError('')
         setVariationOpen(false)
@@ -442,10 +440,10 @@ export function Lobby() {
 
     if (!lobby) {
         return (
-            <div className="page-lobby page-lobby--loading">
-                <div className="page-lobby__floating-bg" aria-hidden="true">
+            <div className="wd-page page-lobby page-lobby--loading">
+                <div className="wd-floating-bg page-lobby__floating-bg" aria-hidden="true">
                     {FLOATING_LETTERS.map(({ key, letter, className }) => (
-                        <div key={key} className={["page-lobby__floating-letter", className].join(' ')}>
+                        <div key={key} className={["wd-floating-letter", "page-lobby__floating-letter", className].join(' ')}>
                             {letter}
                         </div>
                     ))}
@@ -465,10 +463,10 @@ export function Lobby() {
     const currentVariationLabel = getPresetDisplayLabel(lobby.variation.wordLengths)
 
     return (
-        <div className="page-lobby">
-            <div className="page-lobby__floating-bg" aria-hidden="true">
+        <div className="wd-page page-lobby">
+            <div className="wd-floating-bg page-lobby__floating-bg" aria-hidden="true">
                 {FLOATING_LETTERS.map(({ key, letter, className }) => (
-                    <div key={key} className={["page-lobby__floating-letter", className].join(' ')}>
+                    <div key={key} className={["wd-floating-letter", "page-lobby__floating-letter", className].join(' ')}>
                         {letter}
                     </div>
                 ))}
@@ -484,13 +482,13 @@ export function Lobby() {
                 </div>
 
                 <div className="page-lobby__topbar-actions">
-                    <button className="page-lobby__copy-btn" type="button" onClick={handleCopyLink}>
+                    <button className="wd-btn wd-btn--lift page-lobby__copy-btn" type="button" onClick={handleCopyLink}>
                         Copy Link
                     </button>
                 </div>
             </nav>
 
-            <main className="page-lobby__main">
+            <main className="wd-content-layer page-lobby__main">
                 <div className="page-lobby__grid">
                     <section className="page-lobby__settings-column" aria-labelledby="page-lobby-settings-title">
                         <div className="page-lobby__settings-card">
@@ -522,6 +520,7 @@ export function Lobby() {
                                         <button
                                             key={tab}
                                             className={[
+                                                'wd-btn',
                                                 'page-lobby__variation-tab',
                                                 activeVariationTab === tab && 'page-lobby__variation-tab--active',
                                             ]
@@ -561,6 +560,7 @@ export function Lobby() {
                                                     <button
                                                         key={preset.label}
                                                         className={[
+                                                            'wd-btn',
                                                             'page-lobby__preset-button',
                                                             isSelected && 'page-lobby__preset-button--selected',
                                                         ]
@@ -588,7 +588,7 @@ export function Lobby() {
 
                                             <div className="page-lobby__custom-row">
                                                 <div className="page-lobby__custom-field">
-                                                    <label className="page-lobby__sr-only" htmlFor="variation-custom">
+                                                    <label className="wd-sr-only" htmlFor="variation-custom">
                                                         Custom variation
                                                     </label>
                                                     <input
@@ -618,7 +618,7 @@ export function Lobby() {
                                                 </div>
 
                                                 <button
-                                                    className="page-lobby__custom-apply-btn"
+                                                    className="wd-btn wd-btn--lift wd-btn--secondary page-lobby__custom-apply-btn"
                                                     type="button"
                                                     onClick={handleCustomApply}
                                                     disabled={!isHost}
@@ -672,7 +672,7 @@ export function Lobby() {
 
                                 <div className="page-lobby__timer-controls">
                                     <button
-                                        className="page-lobby__timer-step"
+                                        className="wd-btn wd-btn--lift page-lobby__timer-step"
                                         type="button"
                                         onClick={() => handleTimerStep(-15)}
                                         disabled={!isHost}
@@ -682,7 +682,7 @@ export function Lobby() {
                                     </button>
 
                                     <div className="page-lobby__timer-display">
-                                        <label className="page-lobby__sr-only" htmlFor="turn-minutes">
+                                        <label className="wd-sr-only" htmlFor="turn-minutes">
                                             Turn length minutes
                                         </label>
                                         <input
@@ -701,7 +701,7 @@ export function Lobby() {
                                             :
                                         </span>
 
-                                        <label className="page-lobby__sr-only" htmlFor="turn-seconds">
+                                        <label className="wd-sr-only" htmlFor="turn-seconds">
                                             Turn length seconds
                                         </label>
                                         <input
@@ -718,7 +718,7 @@ export function Lobby() {
                                     </div>
 
                                     <button
-                                        className="page-lobby__timer-step"
+                                        className="wd-btn wd-btn--lift page-lobby__timer-step"
                                         type="button"
                                         onClick={() => handleTimerStep(15)}
                                         disabled={!isHost}
@@ -732,7 +732,7 @@ export function Lobby() {
                             {isHost && (
                                 <div className="page-lobby__settings-footer">
                                     <button
-                                        className="page-lobby__start-btn"
+                                        className="wd-btn wd-btn--lift wd-btn--secondary page-lobby__start-btn"
                                         type="button"
                                         onClick={handleStart}
                                         disabled={!canStart}
@@ -849,8 +849,10 @@ export function Lobby() {
                                                         {isCurrentPlayer ? (
                                                             <button
                                                                 className={[
+                                                                    'wd-btn',
+                                                                    'wd-btn--lift',
+                                                                    isLocalReady ? 'wd-btn--primary' : 'wd-btn--secondary',
                                                                     'page-lobby__ready-btn',
-                                                                    isLocalReady && 'page-lobby__ready-btn--active',
                                                                 ]
                                                                     .filter(Boolean)
                                                                     .join(' ')}
@@ -872,7 +874,7 @@ export function Lobby() {
                                                     <span className="page-lobby__player-empty-photo" aria-hidden="true">
                                                         <LobbyIcon name="person" className="page-lobby__player-empty-icon-svg" />
                                                     </span>
-                                                    <span className="page-lobby__sr-only">Open player slot</span>
+                                                    <span className="wd-sr-only">Open player slot</span>
                                                 </div>
                                             )}
                                         </article>
