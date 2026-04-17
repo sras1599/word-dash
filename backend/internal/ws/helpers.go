@@ -3,7 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/sras1599/wordit/backend/internal/game"
@@ -39,7 +39,7 @@ func (h *Hub) getRoomState(c *client, roomCode string) (*room.GameState, bool) {
 			sendErr(c, "ROOM_NOT_FOUND", "room not found")
 			return nil, false
 		}
-		log.Printf("ws: failed to load room %s: %v", roomCode, err)
+		slog.Error("ws: failed to load room", "roomCode", roomCode, "error", err)
 		sendErr(c, "INTERNAL_ERROR", "failed to load room")
 		return nil, false
 	}

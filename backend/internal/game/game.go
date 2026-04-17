@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/sras1599/wordit/backend/internal/dictionary"
@@ -84,6 +85,17 @@ func DrawCard(state *room.GameState, playerID string, source string) (*room.Card
 	// Update turn state
 	state.Turn.Phase = room.TurnPhaseArrange
 	state.Turn.DrawnCard = &drawnCard
+	playerName := ""
+	if p, err := state.GetPlayer(playerID); err == nil {
+		playerName = p.Name
+	}
+	slog.Info("game: card drawn",
+		"roomCode", state.RoomCode,
+		"player", fmt.Sprintf("%s (%s)", playerID, playerName),
+		"source", source,
+		"cardID", drawnCard.ID,
+		"letter", drawnCard.Letter,
+	)
 
 	return &drawnCard, nil
 }
@@ -167,6 +179,19 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 	row := &player.WordBoard.Rows[rowIndex]
 	row.IsComplete = computeRowComplete(row, dict)
 	player.WordBoard.AllComplete = computeBoardAllComplete(player.WordBoard)
+	playerName := ""
+	if p, err := state.GetPlayer(playerID); err == nil {
+		playerName = p.Name
+	}
+	slog.Info("game: card placed",
+		"roomCode", state.RoomCode,
+		"player", fmt.Sprintf("%s (%s)", playerID, playerName),
+		"cardID", cardID,
+		"row", rowIndex,
+		"slot", slotIndex,
+		"rowComplete", row.IsComplete,
+		"boardComplete", player.WordBoard.AllComplete,
+	)
 
 	return nil
 }
@@ -184,24 +209,23 @@ func UnplaceCard(state *room.GameState, playerID string, rowIndex, slotIndex int
 		return ErrInvalidPhase
 	}
 
-	playerIdx := -1
-	for i := range state.Players {
-		if state.Players[i].ID == playerID {
-			playerIdx = i
-			break
-		}
-	}
-	if playerIdx == -1 {
-		return fmt.Errorf("player not found")
+	player, err := state.GetPlayer(playerID)
+	if err != nil {
+		return err
 	}
 
-	player := &state.Players[playerIdx]
 	card, err := removeCardFromBoard(player, rowIndex, slotIndex)
 	if err != nil {
 		return err
 	}
 
 	player.Hand = append(player.Hand, card)
+	slog.Info("game: card unplaced",
+		"roomCode", state.RoomCode,
+		"player", fmt.Sprintf("%s (%s)", playerID, player.Name),
+		"row", rowIndex,
+		"slot", slotIndex,
+	)
 
 	return nil
 }
@@ -258,6 +282,21 @@ func DiscardCard(state *room.GameState, playerID, cardID string) (*room.Card, st
 	state.Turn.Phase = room.TurnPhaseDraw
 	state.Turn.TimeRemainingMs = state.TurnDurationMs
 	state.Turn.DrawnCard = nil
+	playerName := ""
+	if p, err := state.GetPlayer(playerID); err == nil {
+		playerName = p.Name
+	}
+	nextPlayerName := ""
+	if p, err := state.GetPlayer(nextPlayerID); err == nil {
+		nextPlayerName = p.Name
+	}
+	slog.Info("game: card discarded",
+		"roomCode", state.RoomCode,
+		"player", fmt.Sprintf("%s (%s)", playerID, playerName),
+		"cardID", cardID,
+		"letter", discarded.Letter,
+		"nextPlayer", fmt.Sprintf("%s (%s)", nextPlayerID, nextPlayerName),
+	)
 
 	return &discarded, nextPlayerID, nil
 }

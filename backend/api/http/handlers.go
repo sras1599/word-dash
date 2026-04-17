@@ -3,12 +3,25 @@ package http
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/sras1599/wordit/backend/config"
 	"github.com/sras1599/wordit/backend/internal/room"
 )
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
 
 func RegisterRoutes(mux *http.ServeMux, store room.Store) {
 	mux.HandleFunc("/healthz", handleHealth)
@@ -32,6 +45,20 @@ func CORSMiddleware(origin string, next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+		next.ServeHTTP(rw, r)
+		slog.Info("http request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rw.statusCode,
+			"latency_ms", time.Since(start).Milliseconds(),
+		)
 	})
 }
 
@@ -75,9 +102,12 @@ func handleCreateRoom(w http.ResponseWriter, r *http.Request, store room.Store) 
 
 	roomCode, playerID, err := room.Create(store, body.Name, room.Variation{WordLengths: wordLengths}, turnDurationMs)
 	if err != nil {
+		slog.Error("create room: storage error", "error", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create room"})
 		return
 	}
+
+	slog.Info("room created", "roomCode", roomCode, "player", fmt.Sprintf("%s (%s)", playerID, body.Name))
 
 	writeJSON(w, http.StatusOK, map[string]string{
 		"roomCode": roomCode,
@@ -121,9 +151,12 @@ func handleJoinRoom(w http.ResponseWriter, r *http.Request, store room.Store) {
 		return
 	}
 	if err != nil {
+		slog.Error("join room: storage error", "roomCode", roomCode, "error", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to join room"})
 		return
 	}
+
+	slog.Info("player joined room", "roomCode", roomCode, "player", fmt.Sprintf("%s (%s)", playerID, strings.TrimSpace(body.Name)))
 
 	writeJSON(w, http.StatusOK, map[string]string{
 		"roomCode": roomCode,

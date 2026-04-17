@@ -3,7 +3,8 @@ package ws
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -62,6 +63,7 @@ func NewHub(store room.Store) *Hub {
 func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	roomCode := r.URL.Query().Get("roomCode")
 	playerID := r.URL.Query().Get("playerId")
+	playerName := ""
 	if roomCode == "" || playerID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "missing required query params: roomCode and playerId",
@@ -76,9 +78,12 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "room not found"})
 			return
 		}
-		log.Printf("ws: failed to load room %s: %v", roomCode, err)
+		slog.Error("ws: failed to load room", "roomCode", roomCode, "error", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load room"})
 		return
+	}
+	if p, err := state.GetPlayer(playerID); err == nil {
+		playerName = p.Name
 	}
 	if !roomHasPlayer(state, playerID) {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "player not in room"})
@@ -87,7 +92,7 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("ws: upgrade error for player %s: %v", playerID, err)
+		slog.Error("ws: upgrade error", "player", fmt.Sprintf("%s (%s)", playerID, playerName), "error", err)
 		return
 	}
 
@@ -100,6 +105,7 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	if previousClient != nil && previousClient != c {
 		_ = previousClient.conn.Close()
 	}
+	slog.Info("ws: client connected", "roomCode", roomCode, "player", fmt.Sprintf("%s (%s)", playerID, playerName))
 
 	h.handleClientConnected(c, roomCode, playerID)
 
@@ -112,6 +118,7 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 		}
 		h.mu.Unlock()
 		if shouldHandleDisconnect {
+			slog.Info("ws: client disconnected", "roomCode", roomCode, "player", fmt.Sprintf("%s (%s)", playerID, playerName))
 			h.handleClientDisconnected(roomCode, playerID)
 		}
 		conn.Close()
@@ -174,12 +181,16 @@ func (h *Hub) handleClientDisconnected(roomCode, playerID string) {
 	if err != nil {
 		return
 	}
+	playerName := ""
+	if p, err := state.GetPlayer(playerID); err == nil {
+		playerName = p.Name
+	}
 
 	switch state.Phase {
 	case room.GamePhaseWaiting:
 		nextState, roomDeleted, err := h.store.RemovePlayer(roomCode, playerID)
 		if err != nil {
-			log.Printf("ws: failed to remove lobby player %s from room %s: %v", playerID, roomCode, err)
+			slog.Error("ws: failed to remove lobby player", "player", fmt.Sprintf("%s (%s)", playerID, playerName), "roomCode", roomCode, "error", err)
 			return
 		}
 		if roomDeleted {
@@ -191,7 +202,7 @@ func (h *Hub) handleClientDisconnected(roomCode, playerID string) {
 		})
 	case room.GamePhasePlaying, room.GamePhaseFinished:
 		if _, err := h.store.MarkPlayerDisconnected(roomCode, playerID); err != nil {
-			log.Printf("ws: failed to mark player %s disconnected in room %s: %v", playerID, roomCode, err)
+			slog.Error("ws: failed to mark player disconnected", "player", fmt.Sprintf("%s (%s)", playerID, playerName), "roomCode", roomCode, "error", err)
 			return
 		}
 		h.broadcastToRoom(roomCode, "game:player_disconnected", playerEventPayload{PlayerID: playerID})
@@ -336,20 +347,25 @@ func (h *Hub) handleLobbyStartGame(c *client, roomCode, playerID string) {
 	}
 
 	// Validate, deal cards, and transition the room to playing.
-	if _, err := h.store.StartGame(roomCode, playerID, drawPile); err != nil {
+	state, err := h.store.StartGame(roomCode, playerID, drawPile)
+	if err != nil {
 		sendErr(c, roomErrorCode(err), err.Error())
 		return
 	}
 
 	// Start the per-room turn timer.
 	h.startTurnTimer(roomCode)
+	playerName := ""
+	if p, err2 := state.GetPlayer(playerID); err2 == nil {
+		playerName = p.Name
+	}
+	slog.Info("ws: game starting", "roomCode", roomCode, "player", fmt.Sprintf("%s (%s)", playerID, playerName))
 
 	// Broadcast lobby:game_starting to all connected players.
 	h.broadcastToRoom(roomCode, "lobby:game_starting", map[string]string{"roomCode": roomCode})
 }
 
 // --- Turn timer ---
-
 func (h *Hub) startTurnTimer(roomCode string) {
 	h.mu.Lock()
 	if _, ok := h.activeTimers[roomCode]; ok {
@@ -361,6 +377,7 @@ func (h *Hub) startTurnTimer(roomCode string) {
 	h.mu.Unlock()
 
 	go h.timerLoop(roomCode, stopCh)
+	slog.Info("ws: turn timer started", "roomCode", roomCode)
 }
 
 func (h *Hub) stopTurnTimer(roomCode string) {
@@ -387,14 +404,14 @@ func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
 		case <-ticker.C:
 			remaining, err := h.store.TickTimer(roomCode)
 			if err != nil {
-				log.Printf("timer: room %s not found, stopping", roomCode)
+				slog.Warn("timer: room not found after tick, stopping timer", "roomCode", roomCode)
 				h.stopTurnTimer(roomCode)
 				return
 			}
 
 			state, err := h.store.Get(roomCode)
 			if err != nil {
-				log.Printf("timer: room %s not found after tick, stopping", roomCode)
+				slog.Warn("timer: room not found after state load, stopping timer", "roomCode", roomCode)
 				h.stopTurnTimer(roomCode)
 				return
 			}
@@ -427,15 +444,31 @@ func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
 
 func (h *Hub) handleTurnTimeout(roomCode string) {
 	skippedPlayerID := ""
-	if state, err := h.store.Get(roomCode); err == nil {
+	var state *room.GameState
+	if loadedState, err := h.store.Get(roomCode); err == nil {
+		state = loadedState
 		skippedPlayerID = state.Turn.CurrentPlayerID
 	}
 
 	nextState, err := h.store.NextTurn(roomCode)
 	if err != nil {
-		log.Printf("timer: failed to rotate turn for room %s: %v", roomCode, err)
+		slog.Error("timer: failed to rotate turn", "roomCode", roomCode, "error", err)
 		return
 	}
+	skippedName := ""
+	if state != nil {
+		if p, err2 := state.GetPlayer(skippedPlayerID); err2 == nil {
+			skippedName = p.Name
+		}
+	}
+	nextName := ""
+	if p, err2 := nextState.GetPlayer(nextState.Turn.CurrentPlayerID); err2 == nil {
+		nextName = p.Name
+	}
+	slog.Info("ws: turn timed out", "roomCode", roomCode,
+		"skippedPlayer", fmt.Sprintf("%s (%s)", skippedPlayerID, skippedName),
+		"nextPlayer", fmt.Sprintf("%s (%s)", nextState.Turn.CurrentPlayerID, nextName),
+	)
 
 	h.broadcastToRoom(roomCode, "game:turn_skipped", turnSkippedPayload{
 		PlayerID:        skippedPlayerID,
@@ -479,10 +512,14 @@ func (h *Hub) skipDisconnectedTurns(roomCode string) {
 		if currentConnected {
 			return
 		}
+		playerName := ""
+		if p, err := state.GetPlayer(currentPlayerID); err == nil {
+			playerName = p.Name
+		}
 
 		nextState, err := h.store.NextTurn(roomCode)
 		if err != nil {
-			log.Printf("ws: failed to skip disconnected player %s in room %s: %v", currentPlayerID, roomCode, err)
+			slog.Error("ws: failed to skip disconnected player", "player", fmt.Sprintf("%s (%s)", currentPlayerID, playerName), "roomCode", roomCode, "error", err)
 			return
 		}
 
@@ -502,6 +539,7 @@ func (h *Hub) broadcastToRoom(roomCode, event string, payload any) {
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	slog.Debug("ws: broadcasting event", "event", event, "roomCode", roomCode)
 	for _, p := range state.Players {
 		if cl, ok := h.conns[p.ID]; ok {
 			cl.send(event, payload)
@@ -531,7 +569,7 @@ func (h *Hub) handleGamePlayerConnected(c *client, roomCode, playerID string) {
 		if errors.Is(err, room.ErrRoomNotFound) {
 			sendErr(c, "ROOM_NOT_FOUND", "room not found")
 		} else {
-			log.Printf("ws: failed to load room %s: %v", roomCode, err)
+			slog.Error("ws: failed to load room", "roomCode", roomCode, "error", err)
 			sendErr(c, "INTERNAL_ERROR", "failed to load room")
 		}
 		return

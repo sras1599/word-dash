@@ -13,6 +13,7 @@ var (
 	ErrNotHost            = errors.New("only the host can start the game")
 	ErrGameAlreadyStarted = errors.New("game already in progress")
 	ErrNotAllReady        = errors.New("not all players are ready")
+	ErrPlayerNotFound     = errors.New("player not found")
 )
 
 // --- Domain types ---
@@ -90,6 +91,16 @@ type GameState struct {
 	DiscardPile []Card `json:"-"`
 }
 
+func (state *GameState) GetPlayer(playerId string) (*Player, error) {
+	for _, player := range state.Players {
+		if playerId == player.ID {
+			return &player, nil
+		}
+	}
+
+	return nil, ErrPlayerNotFound
+}
+
 // Store defines the persistence contract used by room orchestration and the
 // HTTP/WebSocket layers. Concrete implementations live in infrastructure
 // packages. A nil error from Get means the returned state is non-nil.
@@ -145,6 +156,7 @@ func Create(store Store, hostName string, variation Variation, turnDurationMs in
 	if err := store.Put(state); err != nil {
 		return "", "", fmt.Errorf("save room: %w", err)
 	}
+
 	return roomCode, playerID, nil
 }
 

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,12 +19,16 @@ import (
 
 func main() {
 	cfg := config.Load()
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})))
 	startupCtx, startupCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer startupCancel()
 
 	store, cleanup, err := storage.NewFromConfig(startupCtx, cfg)
 	if err != nil {
-		log.Fatalf("failed to initialize storage: %v", err)
+		slog.Error("failed to initialize storage", "error", err)
+		os.Exit(1)
 	}
 	defer cleanup()
 
@@ -32,7 +36,7 @@ func main() {
 	apihttp.RegisterRoutes(restMux, store)
 	restServer := &http.Server{
 		Addr:    cfg.RESTAddr(),
-		Handler: apihttp.CORSMiddleware(cfg.CORSOrigin, restMux),
+		Handler: apihttp.LoggingMiddleware(apihttp.CORSMiddleware(cfg.CORSOrigin, restMux)),
 	}
 
 	wsMux := http.NewServeMux()
@@ -52,9 +56,10 @@ func main() {
 
 	select {
 	case err := <-errCh:
-		log.Fatalf("server failed: %v", err)
+		slog.Error("server failed", "error", err)
+		os.Exit(1)
 	case sig := <-sigCh:
-		log.Printf("received signal %s, shutting down servers", sig.String())
+		slog.Info("received signal, shutting down", "signal", sig.String())
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -65,7 +70,7 @@ func main() {
 }
 
 func listenAndServe(name string, srv *http.Server, errCh chan<- error) {
-	log.Printf("starting %s server on %s", name, srv.Addr)
+	slog.Info("starting server", "name", name, "addr", srv.Addr)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		errCh <- err
 	}
@@ -73,9 +78,9 @@ func listenAndServe(name string, srv *http.Server, errCh chan<- error) {
 
 func shutdownServer(name string, srv *http.Server, ctx context.Context) {
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("%s server shutdown error: %v", name, err)
+		slog.Error("server shutdown error", "name", name, "error", err)
 		return
 	}
 
-	log.Printf("%s server stopped", name)
+	slog.Info("server stopped", "name", name)
 }
