@@ -1,6 +1,5 @@
 import React from 'react'
 import './Card.css'
-import worditLogo from '../../assets/wordit-logo.svg'
 
 export interface CardData {
     id: string
@@ -100,31 +99,19 @@ export function Card({
         >
             {faceDown ? (
                 <div className="card__back" aria-hidden="true">
-                    {/* Wave background: red top, black middle, teal bottom */}
-                    <svg
-                        className="card__back-waves"
-                        viewBox="0 0 80 120"
-                        xmlns="http://www.w3.org/2000/svg"
-                        preserveAspectRatio="none"
-                    >
-                        <rect width="80" height="120" fill="#111111" />
-                        {/* Red top section with organic wave bottom edge */}
-                        <path
-                            d="M0,0 H80 V18 C60,18 55,28 40,24 C25,20 20,30 0,24 Z"
-                            fill="#E8231A"
-                        />
-                        {/* Teal bottom section with organic wave top edge */}
-                        <path
-                            d="M0,96 C20,90 25,100 40,96 C55,92 60,102 80,96 V120 H0 Z"
-                            fill="#2DB89C"
-                        />
-                    </svg>
-                    {/* Scrambled letters in the black middle band */}
-                    <div className="card__back-pattern" />
-                    {/* WordIt! logo – top right */}
-                    <img src={worditLogo} alt="" className="card__back-logo" />
-                    {/* WordIt! logo – bottom left, rotated 180° */}
-                    <img src={worditLogo} alt="" className="card__back-logo card__back-logo--inverted" />
+                    <span className="card__back-letter card__back-letter--w">W</span>
+                    <span className="card__back-letter card__back-letter--d">D</span>
+                    <span className="card__back-letter card__back-letter--a">A</span>
+                    <span className="card__back-letter card__back-letter--s">S</span>
+                    <span className="card__back-letter card__back-letter--h">H</span>
+                    <span className="card__back-letter card__back-letter--k">K</span>
+                    <span className="card__back-letter card__back-letter--z">Z</span>
+                    <span className="card__back-letter card__back-letter--x">X</span>
+                    <span className="card__back-letter card__back-letter--d2">D</span>
+                    <span className="card__back-letter card__back-letter--w2">W</span>
+                    <span className="card__back-letter card__back-letter--s2">S</span>
+                    <span className="card__back-letter card__back-letter--a2">A</span>
+                    <span className="card__back-letter card__back-letter--x2">X</span>
                 </div>
             ) : card ? (
                 <>

@@ -154,72 +154,130 @@
     position: relative;
     width: 100%;
     height: 100%;
-    display: flex;
-    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
 }
 
-/* Full-bleed SVG that paints red wave / black middle / teal wave */
-.card__back-waves {
+.card__back-letter {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    font-family: inherit;
+    font-weight: 800;
+    line-height: 1;
 }
 
-/* "WordIt!" logo – top right */
-.card__back-logo {
-    position: absolute;
-    top: 5%;
-    right: 5%;
-    z-index: 2;
-    height: clamp(7px, 9%, 13px);
-    width: auto;
-}
-
-/* "WordIt!" logo – bottom left, rotated 180° */
-.card__back-logo--inverted {
-    top: auto;
-    right: auto;
-    bottom: 5%;
+.card__back-letter--w {
+    top: 10%;
     left: 5%;
-    transform: rotate(180deg);
+    color: var(--card-red);
+    font-size: 2rem;
+    transform: rotate(-12deg);
+    opacity: 0.9;
 }
 
-/* Scrambled-letter texture: confined to the black middle band */
-.card__back-pattern {
-    position: absolute;
-    inset: 23% 0 23%;
-    overflow: hidden;
-    color: rgba(255, 255, 255, 0.88);
-    font-weight: 900;
-    line-height: 1.05;
-    font-size: clamp(11px, 1.35em, 20px);
-    word-break: break-all;
-    word-spacing: -0.15em;
-    padding: 4%;
-    z-index: 1;
+.card__back-letter--d {
+    top: 5%;
+    right: 10%;
+    color: #a4d483;
+    font-size: 1.35rem;
+    transform: rotate(45deg);
+    opacity: 0.8;
 }
 
-/* Dense letter pattern rendered as CSS content */
-.card__back-pattern::before {
-    content: 'th ngeac bkoc slo meow yafs rth ngeac bkoc slo meow yafs rth ngeac bkoc slo meow yafs';
-    display: block;
-    overflow: hidden;
-    max-height: 100%;
-    text-transform: lowercase;
+.card__back-letter--a {
+    top: 30%;
+    left: 40%;
+    color: #bb000e;
+    font-size: 3rem;
+    transform: rotate(15deg);
+    opacity: 0.95;
 }
 
-/* "flipside" brand centred in the teal wave section */
-.card__back-brand {
-    position: absolute;
-    bottom: 4%;
+.card__back-letter--s {
+    bottom: 20%;
+    left: 10%;
+    color: #406925;
+    font-size: 2rem;
+    transform: rotate(-25deg);
+    opacity: 0.7;
+}
+
+.card__back-letter--h {
+    top: 50%;
+    right: 5%;
+    color: var(--card-red);
+    font-size: 2.4rem;
+    transform: rotate(-12deg);
+    opacity: 0.9;
+}
+
+.card__back-letter--k {
+    bottom: 35%;
+    left: 30%;
+    color: #c0f19d;
+    font-size: 1.15rem;
+    transform: rotate(30deg);
+    opacity: 0.85;
+}
+
+.card__back-letter--z {
+    right: 20%;
+    bottom: 5%;
+    color: #bb000e;
+    font-size: 1.7rem;
+    transform: rotate(10deg);
+    opacity: 0.9;
+}
+
+.card__back-letter--x {
+    top: 40%;
+    left: 15%;
+    color: #c0f19d;
+    font-size: 0.85rem;
+    transform: rotate(-45deg);
+    opacity: 0.6;
+}
+
+.card__back-letter--d2 {
+    top: 70%;
     left: 50%;
-    transform: translateX(-50%);
-    z-index: 2;
-    color: #0d0d0d;
-    font-size: clamp(6px, 0.6em, 9px);
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: lowercase;
-    white-space: nowrap;
+    color: var(--card-red);
+    font-size: 2.8rem;
+    transform: rotate(20deg);
+    opacity: 0.4;
+}
+
+.card__back-letter--w2 {
+    bottom: 10%;
+    left: 5%;
+    color: #406925;
+    font-size: 1.4rem;
+    transform: rotate(12deg);
+    opacity: 0.5;
+}
+
+.card__back-letter--s2 {
+    top: 20%;
+    right: 30%;
+    color: #bb000e;
+    font-size: 0.85rem;
+    transform: rotate(-12deg);
+    opacity: 0.6;
+}
+
+.card__back-letter--a2 {
+    top: 65%;
+    left: 20%;
+    color: #c0f19d;
+    font-size: 2.2rem;
+    transform: rotate(-6deg);
+    opacity: 0.85;
+}
+
+.card__back-letter--x2 {
+    right: 30%;
+    bottom: 40%;
+    color: var(--card-red);
+    font-size: 1.7rem;
+    transform: rotate(45deg);
+    opacity: 0.7;
 }

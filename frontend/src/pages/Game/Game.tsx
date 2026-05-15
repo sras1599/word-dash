@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createWsClient, WsClient } from '../../lib/ws'
 import { session } from '../../lib/session'
 import { WordRow } from '../../components/WordRow/WordRow'
 import type { WordRowState } from '../../components/WordRow/WordRow'
 import { Card as PlayingCard, type CardData } from '../../components/Card/Card'
+import { CardPile } from '../../components/CardPile/CardPile'
 import wordDashLogo from '../../assets/word-dash-logo.svg'
 import './Game.css'
 
@@ -65,22 +66,6 @@ const FLOATING_LETTERS = [
     { key: 'a', letter: 'A', className: 'page-game__floating-letter--a' },
     { key: 'w', letter: 'W', className: 'page-game__floating-letter--w' },
     { key: 's', letter: 'S', className: 'page-game__floating-letter--s' },
-]
-
-const DRAW_PILE_LETTERS = [
-    { key: 'w', letter: 'W', className: 'page-game__draw-pile-letter--w' },
-    { key: 'd', letter: 'D', className: 'page-game__draw-pile-letter--d' },
-    { key: 'a', letter: 'A', className: 'page-game__draw-pile-letter--a' },
-    { key: 's', letter: 'S', className: 'page-game__draw-pile-letter--s' },
-    { key: 'h', letter: 'H', className: 'page-game__draw-pile-letter--h' },
-    { key: 'k', letter: 'K', className: 'page-game__draw-pile-letter--k' },
-    { key: 'z', letter: 'Z', className: 'page-game__draw-pile-letter--z' },
-    { key: 'x', letter: 'X', className: 'page-game__draw-pile-letter--x' },
-    { key: 'd2', letter: 'D', className: 'page-game__draw-pile-letter--d2' },
-    { key: 'w2', letter: 'W', className: 'page-game__draw-pile-letter--w2' },
-    { key: 's2', letter: 'S', className: 'page-game__draw-pile-letter--s2' },
-    { key: 'a2', letter: 'A', className: 'page-game__draw-pile-letter--a2' },
-    { key: 'x2', letter: 'X', className: 'page-game__draw-pile-letter--x2' },
 ]
 
 function formatTime(ms: number): string {
@@ -181,7 +166,6 @@ export function Game() {
     const localPlayerId = session.getPlayerId() ?? ''
 
     const [gameState, setGameState] = useState<GameState | null>(null)
-    const [isDiscardDragOver, setIsDiscardDragOver] = useState(false)
     const [isHandDragOver, setIsHandDragOver] = useState(false)
     const wsRef = useRef<WsClient | null>(null)
     const boardDragSourceRef = useRef<BoardDragSource | null>(null)
@@ -519,29 +503,6 @@ export function Game() {
         handleUnplace(source.rowIndex, source.slotIndex)
     }
 
-    function handleDiscardDragOver(e: DragEvent<HTMLDivElement>, isArrangePhase: boolean) {
-        if (!isArrangePhase) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        setIsDiscardDragOver(true)
-    }
-
-    function handleDiscardDragLeave(e: DragEvent<HTMLDivElement>) {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-            setIsDiscardDragOver(false)
-        }
-    }
-
-    function handleDiscardDrop(e: DragEvent<HTMLDivElement>, isArrangePhase: boolean) {
-        if (!isArrangePhase) return
-        e.preventDefault()
-        setIsDiscardDragOver(false)
-        const cardId = e.dataTransfer.getData('text/plain')
-        if (cardId) {
-            handleDiscard(cardId)
-        }
-    }
-
     if (!roomCode || !localPlayerId) {
         return (
             <div className="wd-page page-game page-game--error">
@@ -610,14 +571,6 @@ export function Game() {
         : currentGameState.players
     const boardRows = localPlayerData?.wordBoard.rows ?? []
     const currentTurnPlayer = currentGameState.players.find((p) => p.id === currentGameState.turn.currentPlayerId) ?? null
-
-    function handlePileKeyDown(e: KeyboardEvent<HTMLDivElement>, source: 'draw' | 'discard', isInteractive: boolean) {
-        if (!isInteractive) return
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            handleDraw(source)
-        }
-    }
 
     function getPlayerStatus(player: Player): string {
         if (!player.isConnected) {
@@ -807,62 +760,26 @@ export function Game() {
                 <section className="page-game__piles" aria-label="Card piles">
                     <div className="page-game__pile">
                         <p className="page-game__pile-label">Draw</p>
-                        <div
-                            className={[
-                                'page-game__draw-pile',
-                                isDrawPhase && 'page-game__draw-pile--interactive',
-                                currentGameState.drawPileCount === 0 && 'page-game__draw-pile--empty',
-                            ]
-                                .filter(Boolean)
-                                .join(' ')}
-                            role={isDrawPhase ? 'button' : undefined}
-                            tabIndex={isDrawPhase ? 0 : undefined}
-                            aria-label={`Draw pile, ${currentGameState.drawPileCount} cards`}
-                            onClick={isDrawPhase ? () => handleDraw('draw') : undefined}
-                            onKeyDown={(e) => handlePileKeyDown(e, 'draw', isDrawPhase)}
-                        >
-                            <div className="page-game__draw-pile-stack" aria-hidden="true">
-                                {DRAW_PILE_LETTERS.map(({ key, letter, className }) => (
-                                    <span key={key} className={['page-game__draw-pile-letter', className].join(' ')}>
-                                        {letter}
-                                    </span>
-                                ))}
-                                <div className="page-game__draw-pile-sheen" />
-                            </div>
-                        </div>
+                        <CardPile
+                            type="draw"
+                            topCard={null}
+                            cardCount={currentGameState.drawPileCount}
+                            isActive={isDrawPhase}
+                            onDraw={handleDraw}
+                        />
                     </div>
 
                     <div className="page-game__pile">
                         <p className="page-game__pile-label">Discard</p>
-                        <div
-                            className={[
-                                'page-game__discard-pile',
-                                isDrawPhase && 'page-game__discard-pile--interactive',
-                                isArrangePhase && 'page-game__discard-pile--drop-target',
-                                isDiscardDragOver && 'page-game__discard-pile--drag-over',
-                                !currentGameState.discardPileTop && 'page-game__discard-pile--empty',
-                            ]
-                                .filter(Boolean)
-                                .join(' ')}
-                            role={isDrawPhase ? 'button' : undefined}
-                            tabIndex={isDrawPhase ? 0 : undefined}
-                            aria-label={
-                                currentGameState.discardPileTop
-                                    ? `Discard pile, top card ${currentGameState.discardPileTop.letter}`
-                                    : 'Discard pile, empty'
-                            }
-                            onClick={isDrawPhase ? () => handleDraw('discard') : undefined}
-                            onKeyDown={(e) => handlePileKeyDown(e, 'discard', isDrawPhase)}
-                            onDragOver={(e) => handleDiscardDragOver(e, isArrangePhase)}
-                            onDragLeave={handleDiscardDragLeave}
-                            onDrop={(e) => handleDiscardDrop(e, isArrangePhase)}
-                        >
-                            {currentGameState.discardPileTop ? (
-                                <PlayingCard card={currentGameState.discardPileTop} />
-                            ) : (
-                                <div className="page-game__discard-empty" aria-hidden="true" />
-                            )}
-                        </div>
+                        <CardPile
+                            type="discard"
+                            topCard={currentGameState.discardPileTop}
+                            cardCount={currentGameState.discardPileTop ? 1 : 0}
+                            isActive={isDrawPhase}
+                            isDropTarget={isArrangePhase}
+                            onDraw={handleDraw}
+                            onDiscard={handleDiscard}
+                        />
                     </div>
                 </section>
             </main>
