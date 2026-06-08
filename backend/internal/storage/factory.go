@@ -14,6 +14,7 @@ import (
 // NewFromConfig returns the configured room store and a cleanup function for
 // any external resources it owns.
 func NewFromConfig(ctx context.Context, cfg config.Config) (room.Store, func(), error) {
+	// if REDIS_URL is not set, use in-memory store
 	if cfg.RedisURL == "" {
 		return memory.NewStore(), func() {}, nil
 	}

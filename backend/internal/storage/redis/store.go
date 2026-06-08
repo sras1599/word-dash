@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/sras1599/wordit/backend/internal/room"
@@ -188,6 +189,19 @@ func (s *Store) mutatePlayer(roomCode, playerID string, mutateFn func(*room.Play
 // MarkPlayerConnected sets the given player's IsConnected flag to true and
 // returns a shallow copy of the game state as it stands after the update.
 func (s *Store) MarkPlayerConnected(roomCode, playerID string) (room.GameState, error) {
+	// a TTL of 15 minutes gets set for the room when all players leave
+	// we remove this countdown when any player connects
+	key := roomKey(roomCode)
+	ctx := context.Background()
+	s.client.Watch(ctx, func(tx *goredis.Tx) error {
+		_, err := tx.TxPipelined(ctx, func(pipe goredis.Pipeliner) error {
+			pipe.Persist(ctx, key)
+			return nil
+		})
+
+		return err
+	}, key)
+
 	return s.mutatePlayer(roomCode, playerID, func(p *room.Player) error {
 		p.IsConnected = true
 		return nil
@@ -259,10 +273,13 @@ func (s *Store) RemovePlayer(roomCode, playerID string) (room.GameState, bool, e
 			}
 
 			state.Players = append(state.Players[:playerIndex], state.Players[playerIndex+1:]...)
+
+			// set the lobby to expire after 15 minutes (set a TTL countdown)
+			// if a room isn't expired when a player reconnects, we remove this countdown
 			if len(state.Players) == 0 {
 				result = room.GameState{RoomCode: roomCode}
 				_, err = tx.TxPipelined(ctx, func(pipe goredis.Pipeliner) error {
-					pipe.Del(ctx, key)
+					pipe.Expire(ctx, key, 15*time.Minute)
 					return nil
 				})
 				return err
