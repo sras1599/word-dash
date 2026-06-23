@@ -60,3 +60,22 @@ Join an existing room.
 | `400`  | Missing or invalid fields              |
 | `404`  | Room not found                         |
 | `409`  | Room is full or game already in progress |
+
+## GET /rooms/:roomCode
+
+Check whether a room exists before opening a WebSocket connection.
+
+### Response 200 OK
+
+```json
+{
+  "roomCode": "XK39PQ"
+}
+```
+
+### Error responses
+
+| Status | Condition       |
+|--------|-----------------|
+| `404`  | Room not found  |
+| `500`  | Storage failure |

@@ -913,6 +913,47 @@
     color: var(--on-surface-variant);
 }
 
+.page-lobby__error {
+    display: flex;
+    width: min(30rem, 100%);
+    flex-direction: column;
+    align-items: center;
+    gap: 0.85rem;
+    text-align: center;
+}
+
+.page-lobby__error-title {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    line-height: 1.1;
+}
+
+.page-lobby__error-message {
+    max-width: 28rem;
+    color: var(--on-surface-variant);
+}
+
+.page-lobby__home-button {
+    min-height: 3rem;
+    margin-top: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: var(--primary);
+    color: var(--on-primary);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.page-lobby__home-button:hover {
+    background: var(--primary-container);
+}
+
+.page-lobby__home-button:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--primary) 38%, transparent);
+    outline-offset: 3px;
+}
+
 @media (min-width: 48rem) {
     .page-lobby__room-pill {
         display: inline-flex;

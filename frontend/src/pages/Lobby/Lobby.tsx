@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ApiError, validateRoom } from '../../lib/api'
 import { createWsClient, WsClient } from '../../lib/ws'
 import { session } from '../../lib/session'
 import wordDashLogo from '../../assets/word-dash-logo.svg'
@@ -23,6 +24,8 @@ type LobbyState = {
     turnDurationMs: number
     players: LobbyPlayer[]
 }
+
+type LobbyPageStatus = 'connecting' | 'ready' | 'room-not-found' | 'connection-error'
 
 const MAX_PLAYERS = 4
 
@@ -239,6 +242,7 @@ export function Lobby() {
     const localPlayerId = session.getPlayerId() ?? ''
 
     const [lobby, setLobby] = useState<LobbyState | null>(null)
+    const [pageStatus, setPageStatus] = useState<LobbyPageStatus>('connecting')
     const [customInput, setCustomInput] = useState('')
     const [customVariationError, setCustomVariationError] = useState('')
     const [variationOpen, setVariationOpen] = useState(false)
@@ -257,17 +261,43 @@ export function Lobby() {
     useEffect(() => {
         if (!roomCode || !localPlayerId) return
 
-        const ws = createWsClient(roomCode, localPlayerId)
-        wsRef.current = ws
+        let cancelled = false
+        let ws: WsClient | null = null
 
-        ws.on('lobby:state', (payload) => {
-            const state = payload as LobbyState
-            setLobby(state)
-            setActiveVariationTab(getVariationDifficulty(state.variation.wordLengths))
-            setTurnMinutes(String(Math.floor(state.turnDurationMs / 60_000)))
-            setTurnSeconds(String(Math.round((state.turnDurationMs % 60_000) / 1_000)))
-        })
-        ws.on('lobby:player_joined', (payload) => {
+        void Promise.resolve()
+            .then(() => {
+                if (cancelled) return
+                setPageStatus('connecting')
+                setLobby(null)
+                return validateRoom(roomCode)
+            })
+            .then(() => {
+                if (cancelled) return
+
+                ws = createWsClient(roomCode, localPlayerId)
+                wsRef.current = ws
+
+                ws.on('lobby:state', (payload) => {
+                    const state = payload as LobbyState
+                    setLobby(state)
+                    setPageStatus('ready')
+                    setActiveVariationTab(getVariationDifficulty(state.variation.wordLengths))
+                    setTurnMinutes(String(Math.floor(state.turnDurationMs / 60_000)))
+                    setTurnSeconds(String(Math.round((state.turnDurationMs % 60_000) / 1_000)))
+                })
+                ws.on('lobby:player_joined', handlePlayerJoined)
+                ws.on('lobby:player_ready', handlePlayerReady)
+                ws.on('lobby:player_unready', handlePlayerUnready)
+                ws.on('lobby:player_disconnected', handlePlayerDisconnected)
+                ws.on('lobby:settings_changed', handleSettingsChanged)
+                ws.on('lobby:game_starting', handleGameStarting)
+            })
+            .catch((error: unknown) => {
+                if (cancelled) return
+                setPageStatus(error instanceof ApiError && error.status === 404 ? 'room-not-found' : 'connection-error')
+            })
+
+        function handlePlayerJoined(payload: unknown) {
             const { player } = payload as { player: LobbyPlayer }
             setLobby((prev) =>
                 prev
@@ -281,8 +311,9 @@ export function Lobby() {
                     }
                     : prev,
             )
-        })
-        ws.on('lobby:player_ready', (payload) => {
+        }
+
+        function handlePlayerReady(payload: unknown) {
             const { playerId } = payload as { playerId: string }
             setLobby((prev) =>
                 prev
@@ -294,8 +325,9 @@ export function Lobby() {
                     }
                     : prev,
             )
-        })
-        ws.on('lobby:player_unready', (payload) => {
+        }
+
+        function handlePlayerUnready(payload: unknown) {
             const { playerId } = payload as { playerId: string }
             setLobby((prev) =>
                 prev
@@ -307,8 +339,9 @@ export function Lobby() {
                     }
                     : prev,
             )
-        })
-        ws.on('lobby:player_disconnected', (payload) => {
+        }
+
+        function handlePlayerDisconnected(payload: unknown) {
             const { playerId, hostPlayerId } = payload as {
                 playerId: string
                 hostPlayerId: string
@@ -322,21 +355,27 @@ export function Lobby() {
                     }
                     : prev,
             )
-        })
-        ws.on('lobby:settings_changed', (payload) => {
+        }
+
+        function handleSettingsChanged(payload: unknown) {
             const { variation, turnDurationMs } = payload as { variation: Variation; turnDurationMs: number }
             setLobby((prev) => (prev ? { ...prev, variation, turnDurationMs } : prev))
             setActiveVariationTab(getVariationDifficulty(variation.wordLengths))
             setTurnMinutes(String(Math.floor(turnDurationMs / 60_000)))
             setTurnSeconds(String(Math.round((turnDurationMs % 60_000) / 1_000)))
-        })
-        ws.on('lobby:game_starting', (payload) => {
+        }
+
+        function handleGameStarting(payload: unknown) {
             const { roomCode: rc } = payload as { roomCode: string }
             navigate(`/game/${rc}`)
-        })
+        }
 
         return () => {
-            ws.close()
+            cancelled = true
+            ws?.close()
+            if (wsRef.current === ws) {
+                wsRef.current = null
+            }
         }
     }, [roomCode, localPlayerId, navigate])
 
@@ -438,7 +477,10 @@ export function Lobby() {
         (_, i) => lobby?.players[i] ?? null,
     )
 
-    if (!lobby) {
+    if (pageStatus !== 'ready' || !lobby) {
+        const isRoomNotFound = pageStatus === 'room-not-found'
+        const isConnectionError = pageStatus === 'connection-error'
+
         return (
             <div className="wd-page page-lobby page-lobby--loading">
                 <div className="wd-floating-bg page-lobby__floating-bg" aria-hidden="true">
@@ -451,7 +493,27 @@ export function Lobby() {
 
                 <main className="page-lobby__loading-shell">
                     <img src={wordDashLogo} alt="Word Dash" className="page-lobby__loading-logo" />
-                    <p className="page-lobby__loading-text">Connecting…</p>
+                    {isRoomNotFound || isConnectionError ? (
+                        <div className="page-lobby__error" role="alert">
+                            <h1 className="page-lobby__error-title">
+                                {isRoomNotFound ? 'Room not found' : 'Unable to connect'}
+                            </h1>
+                            <p className="page-lobby__error-message">
+                                {isRoomNotFound
+                                    ? 'This room no longer exists. Go back home to create or join another game.'
+                                    : 'We could not reach the server. Please try again from the home page.'}
+                            </p>
+                            <button
+                                type="button"
+                                className="page-lobby__home-button"
+                                onClick={() => navigate('/')}
+                            >
+                                Go to home
+                            </button>
+                        </div>
+                    ) : (
+                        <p className="page-lobby__loading-text">Connecting…</p>
+                    )}
                 </main>
             </div>
         )
