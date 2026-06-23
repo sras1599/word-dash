@@ -25,12 +25,21 @@ func (rw *responseWriter) WriteHeader(code int) {
 
 func RegisterRoutes(mux *http.ServeMux, store room.Store) {
 	mux.HandleFunc("/healthz", handleHealth)
-	mux.HandleFunc("/rooms", func(w http.ResponseWriter, r *http.Request) {
+
+	mux.HandleFunc("POST /rooms", func(w http.ResponseWriter, r *http.Request) {
 		handleCreateRoom(w, r, store)
 	})
-	mux.HandleFunc("/rooms/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/rooms", handleMethodNotAllowed)
+
+	mux.HandleFunc("GET /rooms/{roomCode}", func(w http.ResponseWriter, r *http.Request) {
+		handleGetRoom(w, r, store)
+	})
+	mux.HandleFunc("/rooms/{roomCode}", handleMethodNotAllowed)
+
+	mux.HandleFunc("POST /rooms/{roomCode}/join", func(w http.ResponseWriter, r *http.Request) {
 		handleJoinRoom(w, r, store)
 	})
+	mux.HandleFunc("/rooms/{roomCode}/join", handleMethodNotAllowed)
 }
 
 func CORSMiddleware(origin string, next http.Handler) http.Handler {
@@ -64,6 +73,10 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 func handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func handleMethodNotAllowed(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 }
 
 func handleCreateRoom(w http.ResponseWriter, r *http.Request, store room.Store) {
@@ -115,19 +128,26 @@ func handleCreateRoom(w http.ResponseWriter, r *http.Request, store room.Store) 
 	})
 }
 
+func handleGetRoom(w http.ResponseWriter, r *http.Request, store room.Store) {
+	roomCode := r.PathValue("roomCode")
+	state, err := store.Get(roomCode)
+
+	if errors.Is(err, room.ErrRoomNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "room not found"})
+		return
+	}
+
+	if err != nil {
+		slog.Error("get room: storage error", "roomCode", roomCode, "error", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load room"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"roomCode": state.RoomCode})
+}
+
 func handleJoinRoom(w http.ResponseWriter, r *http.Request, store room.Store) {
-	if r.Method != http.MethodPost {
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
-		return
-	}
-
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) != 3 || parts[0] != "rooms" || parts[2] != "join" {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "route not found"})
-		return
-	}
-
-	roomCode := parts[1]
+	roomCode := r.PathValue("roomCode")
 
 	var body struct {
 		Name string `json:"name"`
