@@ -49,6 +49,8 @@ func (h *Hub) getRoomState(c *client, roomCode string) (*room.GameState, bool) {
 // gameErrorCode maps game-package sentinel errors to WS error codes.
 func gameErrorCode(err error) string {
 	switch {
+	case errors.Is(err, room.ErrRoomNotFound):
+		return "ROOM_NOT_FOUND"
 	case errors.Is(err, game.ErrNotYourTurn):
 		return "NOT_YOUR_TURN"
 	case errors.Is(err, game.ErrInvalidPhase):

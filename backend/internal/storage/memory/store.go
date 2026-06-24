@@ -36,6 +36,20 @@ func (s *Store) Get(roomCode string) (*room.GameState, error) {
 	return state, nil
 }
 
+func (s *Store) UpdateGameState(roomCode string, mutateFn func(*room.GameState) error) (room.GameState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	state, ok := s.rooms[roomCode]
+	if !ok {
+		return room.GameState{}, fmt.Errorf("%w: %s", room.ErrRoomNotFound, roomCode)
+	}
+	if err := mutateFn(state); err != nil {
+		return room.GameState{}, err
+	}
+	return *state, nil
+}
+
 func (s *Store) mutatePlayer(roomCode, playerID string, mutateFn func(*room.Player) error) (room.GameState, error) {
 	state, ok := s.rooms[roomCode]
 	if !ok {

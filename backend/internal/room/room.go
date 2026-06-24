@@ -92,9 +92,9 @@ type GameState struct {
 }
 
 func (state *GameState) GetPlayer(playerId string) (*Player, error) {
-	for _, player := range state.Players {
-		if playerId == player.ID {
-			return &player, nil
+	for i := range state.Players {
+		if playerId == state.Players[i].ID {
+			return &state.Players[i], nil
 		}
 	}
 
@@ -107,6 +107,7 @@ func (state *GameState) GetPlayer(playerId string) (*Player, error) {
 type Store interface {
 	Put(state *GameState) error
 	Get(roomCode string) (*GameState, error)
+	UpdateGameState(roomCode string, mutateFn func(*GameState) error) (GameState, error)
 	MarkPlayerConnected(roomCode, playerID string) (GameState, error)
 	MarkPlayerDisconnected(roomCode, playerID string) (GameState, error)
 	MarkPlayerReady(roomCode, playerID string) (GameState, error)

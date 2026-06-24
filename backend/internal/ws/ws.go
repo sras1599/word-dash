@@ -590,12 +590,12 @@ func (h *Hub) handleGameDrawCard(c *client, roomCode, playerID string, rawPayloa
 		return
 	}
 
-	state, ok := h.getRoomState(c, roomCode)
-	if !ok {
-		return
-	}
-
-	drawnCard, err := game.DrawCard(state, playerID, req.Source)
+	var drawnCard *room.Card
+	state, err := h.store.UpdateGameState(roomCode, func(state *room.GameState) error {
+		var err error
+		drawnCard, err = game.DrawCard(state, playerID, req.Source)
+		return err
+	})
 	if err != nil {
 		sendErr(c, gameErrorCode(err), err.Error())
 		return
@@ -648,32 +648,31 @@ func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPaylo
 		return
 	}
 
-	state, ok := h.getRoomState(c, roomCode)
-	if !ok {
-		return
-	}
-
-	if err := game.PlaceCard(state, playerID, req.CardID, req.RowIndex, req.SlotIndex, h.dict); err != nil {
-		sendErr(c, gameErrorCode(err), err.Error())
-		return
-	}
-
-	// Find the updated board and hand for the acting player.
 	var (
 		updatedBoard room.WordBoard
 		updatedHand  []cardJSON
+		winner       room.Player
+		won          bool
 	)
-	for _, p := range state.Players {
-		if p.ID == playerID {
-			updatedBoard = p.WordBoard
-			updatedHand = buildHandJSON(p.Hand)
-			break
+	state, err := h.store.UpdateGameState(roomCode, func(state *room.GameState) error {
+		if err := game.PlaceCard(state, playerID, req.CardID, req.RowIndex, req.SlotIndex, h.dict); err != nil {
+			return err
 		}
-	}
 
-	winner, won, err := game.DeclareWinnerIfComplete(state, playerID)
+		for _, p := range state.Players {
+			if p.ID == playerID {
+				updatedBoard = p.WordBoard
+				updatedHand = buildHandJSON(p.Hand)
+				break
+			}
+		}
+
+		var err error
+		winner, won, err = game.DeclareWinnerIfComplete(state, playerID)
+		return err
+	})
 	if err != nil {
-		sendErr(c, "INTERNAL_ERROR", err.Error())
+		sendErr(c, gameErrorCode(err), err.Error())
 		return
 	}
 
@@ -719,27 +718,27 @@ func (h *Hub) handleGameUnplaceCard(c *client, roomCode, playerID string, rawPay
 		return
 	}
 
-	state, ok := h.getRoomState(c, roomCode)
-	if !ok {
-		return
-	}
-
-	if err := game.UnplaceCard(state, playerID, req.RowIndex, req.SlotIndex); err != nil {
-		sendErr(c, gameErrorCode(err), err.Error())
-		return
-	}
-
-	// Find the updated board and hand for the acting player.
 	var (
 		updatedBoard room.WordBoard
 		updatedHand  []cardJSON
 	)
-	for _, p := range state.Players {
-		if p.ID == playerID {
-			updatedBoard = p.WordBoard
-			updatedHand = buildHandJSON(p.Hand)
-			break
+	state, err := h.store.UpdateGameState(roomCode, func(state *room.GameState) error {
+		if err := game.UnplaceCard(state, playerID, req.RowIndex, req.SlotIndex); err != nil {
+			return err
 		}
+
+		for _, p := range state.Players {
+			if p.ID == playerID {
+				updatedBoard = p.WordBoard
+				updatedHand = buildHandJSON(p.Hand)
+				break
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		sendErr(c, gameErrorCode(err), err.Error())
+		return
 	}
 
 	// Snapshot connected clients for this room.
@@ -779,28 +778,31 @@ func (h *Hub) handleGameDiscardCard(c *client, roomCode, playerID string, rawPay
 		return
 	}
 
-	state, ok := h.getRoomState(c, roomCode)
-	if !ok {
-		return
-	}
-
-	discarded, nextPlayerID, err := game.DiscardCard(state, playerID, req.CardID)
-	if err != nil {
-		sendErr(c, gameErrorCode(err), err.Error())
-		return
-	}
-
-	// Find the updated board and hand for the acting player.
 	var (
 		updatedBoard room.WordBoard
 		updatedHand  []cardJSON
+		discarded    *room.Card
+		nextPlayerID string
 	)
-	for _, p := range state.Players {
-		if p.ID == playerID {
-			updatedBoard = p.WordBoard
-			updatedHand = buildHandJSON(p.Hand)
-			break
+	state, err := h.store.UpdateGameState(roomCode, func(state *room.GameState) error {
+		var err error
+		discarded, nextPlayerID, err = game.DiscardCard(state, playerID, req.CardID)
+		if err != nil {
+			return err
 		}
+
+		for _, p := range state.Players {
+			if p.ID == playerID {
+				updatedBoard = p.WordBoard
+				updatedHand = buildHandJSON(p.Hand)
+				break
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		sendErr(c, gameErrorCode(err), err.Error())
+		return
 	}
 
 	// Snapshot connected clients for this room.

@@ -186,6 +186,15 @@ func (s *Store) mutatePlayer(roomCode, playerID string, mutateFn func(*room.Play
 	})
 }
 
+func (s *Store) UpdateGameState(roomCode string, mutateFn func(*room.GameState) error) (room.GameState, error) {
+	return s.mutate(roomCode, func(state *room.GameState) (room.GameState, bool, error) {
+		if err := mutateFn(state); err != nil {
+			return room.GameState{}, false, err
+		}
+		return *state, false, nil
+	})
+}
+
 // MarkPlayerConnected sets the given player's IsConnected flag to true and
 // returns a shallow copy of the game state as it stands after the update.
 func (s *Store) MarkPlayerConnected(roomCode, playerID string) (room.GameState, error) {
