@@ -1,3 +1,4 @@
+// This file defines the JSON request and event payload types for WebSockets.
 package ws
 
 import "encoding/json"
@@ -6,6 +7,12 @@ import "encoding/json"
 type incomingMessage struct {
 	Event   string          `json:"event"`
 	Payload json.RawMessage `json:"payload"`
+}
+
+// outgoingMessage is the wire format for all server→client messages.
+type outgoingMessage struct {
+	Event   string `json:"event"`
+	Payload any    `json:"payload"`
 }
 
 // --- Shared ---

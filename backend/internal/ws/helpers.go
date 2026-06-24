@@ -1,3 +1,4 @@
+// This file contains shared WebSocket error, payload, and response helpers.
 package ws
 
 import (
@@ -11,6 +12,27 @@ import (
 )
 
 var timerWarningThresholdsMs = []int{10_000, 5_000, 1_000}
+
+type errorCodeMapping struct {
+	err  error
+	code string
+}
+
+var gameErrorCodes = []errorCodeMapping{
+	{room.ErrRoomNotFound, "ROOM_NOT_FOUND"},
+	{game.ErrNotYourTurn, "NOT_YOUR_TURN"},
+	{game.ErrInvalidPhase, "INVALID_PHASE"},
+	{game.ErrEmptyDeck, "EMPTY_DECK"},
+	{game.ErrInvalidCard, "INVALID_CARD"},
+	{game.ErrInvalidSlot, "INVALID_SLOT"},
+}
+
+var roomErrorCodes = []errorCodeMapping{
+	{room.ErrNotHost, "FORBIDDEN"},
+	{room.ErrGameAlreadyStarted, "INVALID_PHASE"},
+	{room.ErrRoomNotFound, "ROOM_NOT_FOUND"},
+	{room.ErrNotAllReady, "NOT_ALL_READY"},
+}
 
 // sendErr sends a standardised game:error message to the client.
 func sendErr(c *client, code, message string) {
@@ -48,127 +70,240 @@ func (h *Hub) getRoomState(c *client, roomCode string) (*room.GameState, bool) {
 
 // gameErrorCode maps game-package sentinel errors to WS error codes.
 func gameErrorCode(err error) string {
-	switch {
-	case errors.Is(err, room.ErrRoomNotFound):
-		return "ROOM_NOT_FOUND"
-	case errors.Is(err, game.ErrNotYourTurn):
-		return "NOT_YOUR_TURN"
-	case errors.Is(err, game.ErrInvalidPhase):
-		return "INVALID_PHASE"
-	case errors.Is(err, game.ErrEmptyDeck):
-		return "EMPTY_DECK"
-	case errors.Is(err, game.ErrInvalidCard):
-		return "INVALID_CARD"
-	case errors.Is(err, game.ErrInvalidSlot):
-		return "INVALID_SLOT"
-	default:
-		return "INTERNAL_ERROR"
-	}
+	return mappedErrorCode(err, gameErrorCodes, "INTERNAL_ERROR")
 }
 
 // roomErrorCode maps room-package sentinel errors to WS error codes.
 func roomErrorCode(err error) string {
-	switch {
-	case errors.Is(err, room.ErrNotHost):
-		return "FORBIDDEN"
-	case errors.Is(err, room.ErrGameAlreadyStarted):
-		return "INVALID_PHASE"
-	case errors.Is(err, room.ErrRoomNotFound):
-		return "ROOM_NOT_FOUND"
-	case errors.Is(err, room.ErrNotAllReady):
-		return "NOT_ALL_READY"
-	default:
-		return "INTERNAL_ERROR"
-	}
+	return mappedErrorCode(err, roomErrorCodes, "INTERNAL_ERROR")
 }
 
+// mappedErrorCode resolves a sentinel error to a protocol error code.
+func mappedErrorCode(err error, mappings []errorCodeMapping, fallback string) string {
+	for _, mapping := range mappings {
+		if errors.Is(err, mapping.err) {
+			return mapping.code
+		}
+	}
+	return fallback
+}
+
+// shouldBroadcastTimerWarning reports whether a timer crossed a warning threshold.
 func shouldBroadcastTimerWarning(previousRemaining, currentRemaining int) bool {
 	if currentRemaining <= 0 {
 		return false
 	}
-	for _, threshold := range timerWarningThresholdsMs {
-		if previousRemaining > threshold && currentRemaining <= threshold {
+	for _, thresholdMs := range timerWarningThresholdsMs {
+		if crossedTimerThreshold(previousRemaining, currentRemaining, thresholdMs) {
 			return true
 		}
 	}
 	return false
 }
 
+// crossedTimerThreshold checks one threshold transition.
+func crossedTimerThreshold(previousRemaining, currentRemaining, thresholdMs int) bool {
+	return previousRemaining > thresholdMs && currentRemaining <= thresholdMs
+}
+
+// buildGameStatePayload builds a personalized full game-state snapshot.
 func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStatePayload {
-	players := make([]gamePlayerJSON, len(state.Players))
-	for i, p := range state.Players {
-		var hand []cardJSON
-		if p.ID == forPlayerID {
-			hand = buildHandJSON(p.Hand)
-		}
-		players[i] = gamePlayerJSON{
-			ID:          p.ID,
-			Name:        p.Name,
-			HandCount:   len(p.Hand),
-			Hand:        hand,
-			WordBoard:   buildWordBoardJSON(p.WordBoard),
-			IsReady:     p.IsReady,
-			IsConnected: p.IsConnected,
-		}
-	}
-
-	var discardPileTop *cardJSON
-	if state.DiscardPileTop != nil {
-		discardPileTop = &cardJSON{ID: state.DiscardPileTop.ID, Letter: state.DiscardPileTop.Letter}
-	}
-
 	return gameStatePayload{
 		RoomCode:       state.RoomCode,
 		Variation:      variationJSON{WordLengths: state.Variation.WordLengths},
-		Players:        players,
+		Players:        buildGamePlayersJSON(state, forPlayerID),
 		DrawPileCount:  state.DrawPileCount,
-		DiscardPileTop: discardPileTop,
-		Turn: turnJSON{
-			CurrentPlayerID: state.Turn.CurrentPlayerID,
-			Phase:           string(state.Turn.Phase),
-			TimeRemainingMs: state.Turn.TimeRemainingMs,
-		},
-		Phase: string(state.Phase),
+		DiscardPileTop: buildOptionalCardJSON(state.DiscardPileTop),
+		Turn:           buildTurnJSON(state),
+		Phase:          string(state.Phase),
 	}
 }
 
+// buildGamePlayersJSON builds player snapshots, including one private hand.
+func buildGamePlayersJSON(state *room.GameState, forPlayerID string) []gamePlayerJSON {
+	players := make([]gamePlayerJSON, len(state.Players))
+	for i, p := range state.Players {
+		players[i] = buildGamePlayerJSON(p, p.ID == forPlayerID)
+	}
+	return players
+}
+
+// buildGamePlayerJSON converts a room player into game-state JSON.
+func buildGamePlayerJSON(p room.Player, includeHand bool) gamePlayerJSON {
+	return gamePlayerJSON{
+		ID:          p.ID,
+		Name:        p.Name,
+		HandCount:   len(p.Hand),
+		Hand:        maybeHandJSON(p.Hand, includeHand),
+		WordBoard:   buildWordBoardJSON(p.WordBoard),
+		IsReady:     p.IsReady,
+		IsConnected: p.IsConnected,
+	}
+}
+
+// maybeHandJSON includes hand cards only when the recipient may see them.
+func maybeHandJSON(hand []room.Card, includeHand bool) []cardJSON {
+	if includeHand {
+		return buildHandJSON(hand)
+	}
+	return nil
+}
+
+// buildTurnJSON converts turn state into the wire payload shape.
+func buildTurnJSON(state *room.GameState) turnJSON {
+	return turnJSON{
+		CurrentPlayerID: state.Turn.CurrentPlayerID,
+		Phase:           string(state.Turn.Phase),
+		TimeRemainingMs: state.Turn.TimeRemainingMs,
+	}
+}
+
+// buildHandJSON converts a hand of room cards into JSON cards.
 func buildHandJSON(hand []room.Card) []cardJSON {
 	out := make([]cardJSON, len(hand))
 	for i, card := range hand {
-		out[i] = cardJSON{ID: card.ID, Letter: card.Letter}
+		out[i] = buildCardJSON(card)
 	}
 	return out
 }
 
+// buildWordBoardJSON converts a domain word board into wire JSON.
 func buildWordBoardJSON(wb room.WordBoard) wordBoardJSON {
 	rows := make([]wordRowJSON, len(wb.Rows))
 	for i, row := range wb.Rows {
-		slots := make([]wordSlotJSON, len(row.Slots))
-		for j, slot := range row.Slots {
-			var card *cardJSON
-			if slot.Card != nil {
-				card = &cardJSON{ID: slot.Card.ID, Letter: slot.Card.Letter}
-			}
-			slots[j] = wordSlotJSON{SlotIndex: slot.SlotIndex, Card: card}
-		}
-		rows[i] = wordRowJSON{
-			TargetLength: row.TargetLength,
-			Slots:        slots,
-			IsComplete:   row.IsComplete,
-		}
+		rows[i] = buildWordRowJSON(row)
 	}
 	return wordBoardJSON{Rows: rows, AllComplete: wb.AllComplete}
 }
 
-func roomHasPlayer(state *room.GameState, playerID string) bool {
-	for _, p := range state.Players {
-		if p.ID == playerID {
-			return true
-		}
+// buildWordRowJSON converts one domain word row into wire JSON.
+func buildWordRowJSON(row room.WordRow) wordRowJSON {
+	return wordRowJSON{
+		TargetLength: row.TargetLength,
+		Slots:        buildWordSlotsJSON(row.Slots),
+		IsComplete:   row.IsComplete,
 	}
-	return false
 }
 
+// buildWordSlotsJSON converts domain slots into wire JSON slots.
+func buildWordSlotsJSON(slots []room.WordSlot) []wordSlotJSON {
+	out := make([]wordSlotJSON, len(slots))
+	for i, slot := range slots {
+		out[i] = wordSlotJSON{SlotIndex: slot.SlotIndex, Card: buildOptionalCardJSON(slot.Card)}
+	}
+
+	return out
+}
+
+// buildOptionalCardJSON converts a nullable domain card into wire JSON.
+func buildOptionalCardJSON(card *room.Card) *cardJSON {
+	if card == nil {
+		return nil
+	}
+
+	out := buildCardJSON(*card)
+	return &out
+}
+
+// buildCardJSON converts a domain card into wire JSON.
+func buildCardJSON(card room.Card) cardJSON {
+	return cardJSON{ID: card.ID, Letter: card.Letter}
+}
+
+// buildLobbyStatePayload builds the full lobby-state sync payload.
+func buildLobbyStatePayload(state *room.GameState) lobbyStatePayload {
+	return lobbyStatePayload{
+		RoomCode:       state.RoomCode,
+		HostPlayerID:   state.Players[0].ID,
+		Variation:      variationJSON{WordLengths: state.Variation.WordLengths},
+		TurnDurationMs: state.TurnDurationMs,
+		Players:        buildLobbyPlayersJSON(state.Players),
+	}
+}
+
+// buildLobbyPlayersJSON converts lobby players into wire JSON.
+func buildLobbyPlayersJSON(players []room.Player) []lobbyPlayerJSON {
+	out := make([]lobbyPlayerJSON, len(players))
+	for i, p := range players {
+		out[i] = buildLobbyPlayerJSON(p)
+	}
+	return out
+}
+
+// buildLobbyPlayerJSON converts one lobby player into wire JSON.
+func buildLobbyPlayerJSON(p room.Player) lobbyPlayerJSON {
+	return lobbyPlayerJSON{
+		ID:          p.ID,
+		Name:        p.Name,
+		IsReady:     p.IsReady,
+		IsConnected: p.IsConnected,
+	}
+}
+
+// lobbyPlayerJoined builds a join broadcast payload for one player.
+func lobbyPlayerJoined(state *room.GameState, playerID string) (lobbyPlayerJoinedPayload, bool) {
+	player, err := state.GetPlayer(playerID)
+	if err != nil {
+		return lobbyPlayerJoinedPayload{}, false
+	}
+	return lobbyPlayerJoinedPayload{Player: buildLobbyPlayerJSON(*player)}, true
+}
+
+// boardUpdateFor captures the acting player's board and private hand.
+func boardUpdateFor(state *room.GameState, playerID string) boardUpdate {
+	for _, p := range state.Players {
+		if p.ID == playerID {
+			return boardUpdate{board: p.WordBoard, hand: buildHandJSON(p.Hand)}
+		}
+	}
+	return boardUpdate{}
+}
+
+// boardPayloadFor builds a board update with hand data only for the actor.
+func boardPayloadFor(pid, playerID string, update boardUpdate) boardUpdatedPayload {
+	payload := boardUpdatedPayload{
+		PlayerID:  playerID,
+		WordBoard: buildWordBoardJSON(update.board),
+		HandCount: len(update.hand),
+	}
+	if pid == playerID {
+		payload.Hand = update.hand
+	}
+	return payload
+}
+
+// cardDrawnPayloadFor builds a draw payload with per-recipient card visibility.
+func cardDrawnPayloadFor(state *room.GameState, pid, playerID, source string, drawnCard *room.Card) cardDrawnPayload {
+	return cardDrawnPayload{
+		PlayerID:       playerID,
+		Source:         source,
+		Card:           visibleDrawnCard(pid, playerID, source, drawnCard),
+		DrawPileCount:  state.DrawPileCount,
+		DiscardPileTop: buildOptionalCardJSON(state.DiscardPileTop),
+	}
+}
+
+// visibleDrawnCard returns the card only for recipients allowed to see it.
+func visibleDrawnCard(pid, playerID, source string, drawnCard *room.Card) *cardJSON {
+	if pid == playerID || source == "discard" {
+		return buildOptionalCardJSON(drawnCard)
+	}
+	return nil
+}
+
+// playerName looks up a player's display name for logs.
+func playerName(state *room.GameState, playerID string) string {
+	if state == nil {
+		return ""
+	}
+	player, err := state.GetPlayer(playerID)
+	if err != nil {
+		return ""
+	}
+	return player.Name
+}
+
+// writeJSON writes an HTTP JSON response before WebSocket upgrade.
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
