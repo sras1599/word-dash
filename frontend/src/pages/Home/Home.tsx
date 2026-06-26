@@ -14,6 +14,7 @@ export function Home() {
     // Create Game form state
     const [createName, setCreateName] = useState('')
     const [createNameError, setCreateNameError] = useState('')
+    const [createSubmitError, setCreateSubmitError] = useState('')
     const [createLoading, setCreateLoading] = useState(false)
 
     // Join Game form state
@@ -27,6 +28,7 @@ export function Home() {
         setPanel(next)
         setCreateName('')
         setCreateNameError('')
+        setCreateSubmitError('')
         setJoinName('')
         setJoinRoomCode('')
         setJoinNameError('')
@@ -36,19 +38,21 @@ export function Home() {
     const handleCreateSubmit = async (e: React.SubmitEvent) => {
         e.preventDefault()
         setCreateNameError('')
+        setCreateSubmitError('')
 
         if (!createName.trim()) {
-            setCreateNameError('Name is required.')
+            setCreateNameError('Name is required')
             return
         }
 
         setCreateLoading(true)
         try {
-            const { roomCode, playerId } = await createRoom(createName.trim(), { wordLengths: [3, 4, 5] })
+            const { roomCode, playerId } = await createRoom(createName.trim())
             session.setPlayerId(playerId)
             session.setRoomCode(roomCode)
             navigate(`/lobby/${roomCode}`)
         } catch {
+            setCreateSubmitError('Unable to create room. Please try again')
             setCreateLoading(false)
         }
     }
@@ -219,9 +223,15 @@ export function Home() {
                                         aria-describedby={createNameError ? 'create-name-error' : undefined}
                                         aria-invalid={!!createNameError}
                                     />
+
                                     {createNameError && (
                                         <p id="create-name-error" className="page-home__error" role="alert">
                                             {createNameError}
+                                        </p>
+                                    )}
+                                    {createSubmitError && (
+                                        <p className="page-home__error" role="alert">
+                                            {createSubmitError}
                                         </p>
                                     )}
                                 </div>

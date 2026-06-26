@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+
+	"github.com/sras1599/wordit/backend/config"
 )
 
 // Sentinel errors returned by Join and StartGame.
@@ -124,9 +126,9 @@ type Store interface {
 
 const roomCodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-// Create creates a new room with the given host name, variation, and per-turn
-// duration. It returns the generated roomCode and the host player ID.
-func Create(store Store, hostName string, variation Variation, turnDurationMs int) (roomCode string, playerID string, err error) {
+// Create creates a new room with the given host name and configured default
+// settings. It returns the generated roomCode and the host player ID.
+func Create(store Store, hostName string) (roomCode string, playerID string, err error) {
 	roomCode, err = generateRoomCode()
 	if err != nil {
 		return "", "", fmt.Errorf("generate room code: %w", err)
@@ -136,6 +138,9 @@ func Create(store Store, hostName string, variation Variation, turnDurationMs in
 	if err != nil {
 		return "", "", fmt.Errorf("generate player ID: %w", err)
 	}
+
+	variation := Variation{WordLengths: append([]int(nil), config.Cfg.DefaultWordLengths...)}
+	turnDurationMs := config.Cfg.TurnDurationMS
 
 	host := Player{
 		ID:          playerID,

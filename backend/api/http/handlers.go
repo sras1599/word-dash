@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sras1599/wordit/backend/config"
 	"github.com/sras1599/wordit/backend/internal/room"
 )
 
@@ -81,11 +80,7 @@ func handleMethodNotAllowed(w http.ResponseWriter, _ *http.Request) {
 
 func handleCreateRoom(w http.ResponseWriter, r *http.Request, store room.Store) {
 	var body struct {
-		Name      string `json:"name"`
-		Variation struct {
-			WordLengths []int `json:"wordLengths"`
-		} `json:"variation"`
-		TurnDurationMs int `json:"turnDurationMs"`
+		Name string `json:"name"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -98,24 +93,15 @@ func handleCreateRoom(w http.ResponseWriter, r *http.Request, store room.Store) 
 		return
 	}
 
-	wordLengths := body.Variation.WordLengths
-	if len(wordLengths) == 0 {
-		wordLengths = config.Cfg.DefaultWordLengths
-	}
-
-	turnDurationMs := body.TurnDurationMs
-	if turnDurationMs <= 0 {
-		turnDurationMs = config.Cfg.TurnDurationMS
-	}
-
-	roomCode, playerID, err := room.Create(store, body.Name, room.Variation{WordLengths: wordLengths}, turnDurationMs)
+	hostName := strings.TrimSpace(body.Name)
+	roomCode, playerID, err := room.Create(store, hostName)
 	if err != nil {
 		slog.Error("create room: storage error", "error", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create room"})
 		return
 	}
 
-	slog.Info("room created", "roomCode", roomCode, "player", fmt.Sprintf("%s (%s)", playerID, body.Name))
+	slog.Info("room created", "roomCode", roomCode, "player", fmt.Sprintf("%s (%s)", playerID, hostName))
 
 	writeJSON(w, http.StatusOK, map[string]string{
 		"roomCode": roomCode,
