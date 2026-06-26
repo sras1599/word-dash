@@ -47,8 +47,8 @@ Pre-game room where the host configures the game and all players ready up before
 | Room does not exist                      | Shows a room-not-found message with a button that returns the user to the home page.                                 |
 | Host changes variation                   | Sends `lobby:variation_changed` event. All clients receive the update and re-render the settings panel.              |
 | Any player clicks **Ready**              | Sends `lobby:player_ready`. The player's card in the players list shows a ready indicator. Button becomes disabled.  |
-| Click **Copy link**                      | Copies the full join URL to clipboard.                                                                               |
-| Host clicks **Start** (enabled when all players ready, ≥2 players) | Sends `lobby:start_game`. All clients navigate to `/game/:roomCode`.        |
+| Click **Copy Room Code**                 | Copies the room code to clipboard.                                                                                   |
+| Host clicks **Start** (enabled when all players ready, ≥2 players) | Sends `lobby:start_game`. All clients navigate to `/game/:roomCode`.                       |
 | A new player joins                       | Their card appears in an empty player slot in real time.                                                             |
 | A player disconnects in lobby            | Their slot shows as disconnected; they can rejoin before the game starts.                                            |
 
