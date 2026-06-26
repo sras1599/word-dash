@@ -443,8 +443,8 @@ export function Lobby() {
         })
     }
 
-    function handleCopyLink() {
-        void navigator.clipboard.writeText(`${window.location.origin}/lobby/${roomCode}`)
+    function handleCopyRoomCode() {
+        void navigator.clipboard.writeText(`${roomCode}`)
     }
 
     function handleVariationTabChange(nextTab: VariationTab) {
@@ -544,8 +544,8 @@ export function Lobby() {
                 </div>
 
                 <div className="page-lobby__topbar-actions">
-                    <button className="wd-btn wd-btn--lift page-lobby__copy-btn" type="button" onClick={handleCopyLink}>
-                        Copy Link
+                    <button className="wd-btn wd-btn--lift page-lobby__copy-btn" type="button" onClick={handleCopyRoomCode}>
+                        Copy Room Code
                     </button>
                 </div>
             </nav>
