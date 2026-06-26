@@ -13,7 +13,7 @@ const (
 	defaultCORSOrigin     = "http://localhost:5173"
 )
 
-var defaultWordLengths = []int{5}
+var defaultWordLengths = []int{3, 4, 5}
 
 // Cfg is the package-level config, loaded once at startup from environment
 // variables. Any package that imports config can reference Cfg directly.

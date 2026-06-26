@@ -80,11 +80,6 @@ func handleMethodNotAllowed(w http.ResponseWriter, _ *http.Request) {
 }
 
 func handleCreateRoom(w http.ResponseWriter, r *http.Request, store room.Store) {
-	if r.Method != http.MethodPost {
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
-		return
-	}
-
 	var body struct {
 		Name      string `json:"name"`
 		Variation struct {
