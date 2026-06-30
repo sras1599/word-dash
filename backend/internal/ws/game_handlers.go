@@ -34,11 +34,7 @@ func (h *Hub) syncGameConnection(c *client, roomCode, playerID string) {
 	}
 
 	c.send("game:state", buildGameStatePayload(&state, playerID))
-
-	alreadyConnected := h.store.IsPlayerConnected(roomCode, playerID)
-	if !alreadyConnected {
-		h.broadcastToRoom(roomCode, "game:player_reconnected", playerEventPayload{PlayerID: playerID})
-	}
+	h.broadcastToRoom(roomCode, "game:player_reconnected", playerEventPayload{PlayerID: playerID})
 }
 
 // handleGamePlayerConnected resyncs an existing game connection.
