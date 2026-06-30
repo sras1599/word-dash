@@ -13,6 +13,7 @@ import (
 	apihttp "github.com/sras1599/wordit/backend/api/http"
 	apiws "github.com/sras1599/wordit/backend/api/ws"
 	"github.com/sras1599/wordit/backend/config"
+	"github.com/sras1599/wordit/backend/internal/dictionary"
 	"github.com/sras1599/wordit/backend/internal/storage"
 	internalws "github.com/sras1599/wordit/backend/internal/ws"
 )
@@ -32,6 +33,12 @@ func main() {
 	}
 	defer cleanup()
 
+	dict, err := dictionary.NewEmbeddedEnglishChecker()
+	if err != nil {
+		slog.Error("failed to initialize dictionary", "error", err)
+		os.Exit(1)
+	}
+
 	restMux := http.NewServeMux()
 	apihttp.RegisterRoutes(restMux, store)
 	restServer := &http.Server{
@@ -40,7 +47,7 @@ func main() {
 	}
 
 	wsMux := http.NewServeMux()
-	hub := internalws.NewHub(store)
+	hub := internalws.NewHub(store, dict)
 	apiws.RegisterRoutes(wsMux, hub)
 	wsServer := &http.Server{
 		Addr:    cfg.WSAddr(),

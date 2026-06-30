@@ -9,12 +9,19 @@ type DictionaryChecker interface {
 }
 ```
 
+## Active Implementation
+
+The backend currently uses `FileChecker`, which loads the embedded English word
+list once during server startup and stores normalized words in a
+`map[string]struct{}` for O(1) lookup. The bundled source is
+`dwyl/english-words` `words_dictionary.json`.
+
+The active checker is injected at startup and passed to the game engine as the
+`DictionaryChecker` interface. Clients never validate words locally.
+
 ## Planned Implementations
 
 | Implementation       | Description |
 |----------------------|-------------|
-| `FileDictionary`     | Loads a flat word list (for example `words_alpha.txt`) into memory at startup. O(1) lookup via `map[string]struct{}`. Suitable for local dev and self-hosted deployments. |
 | `PostgresDictionary` | Queries the `words` table in PostgreSQL. Useful if the word list needs to be updated dynamically without a redeploy. |
 | `APIDictionary`      | Calls an external dictionary API (for example Free Dictionary API). Adds network latency; intended for future use or fallback. |
-
-The active implementation is injected at startup via the config package and passed to the game engine as the `DictionaryChecker` interface.

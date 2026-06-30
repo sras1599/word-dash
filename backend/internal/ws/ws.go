@@ -42,10 +42,14 @@ type Hub struct {
 }
 
 // NewHub creates a WebSocket hub backed by the provided room store.
-func NewHub(store room.Store) *Hub {
+func NewHub(store room.Store, dict dictionary.DictionaryChecker) *Hub {
+	if dict == nil {
+		dict = dictionary.NopChecker{}
+	}
+
 	return &Hub{
 		store:        store,
-		dict:         dictionary.NopChecker{},
+		dict:         dict,
 		conns:        make(map[string]*client),
 		activeTimers: make(map[string]chan struct{}),
 	}
