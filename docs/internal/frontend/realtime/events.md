@@ -145,6 +145,7 @@ Draw the top card from a pile. Only valid during the local player's draw phase.
 
 #### `game:place_card`
 Place a card from hand into a word slot.
+Valid during any player's draw or arrange phase; the server applies it only to the sender's own board.
 ```ts
 {
   cardId: string;
@@ -155,6 +156,7 @@ Place a card from hand into a word slot.
 
 #### `game:unplace_card`
 Remove a card from a word slot back to hand.
+Valid during any player's draw or arrange phase; the server applies it only to the sender's own board.
 ```ts
 {
   rowIndex: number;

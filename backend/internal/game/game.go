@@ -197,15 +197,12 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 }
 
 // UnplaceCard removes a card from the specified board slot and returns it to
-// the active player's hand.
+// the player's hand.
 func UnplaceCard(state *room.GameState, playerID string, rowIndex, slotIndex int) error {
 	if state.Phase != room.GamePhasePlaying {
 		return fmt.Errorf("game not in playing phase")
 	}
-	if state.Turn.CurrentPlayerID != playerID {
-		return ErrNotYourTurn
-	}
-	if state.Turn.Phase != room.TurnPhaseArrange {
+	if state.Turn.Phase != room.TurnPhaseDraw && state.Turn.Phase != room.TurnPhaseArrange {
 		return ErrInvalidPhase
 	}
 

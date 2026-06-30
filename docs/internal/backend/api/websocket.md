@@ -55,11 +55,11 @@ All messages in both directions are JSON objects with the shape:
 | Event               | Payload                                 | Valid phase |
 |---------------------|-----------------------------------------|-------------|
 | `game:draw_card`    | `{ "source": "draw" \| "discard" }` | `draw`      |
-| `game:place_card`   | `{ "cardId", "rowIndex", "slotIndex" }` | `arrange` |
-| `game:unplace_card` | `{ "rowIndex", "slotIndex" }`       | `arrange`   |
+| `game:place_card`   | `{ "cardId", "rowIndex", "slotIndex" }` | `draw` or `arrange` |
+| `game:unplace_card` | `{ "rowIndex", "slotIndex" }`       | `draw` or `arrange` |
 | `game:discard_card` | `{ "cardId" }`                        | `arrange`   |
 
-Events received outside their valid phase, or from a player who is not the current turn holder, are rejected with `game:error`.
+Draw and discard events must come from the current turn holder. Board-edit events (`game:place_card` and `game:unplace_card`) apply only to the sender's own board and are accepted during any player's `draw` or `arrange` turn phase. Events received outside their valid phase, or turn-owned events from a non-current player, are rejected with `game:error`.
 
 ### Server -> Client
 
