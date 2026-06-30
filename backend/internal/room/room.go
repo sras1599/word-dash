@@ -146,7 +146,6 @@ func Create(store Store, hostName string) (roomCode string, playerID string, err
 		ID:          playerID,
 		Name:        hostName,
 		Hand:        []Card{},
-		WordBoard:   buildWordBoard(variation),
 		IsReady:     false,
 		IsConnected: false,
 	}
@@ -166,7 +165,8 @@ func Create(store Store, hostName string) (roomCode string, playerID string, err
 	return roomCode, playerID, nil
 }
 
-func buildWordBoard(v Variation) WordBoard {
+// NewWordBoard builds an empty board from the provided variation info
+func NewWordBoard(v Variation) WordBoard {
 	rows := make([]WordRow, len(v.WordLengths))
 	for i, length := range v.WordLengths {
 		slots := make([]WordSlot, length)
@@ -201,7 +201,6 @@ func Join(store Store, roomCode, playerName string) (string, error) {
 		ID:          playerID,
 		Name:        playerName,
 		Hand:        []Card{},
-		WordBoard:   buildWordBoard(state.Variation),
 		IsReady:     false,
 		IsConnected: false,
 	}

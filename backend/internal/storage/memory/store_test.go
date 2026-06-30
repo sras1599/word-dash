@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/sras1599/wordit/backend/internal/dictionary"
@@ -113,6 +114,56 @@ func TestUpdateGameStatePersistsDiscard(t *testing.T) {
 	}
 }
 
+func TestStartGameBuildsWordBoardsFromFinalVariation(t *testing.T) {
+	store := NewStore()
+	state := &room.GameState{
+		RoomCode: "ROOM1",
+		Variation: room.Variation{
+			WordLengths: []int{5, 6},
+		},
+		Players: []room.Player{
+			{
+				ID:        "host",
+				Name:      "Host",
+				WordBoard: room.NewWordBoard(room.Variation{WordLengths: []int{3, 4, 5}}),
+				IsReady:   true,
+			},
+			{
+				ID:        "guest",
+				Name:      "Guest",
+				WordBoard: room.NewWordBoard(room.Variation{WordLengths: []int{4}}),
+				IsReady:   true,
+			},
+		},
+		Phase:          room.GamePhaseWaiting,
+		TurnDurationMs: 60_000,
+	}
+	if err := store.Put(state); err != nil {
+		t.Fatalf("put state: %v", err)
+	}
+
+	started, err := store.StartGame("ROOM1", "host", testDeck(40))
+	if err != nil {
+		t.Fatalf("start game: %v", err)
+	}
+
+	for _, player := range started.Players {
+		gotLengths := make([]int, len(player.WordBoard.Rows))
+		for i, row := range player.WordBoard.Rows {
+			gotLengths[i] = row.TargetLength
+			if len(row.Slots) != row.TargetLength {
+				t.Fatalf("player %s row %d slots = %d, want %d", player.ID, i, len(row.Slots), row.TargetLength)
+			}
+		}
+		if !slices.Equal(gotLengths, []int{5, 6}) {
+			t.Fatalf("player %s board lengths = %v, want [5 6]", player.ID, gotLengths)
+		}
+		if got := len(player.Hand); got != 11 {
+			t.Fatalf("player %s hand length = %d, want 11", player.ID, got)
+		}
+	}
+}
+
 func testPlayingState(hand []room.Card) *room.GameState {
 	return &room.GameState{
 		RoomCode: "ROOM1",
@@ -147,4 +198,12 @@ func testPlayingState(hand []room.Card) *room.GameState {
 		Phase:          room.GamePhasePlaying,
 		TurnDurationMs: 60_000,
 	}
+}
+
+func testDeck(count int) []room.Card {
+	cards := make([]room.Card, count)
+	for i := range cards {
+		cards[i] = room.Card{ID: "card", Letter: "A"}
+	}
+	return cards
 }

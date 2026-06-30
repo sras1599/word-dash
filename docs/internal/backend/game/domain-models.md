@@ -48,7 +48,7 @@ type Player struct {
     ID          string
     Name        string
     Hand        []Card // normal hand only - does not include DrawnCard
-    WordBoard   WordBoard
+    WordBoard   WordBoard // empty in waiting rooms; initialized when the game starts
     IsReady     bool
     IsConnected bool
 }
@@ -75,3 +75,5 @@ type GameState struct {
 ```
 
 Note: `Turn.DrawnCard` is kept separate from `Player.Hand` so the server can always identify the extra card to auto-discard on timeout without ambiguity.
+
+`Player.WordBoard` is not built when a room is created or when players join. The board is initialized from the final locked-in `Variation` during the `StartGame` transition.

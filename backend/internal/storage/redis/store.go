@@ -337,6 +337,11 @@ func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card) (room
 			}
 		}
 
+		// create the word boards for every player
+		for i := range state.Players {
+			state.Players[i].WordBoard = room.NewWordBoard(state.Variation)
+		}
+
 		// Compute hand size: each player starts with enough cards to fill their board.
 		handSize := 0
 		for _, l := range state.Variation.WordLengths {

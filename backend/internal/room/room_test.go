@@ -54,16 +54,29 @@ func TestCreateInitializesRoomWithDefaults(t *testing.T) {
 	if host.IsConnected {
 		t.Fatal("host should not start connected")
 	}
-	if len(host.WordBoard.Rows) != len(config.Cfg.DefaultWordLengths) {
-		t.Fatalf("word board rows = %d, want %d", len(host.WordBoard.Rows), len(config.Cfg.DefaultWordLengths))
+	if len(host.WordBoard.Rows) != 0 {
+		t.Fatalf("word board rows = %d, want 0 before game start", len(host.WordBoard.Rows))
 	}
-	for i, row := range host.WordBoard.Rows {
-		wantLength := config.Cfg.DefaultWordLengths[i]
+}
+
+func TestNewWordBoardBuildsRowsFromVariation(t *testing.T) {
+	board := room.NewWordBoard(room.Variation{WordLengths: []int{5, 6}})
+
+	if len(board.Rows) != 2 {
+		t.Fatalf("word board rows = %d, want 2", len(board.Rows))
+	}
+	for i, wantLength := range []int{5, 6} {
+		row := board.Rows[i]
 		if row.TargetLength != wantLength {
 			t.Fatalf("row %d target length = %d, want %d", i, row.TargetLength, wantLength)
 		}
 		if len(row.Slots) != wantLength {
 			t.Fatalf("row %d slots = %d, want %d", i, len(row.Slots), wantLength)
+		}
+		for slotIndex, slot := range row.Slots {
+			if slot.SlotIndex != slotIndex {
+				t.Fatalf("row %d slot index = %d, want %d", i, slot.SlotIndex, slotIndex)
+			}
 		}
 	}
 }

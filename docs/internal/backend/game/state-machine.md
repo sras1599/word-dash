@@ -6,8 +6,8 @@
 waiting -> playing -> finished
 ```
 
-- `waiting`: Lobby. Players join and mark ready. Host selects variation.
-- `playing`: Active game. Turn loop is running.
+- `waiting`: Lobby. Players join and mark ready. Host selects variation. Player word boards are not initialized yet.
+- `playing`: Active game. The final variation is locked, player word boards are initialized, and the turn loop is running.
 - `finished`: A player has won. Game is over. Host may trigger `lobby:restart`.
 
 ## Turn Phases
