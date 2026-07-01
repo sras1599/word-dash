@@ -280,6 +280,7 @@ export function GameBoard({
 
                     <WordBoard
                         wordBoard={localPlayer.wordBoard}
+                        willAutoDiscardCardId={willAutoDiscardCardId}
                         onPlace={canPlaceInCurrentPhase ? onPlace : undefined}
                         onCardDragStart={canPlaceInCurrentPhase ? handleBoardCardDragStart : undefined}
                         onCardDragEnd={canPlaceInCurrentPhase ? handleBoardCardDragEnd : undefined}

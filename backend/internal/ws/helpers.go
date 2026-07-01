@@ -285,11 +285,12 @@ func boardPayloadFor(pid, playerID string, update boardUpdate) boardUpdatedPaylo
 // cardDrawnPayloadFor builds a draw payload with per-recipient card visibility.
 func cardDrawnPayloadFor(state *room.GameState, pid, playerID, source string, drawnCard *room.Card) cardDrawnPayload {
 	return cardDrawnPayload{
-		PlayerID:       playerID,
-		Source:         source,
-		Card:           visibleDrawnCard(pid, playerID, source, drawnCard),
-		DrawPileCount:  state.DrawPileCount,
-		DiscardPileTop: buildOptionalCardJSON(state.DiscardPileTop),
+		PlayerID:        playerID,
+		Source:          source,
+		Card:            visibleDrawnCard(pid, playerID, source, drawnCard),
+		DrawPileCount:   state.DrawPileCount,
+		DiscardPileTop:  buildOptionalCardJSON(state.DiscardPileTop),
+		TimeRemainingMs: state.Turn.TimeRemainingMs,
 	}
 }
 

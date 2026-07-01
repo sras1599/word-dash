@@ -163,11 +163,12 @@ type drawCardRequest struct {
 }
 
 type cardDrawnPayload struct {
-	PlayerID       string    `json:"playerId"`
-	Source         string    `json:"source"`
-	Card           *cardJSON `json:"card"`
-	DrawPileCount  int       `json:"drawPileCount"`
-	DiscardPileTop *cardJSON `json:"discardPileTop"`
+	PlayerID        string    `json:"playerId"`
+	Source          string    `json:"source"`
+	Card            *cardJSON `json:"card"`
+	DrawPileCount   int       `json:"drawPileCount"`
+	DiscardPileTop  *cardJSON `json:"discardPileTop"`
+	TimeRemainingMs int       `json:"timeRemainingMs"`
 }
 
 type placeCardRequest struct {

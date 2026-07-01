@@ -67,7 +67,7 @@ Draw and discard events must come from the current turn holder. Board-edit event
 |----------------------------|---------|
 | `game:state`               | Full `GameState` snapshot. Sent to all players on game start and to the reconnecting player on reconnect. |
 | `game:turn_started`        | `{ currentPlayerId, timeRemainingMs: 60000 }` |
-| `game:card_drawn`          | `{ playerId, source, card: Card \| null, drawPileCount, discardPileTop }`. `card` is `null` for non-drawing players. |
+| `game:card_drawn`          | `{ playerId, source, card: Card \| null, drawPileCount, discardPileTop, timeRemainingMs }`. `card` is `null` for non-drawing players. |
 | `game:board_updated`       | `{ playerId, wordBoard: WordBoard }`. Broadcast to all players after every `place` or `unplace` action. |
 | `game:timer_warning`       | `{ currentPlayerId, timeRemainingMs }`. Emitted only when remaining time crosses warning thresholds (`10s`, `5s`, `1s`). |
 | `game:turn_ended`          | `{ playerId, reason: "discarded" \| "timeout", discardedCard: Card, discardPileTop: Card, nextPlayerId, timeRemainingMs }` |

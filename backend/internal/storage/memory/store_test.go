@@ -164,6 +164,38 @@ func TestStartGameBuildsWordBoardsFromFinalVariation(t *testing.T) {
 	}
 }
 
+func TestTickTimerDecrementsDrawAndArrangePhases(t *testing.T) {
+	tests := []struct {
+		name  string
+		phase room.TurnPhase
+		want  int
+	}{
+		{name: "draw", phase: room.TurnPhaseDraw, want: 59_000},
+		{name: "arrange", phase: room.TurnPhaseArrange, want: 59_000},
+		{name: "idle", phase: room.TurnPhaseIdle, want: 60_000},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := NewStore()
+			state := testPlayingState([]room.Card{{ID: "card-a", Letter: "A"}})
+			state.Turn.Phase = tt.phase
+			state.Turn.TimeRemainingMs = 60_000
+			if err := store.Put(state); err != nil {
+				t.Fatalf("put state: %v", err)
+			}
+
+			got, err := store.TickTimer("ROOM1")
+			if err != nil {
+				t.Fatalf("tick timer: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("remaining = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
 func testPlayingState(hand []room.Card) *room.GameState {
 	return &room.GameState{
 		RoomCode: "ROOM1",

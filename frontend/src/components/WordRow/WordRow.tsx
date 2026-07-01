@@ -18,6 +18,8 @@ export interface WordRowProps {
     rowState: WordRowState
     /** The row's index within the player's word board. */
     rowIndex: number
+    /** ID of the card that should flash before automatic discard. */
+    willAutoDiscardCardId?: string | null
     /** Called when a card is dropped into a slot. */
     onPlace?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a card is dragged out of a slot. */
@@ -40,6 +42,7 @@ function deriveIsValid(rowState: WordRowState): boolean | null {
 export function WordRow({
     rowState,
     rowIndex,
+    willAutoDiscardCardId = null,
     onPlace,
     onUnplace,
     onCardDragStart,
@@ -69,6 +72,7 @@ export function WordRow({
                     slotIndex={slot.slotIndex}
                     rowIndex={rowIndex}
                     card={slot.card}
+                    willAutoDiscardCardId={willAutoDiscardCardId}
                     onPlace={onPlace}
                     onUnplace={onUnplace}
                     onCardDragStart={onCardDragStart}

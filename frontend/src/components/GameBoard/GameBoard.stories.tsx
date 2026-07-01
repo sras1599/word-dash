@@ -4,6 +4,7 @@ import { fn } from 'storybook/test'
 import { GameBoard } from './GameBoard'
 import type { GameBoardLocalPlayer, GameBoardOpponentPlayer, GameBoardTurn, GameBoardVariation } from './GameBoard'
 import type { CardData } from '../Card/Card'
+import type { WordBoardState } from '../WordBoard/WordBoard'
 
 // ─── Shared fixtures ────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ function makeHand(n: number): CardData[] {
 }
 
 /** Build an empty word board for the given variation. */
-function emptyWordBoard(variation: GameBoardVariation) {
+function emptyWordBoard(variation: GameBoardVariation): WordBoardState {
     return {
         rows: variation.wordLengths.map((len) => ({
             targetLength: len,
@@ -32,6 +33,12 @@ function emptyWordBoard(variation: GameBoardVariation) {
         })),
         allComplete: false,
     }
+}
+
+function wordBoardWithPlacedCard(variation: GameBoardVariation, card: CardData, rowIndex = 0, slotIndex = 0) {
+    const board = emptyWordBoard(variation)
+    board.rows[rowIndex].slots[slotIndex].card = card
+    return board
 }
 
 const DISCARD_TOP: CardData = { id: 'cx', letter: 'X' }
@@ -153,6 +160,28 @@ export const TimerUrgent: Story = {
             hand: [...makeLocalPlayer(VARIATION_345, 'local').hand, DRAWN_CARD],
         },
         handCount: 13,
+        boardSubtitle: 'Arrange your cards before the timer expires.',
+        drawnCardId: DRAWN_CARD.id,
+        willAutoDiscardCardId: DRAWN_CARD.id,
+        turn: {
+            currentPlayerId: 'local',
+            phase: 'arrange',
+            timeRemainingMs: 8_000,
+            totalDurationMs: 60_000,
+        },
+    },
+}
+
+/** Urgent timer with the drawn card already placed on the word board. */
+export const TimerUrgentBoardCard: Story = {
+    args: {
+        discardTopCard: DISCARD_TOP,
+        localPlayer: {
+            ...makeLocalPlayer(VARIATION_345, 'local'),
+            hand: makeHand(11),
+            wordBoard: wordBoardWithPlacedCard(VARIATION_345, DRAWN_CARD),
+        },
+        handCount: 11,
         boardSubtitle: 'Arrange your cards before the timer expires.',
         drawnCardId: DRAWN_CARD.id,
         willAutoDiscardCardId: DRAWN_CARD.id,

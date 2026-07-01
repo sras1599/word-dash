@@ -169,12 +169,13 @@ export function Game() {
         })
 
         ws.on('game:card_drawn', (payload) => {
-            const { playerId, card, drawPileCount, discardPileTop } = payload as {
+            const { playerId, card, drawPileCount, discardPileTop, timeRemainingMs } = payload as {
                 playerId: string
                 source: 'draw' | 'discard'
                 card: Card | null
                 drawPileCount: number
                 discardPileTop: Card | null
+                timeRemainingMs?: number
             }
             setGameState((prev) => {
                 if (!prev) return prev
@@ -195,6 +196,10 @@ export function Game() {
                     turn: {
                         ...prev.turn,
                         phase: 'arrange' as TurnPhase,
+                        timeRemainingMs:
+                            typeof timeRemainingMs === 'number'
+                                ? Math.max(0, timeRemainingMs)
+                                : prev.turn.timeRemainingMs,
                         drawnCard: playerId === localPlayerId ? card : prev.turn.drawnCard,
                     },
                 }

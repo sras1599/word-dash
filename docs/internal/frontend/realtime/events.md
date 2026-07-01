@@ -201,6 +201,7 @@ When a player draws from the draw pile, only that player receives the actual car
   card: Card | null;
   drawPileCount: number;
   discardPileTop: Card | null;
+  timeRemainingMs: number;
 }
 ```
 
