@@ -561,6 +561,8 @@ export function Game() {
         currentGameState.phase === 'playing' &&
         currentGameState.turn.phase !== 'idle' &&
         currentGameState.turn.timeRemainingMs <= URGENCY_THRESHOLD_MS
+    const drawnCardId = currentGameState.turn.drawnCard?.id ?? null
+    const drawnCardWillAutoDiscard = isArrangePhase && timerIsUrgent
     const canArrangeCards = canPlaceCard(currentGameState)
     const localHand = localPlayerData?.hand ?? []
     const handCount = localPlayerData?.handCount ?? localHand.length
@@ -814,9 +816,19 @@ export function Game() {
                             onDrop={canArrangeCards ? handleHandDrop : undefined}
                         >
                             {localHand.length > 0 ? (
-                                localHand.map((card) => (
-                                    <PlayingCard key={card.id} card={card} draggable={canArrangeCards} />
-                                ))
+                                localHand.map((card) => {
+                                    const isDrawnCard = card.id === drawnCardId
+
+                                    return (
+                                        <PlayingCard
+                                            key={card.id}
+                                            card={card}
+                                            draggable={canArrangeCards}
+                                            isDrawn={isDrawnCard}
+                                            willAutoDiscard={drawnCardWillAutoDiscard && isDrawnCard}
+                                        />
+                                    )
+                                })
                             ) : (
                                 <p className="page-game__hand-empty">No cards in hand.</p>
                             )}

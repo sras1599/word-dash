@@ -17,6 +17,8 @@ export interface CardProps {
     selected?: boolean
     /** Marks the card drawn this turn with a teal border. */
     isDrawn?: boolean
+    /** Flashes a drawn card that will be auto-discarded when the timer expires. */
+    willAutoDiscard?: boolean
     /** Disables all interactions (e.g. results screen). Default: false. */
     readOnly?: boolean
     /** Called when the card is clicked (ignored when readOnly). */
@@ -33,6 +35,7 @@ export function Card({
     draggable: isDraggable = false,
     selected = false,
     isDrawn = false,
+    willAutoDiscard = false,
     readOnly = false,
     onClick,
     onDragStart,
@@ -72,6 +75,7 @@ export function Card({
         isVowel && 'card--vowel',
         selected && 'card--selected',
         isDrawn && 'card--drawn',
+        willAutoDiscard && 'card--will-auto-discard',
         readOnly && 'card--readonly',
         isDraggable && !readOnly && card && 'card--draggable',
     ]

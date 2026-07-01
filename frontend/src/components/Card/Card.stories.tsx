@@ -26,6 +26,7 @@ const meta = {
         draggable: { control: 'boolean' },
         selected: { control: 'boolean' },
         isDrawn: { control: 'boolean' },
+        willAutoDiscard: { control: 'boolean' },
         readOnly: { control: 'boolean' },
     },
     args: {
@@ -34,6 +35,7 @@ const meta = {
         draggable: false,
         selected: false,
         isDrawn: false,
+        willAutoDiscard: false,
         readOnly: false,
         onClick: fn(),
         onDragStart: fn(),
@@ -64,6 +66,15 @@ export const Drawn: Story = {
     args: {
         card: SAMPLE_CARD,
         isDrawn: true,
+    },
+}
+
+/** Drawn card during the urgent timer window. */
+export const WillAutoDiscard: Story = {
+    args: {
+        card: SAMPLE_CARD,
+        isDrawn: true,
+        willAutoDiscard: true,
     },
 }
 

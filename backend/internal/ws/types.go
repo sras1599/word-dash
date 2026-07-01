@@ -99,9 +99,10 @@ type gamePlayerJSON struct {
 }
 
 type turnJSON struct {
-	CurrentPlayerID string `json:"currentPlayerId"`
-	Phase           string `json:"phase"`
-	TimeRemainingMs int    `json:"timeRemainingMs"`
+	CurrentPlayerID string    `json:"currentPlayerId"`
+	Phase           string    `json:"phase"`
+	TimeRemainingMs int       `json:"timeRemainingMs"`
+	DrawnCard       *cardJSON `json:"drawnCard"`
 }
 
 type gameStatePayload struct {

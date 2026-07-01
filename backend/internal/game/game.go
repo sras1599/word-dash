@@ -84,6 +84,7 @@ func DrawCard(state *room.GameState, playerID string, source string) (*room.Card
 
 	// Update turn state
 	state.Turn.Phase = room.TurnPhaseArrange
+	state.Turn.TimeRemainingMs = state.TurnDurationMs
 	state.Turn.DrawnCard = &drawnCard
 	playerName := ""
 	if p, err := state.GetPlayer(playerID); err == nil {
@@ -230,6 +231,29 @@ func UnplaceCard(state *room.GameState, playerID string, rowIndex, slotIndex int
 // DiscardCard removes a card from the active player's hand or board, pushes it
 // to the discard pile, and advances the turn to the next player.
 func DiscardCard(state *room.GameState, playerID, cardID string) (*room.Card, string, error) {
+	return discardCard(state, playerID, cardID)
+}
+
+// AutoDiscardDrawnCard discards the active player's drawn card on timeout and
+// advances the turn to the next player.
+func AutoDiscardDrawnCard(state *room.GameState, playerID string) (*room.Card, string, error) {
+	if state.Phase != room.GamePhasePlaying {
+		return nil, "", fmt.Errorf("game not in playing phase")
+	}
+	if state.Turn.CurrentPlayerID != playerID {
+		return nil, "", ErrNotYourTurn
+	}
+	if state.Turn.Phase != room.TurnPhaseArrange {
+		return nil, "", ErrInvalidPhase
+	}
+	if state.Turn.DrawnCard == nil {
+		return nil, "", ErrInvalidCard
+	}
+
+	return discardCard(state, playerID, state.Turn.DrawnCard.ID)
+}
+
+func discardCard(state *room.GameState, playerID, cardID string) (*room.Card, string, error) {
 	if state.Phase != room.GamePhasePlaying {
 		return nil, "", fmt.Errorf("game not in playing phase")
 	}

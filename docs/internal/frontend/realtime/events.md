@@ -228,11 +228,11 @@ Sent only when the remaining turn time crosses warning thresholds.
 ```
 
 #### `game:turn_ended`
-Broadcast when the active player ends their turn by discarding.
+Broadcast when the active player ends their turn by discarding or times out after drawing.
 ```ts
 {
   playerId: string;
-  reason: 'discarded';
+  reason: 'discarded' | 'timeout';
   discardedCard: Card;
   discardPileTop: Card;
   nextPlayerId: string;
@@ -241,11 +241,11 @@ Broadcast when the active player ends their turn by discarding.
 ```
 
 #### `game:turn_skipped`
-Broadcast when the server skips a turn start because the active player timed out or is still disconnected when their turn begins.
+Broadcast when the server skips a turn start because the active player is still disconnected when their turn begins.
 ```ts
 {
   playerId: string;
-  reason: 'timeout' | 'disconnected';
+  reason: 'disconnected';
   nextPlayerId: string;
   timeRemainingMs: number;
 }

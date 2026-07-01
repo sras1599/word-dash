@@ -114,7 +114,7 @@ func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStateP
 		Players:        buildGamePlayersJSON(state, forPlayerID),
 		DrawPileCount:  state.DrawPileCount,
 		DiscardPileTop: buildOptionalCardJSON(state.DiscardPileTop),
-		Turn:           buildTurnJSON(state),
+		Turn:           buildTurnJSON(state, forPlayerID),
 		Phase:          string(state.Phase),
 	}
 }
@@ -150,12 +150,22 @@ func maybeHandJSON(hand []room.Card, includeHand bool) []cardJSON {
 }
 
 // buildTurnJSON converts turn state into the wire payload shape.
-func buildTurnJSON(state *room.GameState) turnJSON {
+func buildTurnJSON(state *room.GameState, forPlayerID string) turnJSON {
 	return turnJSON{
 		CurrentPlayerID: state.Turn.CurrentPlayerID,
 		Phase:           string(state.Turn.Phase),
 		TimeRemainingMs: state.Turn.TimeRemainingMs,
+		DrawnCard:       visibleTurnDrawnCard(state, forPlayerID),
 	}
+}
+
+// visibleTurnDrawnCard returns the drawn card only to the active player.
+func visibleTurnDrawnCard(state *room.GameState, forPlayerID string) *cardJSON {
+	if state.Turn.CurrentPlayerID != forPlayerID {
+		return nil
+	}
+
+	return buildOptionalCardJSON(state.Turn.DrawnCard)
 }
 
 // buildHandJSON converts a hand of room cards into JSON cards.

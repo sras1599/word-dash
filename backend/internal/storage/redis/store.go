@@ -403,11 +403,14 @@ func (s *Store) NextTurn(roomCode string) (room.GameState, error) {
 	})
 }
 
-// TickTimer decrements the current turn's TimeRemainingMs by one second and
-// returns the new value. Returns 0 without error when the game is not playing.
+// TickTimer decrements the arrange phase's TimeRemainingMs by one second and
+// returns the current value. Returns 0 without error when the game is not playing.
 func (s *Store) TickTimer(roomCode string) (int, error) {
 	updated, err := s.mutate(roomCode, func(state *room.GameState) (room.GameState, bool, error) {
 		if state.Phase != room.GamePhasePlaying {
+			return *state, false, nil
+		}
+		if state.Turn.Phase != room.TurnPhaseArrange {
 			return *state, false, nil
 		}
 

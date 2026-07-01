@@ -140,6 +140,126 @@ func TestUnplaceCardValidatesSlotAndCard(t *testing.T) {
 	}
 }
 
+func TestAutoDiscardDrawnCardRemovesDrawnCardFromHand(t *testing.T) {
+	state := newAutoDiscardTestState()
+
+	discarded, nextPlayerID, err := AutoDiscardDrawnCard(state, "player-1")
+	if err != nil {
+		t.Fatalf("auto-discard drawn card: %v", err)
+	}
+
+	if discarded == nil || discarded.ID != "card-drawn" {
+		t.Fatalf("discarded = %#v, want card-drawn", discarded)
+	}
+	if nextPlayerID != "player-2" {
+		t.Fatalf("next player = %q, want player-2", nextPlayerID)
+	}
+	if got := len(state.Players[0].Hand); got != 1 {
+		t.Fatalf("hand length = %d, want 1", got)
+	}
+	if state.Players[0].Hand[0].ID != "card-a" {
+		t.Fatalf("remaining card = %q, want card-a", state.Players[0].Hand[0].ID)
+	}
+	if state.DiscardPileTop == nil || state.DiscardPileTop.ID != "card-drawn" {
+		t.Fatalf("discard pile top = %#v, want card-drawn", state.DiscardPileTop)
+	}
+	if got := len(state.DiscardPile); got != 1 {
+		t.Fatalf("discard pile length = %d, want 1", got)
+	}
+	if state.Turn.CurrentPlayerID != "player-2" {
+		t.Fatalf("current player = %q, want player-2", state.Turn.CurrentPlayerID)
+	}
+	if state.Turn.Phase != room.TurnPhaseDraw {
+		t.Fatalf("turn phase = %q, want draw", state.Turn.Phase)
+	}
+	if state.Turn.TimeRemainingMs != state.TurnDurationMs {
+		t.Fatalf("time remaining = %d, want %d", state.Turn.TimeRemainingMs, state.TurnDurationMs)
+	}
+	if state.Turn.DrawnCard != nil {
+		t.Fatalf("drawn card = %#v, want nil", state.Turn.DrawnCard)
+	}
+}
+
+func TestAutoDiscardDrawnCardRemovesDrawnCardFromBoard(t *testing.T) {
+	state := newAutoDiscardTestState()
+	drawn := state.Players[0].Hand[1]
+	state.Players[0].Hand = state.Players[0].Hand[:1]
+	state.Players[0].WordBoard.Rows[0].Slots[0].Card = &drawn
+	state.Players[0].WordBoard.Rows[0].IsComplete = true
+	state.Players[0].WordBoard.AllComplete = true
+
+	discarded, _, err := AutoDiscardDrawnCard(state, "player-1")
+	if err != nil {
+		t.Fatalf("auto-discard drawn card: %v", err)
+	}
+
+	if discarded == nil || discarded.ID != "card-drawn" {
+		t.Fatalf("discarded = %#v, want card-drawn", discarded)
+	}
+	if got := state.Players[0].WordBoard.Rows[0].Slots[0].Card; got != nil {
+		t.Fatalf("board slot card = %#v, want nil", got)
+	}
+	if state.Players[0].WordBoard.Rows[0].IsComplete {
+		t.Fatal("row complete = true, want false after board discard")
+	}
+	if state.Players[0].WordBoard.AllComplete {
+		t.Fatal("board complete = true, want false after board discard")
+	}
+}
+
+func TestAutoDiscardDrawnCardValidatesState(t *testing.T) {
+	tests := []struct {
+		name       string
+		mutate     func(*room.GameState)
+		want       error
+		wantAnyErr bool
+	}{
+		{
+			name: "missing drawn card",
+			mutate: func(state *room.GameState) {
+				state.Turn.DrawnCard = nil
+			},
+			want: ErrInvalidCard,
+		},
+		{
+			name: "wrong phase",
+			mutate: func(state *room.GameState) {
+				state.Turn.Phase = room.TurnPhaseDraw
+			},
+			want: ErrInvalidPhase,
+		},
+		{
+			name: "wrong player",
+			mutate: func(state *room.GameState) {
+				state.Turn.CurrentPlayerID = "player-2"
+			},
+			want: ErrNotYourTurn,
+		},
+		{
+			name: "non-playing game",
+			mutate: func(state *room.GameState) {
+				state.Phase = room.GamePhaseFinished
+			},
+			wantAnyErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := newAutoDiscardTestState()
+			tt.mutate(state)
+
+			_, _, err := AutoDiscardDrawnCard(state, "player-1")
+			if tt.want != nil && !errors.Is(err, tt.want) {
+				t.Fatalf("error = %v, want %v", err, tt.want)
+			}
+			if tt.wantAnyErr && err == nil {
+				t.Fatal("error = nil, want non-nil")
+			}
+		})
+	}
+}
+
 func newPlacementTestState() *room.GameState {
 	return &room.GameState{
 		RoomCode: "ABC123",
@@ -159,6 +279,37 @@ func newPlacementTestState() *room.GameState {
 				WordBoard: room.NewWordBoard(room.Variation{WordLengths: []int{3}}),
 			},
 		},
+	}
+}
+
+func newAutoDiscardTestState() *room.GameState {
+	drawnCard := room.Card{ID: "card-drawn", Letter: "D"}
+
+	return &room.GameState{
+		RoomCode: "ABC123",
+		Phase:    room.GamePhasePlaying,
+		Turn: room.Turn{
+			CurrentPlayerID: "player-1",
+			Phase:           room.TurnPhaseArrange,
+			TimeRemainingMs: 0,
+			DrawnCard:       &drawnCard,
+		},
+		Players: []room.Player{
+			{
+				ID:        "player-1",
+				Hand:      []room.Card{{ID: "card-a", Letter: "A"}, drawnCard},
+				WordBoard: room.NewWordBoard(room.Variation{WordLengths: []int{2}}),
+			},
+			{
+				ID:        "player-2",
+				Hand:      []room.Card{},
+				WordBoard: room.NewWordBoard(room.Variation{WordLengths: []int{2}}),
+			},
+		},
+		TurnDurationMs: 60_000,
+		DrawPile:       []room.Card{{ID: "card-b", Letter: "B"}},
+		DrawPileCount:  1,
+		DiscardPile:    []room.Card{},
 	}
 }
 

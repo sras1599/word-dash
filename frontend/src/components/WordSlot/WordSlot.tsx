@@ -27,7 +27,6 @@ export function WordSlot({
     rowIndex,
     card,
     onPlace,
-    onUnplace: _onUnplace,
     onCardDragStart,
     onCardDragEnd,
     onCardSelected,

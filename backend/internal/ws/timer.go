@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/sras1599/wordit/backend/internal/game"
 	"github.com/sras1599/wordit/backend/internal/room"
 )
 
@@ -134,18 +135,50 @@ func (h *Hub) afterTimerExpired(roomCode string) int {
 	return 0
 }
 
-// handleTurnTimeout rotates the turn and reconciles clients after auto-skips.
+// handleTurnTimeout applies timeout behavior and reconciles clients after auto-skips.
 func (h *Hub) handleTurnTimeout(roomCode string) {
 	skippedPlayerID, previousState := h.currentTurnPlayer(roomCode)
+	if previousState != nil && previousState.Turn.Phase == room.TurnPhaseArrange {
+		h.autoDiscardTimedOutTurn(roomCode, skippedPlayerID)
+		return
+	}
+	if previousState == nil || !canSkipDisconnected(previousState) || isCurrentPlayerConnected(previousState) {
+		slog.Warn("timer: expired outside skippable state", "roomCode", roomCode, "player", skippedPlayerID)
+		return
+	}
+
 	nextState, err := h.store.NextTurn(roomCode)
 	if err != nil {
 		slog.Error("timer: failed to rotate turn", "roomCode", roomCode, "error", err)
 		return
 	}
 	h.logTurnTimeout(roomCode, skippedPlayerID, previousState, nextState)
-	h.broadcastTurnSkipped(roomCode, skippedPlayerID, "timeout", nextState)
+	h.broadcastTurnSkipped(roomCode, skippedPlayerID, "disconnected", nextState)
 	h.skipDisconnectedTurns(roomCode)
 	h.syncFinalGameState(roomCode)
+}
+
+// autoDiscardTimedOutTurn discards the drawn card for an expired arrange turn.
+func (h *Hub) autoDiscardTimedOutTurn(roomCode, playerID string) {
+	var result discardCardResult
+	state, err := h.store.UpdateGameState(roomCode, func(state *room.GameState) error {
+		discarded, nextPlayerID, err := game.AutoDiscardDrawnCard(state, playerID)
+		if err != nil {
+			return err
+		}
+		result.boardUpdate = boardUpdateFor(state, playerID)
+		result.discarded = discarded
+		result.nextPlayerID = nextPlayerID
+		result.reason = "timeout"
+		return nil
+	})
+	if err != nil {
+		slog.Error("timer: failed to auto-discard drawn card", "roomCode", roomCode, "player", playerID, "error", err)
+		return
+	}
+
+	h.logTurnTimeout(roomCode, playerID, nil, state)
+	h.afterDiscardCard(roomCode, playerID, &state, result)
 }
 
 // currentTurnPlayer returns the player who is active before timeout rotation.

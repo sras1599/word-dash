@@ -23,6 +23,7 @@ type discardCardResult struct {
 	boardUpdate
 	discarded    *room.Card
 	nextPlayerID string
+	reason       string
 }
 
 // syncGameConnection marks a player connected and sends their private game state.
@@ -258,6 +259,7 @@ func applyDiscardCard(state *room.GameState, playerID string, req discardCardReq
 	result.boardUpdate = boardUpdateFor(state, playerID)
 	result.discarded = discarded
 	result.nextPlayerID = nextPlayerID
+	result.reason = "discarded"
 	return nil
 }
 
@@ -272,7 +274,7 @@ func (h *Hub) afterDiscardCard(roomCode, playerID string, state *room.GameState,
 func (h *Hub) broadcastTurnEnded(roomCode, playerID string, state *room.GameState, result discardCardResult) {
 	h.broadcastToRoom(roomCode, "game:turn_ended", turnEndedPayload{
 		PlayerID:        playerID,
-		Reason:          "discarded",
+		Reason:          result.reason,
 		DiscardedCard:   buildCardJSON(*result.discarded),
 		DiscardPileTop:  buildCardJSON(*result.discarded),
 		NextPlayerID:    result.nextPlayerID,

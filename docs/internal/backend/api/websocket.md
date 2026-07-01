@@ -70,8 +70,8 @@ Draw and discard events must come from the current turn holder. Board-edit event
 | `game:card_drawn`          | `{ playerId, source, card: Card \| null, drawPileCount, discardPileTop }`. `card` is `null` for non-drawing players. |
 | `game:board_updated`       | `{ playerId, wordBoard: WordBoard }`. Broadcast to all players after every `place` or `unplace` action. |
 | `game:timer_warning`       | `{ currentPlayerId, timeRemainingMs }`. Emitted only when remaining time crosses warning thresholds (`10s`, `5s`, `1s`). |
-| `game:turn_ended`          | `{ playerId, reason: "discarded", discardedCard: Card, discardPileTop: Card, nextPlayerId, timeRemainingMs }` |
-| `game:turn_skipped`        | `{ playerId, reason: "timeout" | "disconnected", nextPlayerId, timeRemainingMs }` |
+| `game:turn_ended`          | `{ playerId, reason: "discarded" \| "timeout", discardedCard: Card, discardPileTop: Card, nextPlayerId, timeRemainingMs }` |
+| `game:turn_skipped`        | `{ playerId, reason: "disconnected", nextPlayerId, timeRemainingMs }` |
 | `game:player_won`          | `{ winnerId, winnerName, winningWordBoard: WordBoard }` |
 | `game:player_disconnected` | `{ playerId }` |
 | `game:player_reconnected`  | `{ playerId }` |
