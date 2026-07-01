@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useDroppable } from '@dnd-kit/core'
 import './PlayerHand.css'
 import { Card, type CardData } from '../Card/Card'
 
@@ -40,36 +40,16 @@ export function PlayerHand({
     onDropOnHand,
     onDiscard,
 }: PlayerHandProps) {
-    const [isDragOver, setIsDragOver] = useState(false)
-
     const handleCardClick = (cardId: string) => {
         onCardClick?.(cardId)
     }
 
     const canDropOnHand = isDraggable && !!onDropOnHand
-
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!canDropOnHand) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        setIsDragOver(true)
-    }
-
-    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-            setIsDragOver(false)
-        }
-    }
-
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!canDropOnHand) return
-        e.preventDefault()
-        setIsDragOver(false)
-        const cardId = e.dataTransfer.getData('text/plain')
-        if (cardId) {
-            onDropOnHand?.(cardId)
-        }
-    }
+    const { isOver, setNodeRef } = useDroppable({
+        id: 'player-hand',
+        disabled: !canDropOnHand,
+        data: { type: 'player-hand' },
+    })
 
     const handleDiscardClick = () => {
         if (selectedCardId) onDiscard?.(selectedCardId)
@@ -78,19 +58,17 @@ export function PlayerHand({
     const className = [
         'player-hand',
         canDropOnHand && 'player-hand--drop-target',
-        isDragOver && 'player-hand--drag-over',
+        isOver && 'player-hand--drag-over',
     ]
         .filter(Boolean)
         .join(' ')
 
     return (
         <div
+            ref={setNodeRef}
             className={className}
             role="region"
             aria-label="Your hand"
-            onDragOver={canDropOnHand ? handleDragOver : undefined}
-            onDragLeave={canDropOnHand ? handleDragLeave : undefined}
-            onDrop={canDropOnHand ? handleDrop : undefined}
         >
             <div className="player-hand__cards">
                 {hand.map((card) => (
@@ -104,6 +82,7 @@ export function PlayerHand({
                         onClick={() => handleCardClick(card.id)}
                         onDragStart={onDragStart}
                         onDragEnd={onDragEnd}
+                        dragData={{ source: 'hand', cardId: card.id }}
                     />
                 ))}
 
@@ -120,6 +99,7 @@ export function PlayerHand({
                                 onClick={() => handleCardClick(drawnCard.id)}
                                 onDragStart={onDragStart}
                                 onDragEnd={onDragEnd}
+                                dragData={{ source: 'hand', cardId: drawnCard.id }}
                             />
                         </div>
                     </>

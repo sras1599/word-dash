@@ -1,4 +1,5 @@
 import React from 'react'
+import { useDraggable, type Data } from '@dnd-kit/core'
 import './Card.css'
 
 export interface CardData {
@@ -27,6 +28,8 @@ export interface CardProps {
     onDragStart?: (cardId: string) => void
     /** Called when a drag ends (success or failure). */
     onDragEnd?: () => void
+    /** Metadata consumed by dnd-kit drop handlers. */
+    dragData?: Data
 }
 
 export function Card({
@@ -40,22 +43,33 @@ export function Card({
     onClick,
     onDragStart,
     onDragEnd,
+    dragData,
 }: CardProps) {
     const isInteractive = !readOnly && !!onClick
+    const canDrag = isDraggable && !readOnly && !!card
+    const wasDraggingRef = React.useRef(false)
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: card?.id ?? 'empty-card',
+        data: dragData,
+        disabled: !canDrag,
+    })
+
+    React.useEffect(() => {
+        if (!card) return
+
+        if (isDragging && !wasDraggingRef.current) {
+            onDragStart?.(card.id)
+        }
+
+        if (!isDragging && wasDraggingRef.current) {
+            onDragEnd?.()
+        }
+
+        wasDraggingRef.current = isDragging
+    }, [card, isDragging, onDragEnd, onDragStart])
 
     const handleClick = () => {
         if (isInteractive) onClick?.()
-    }
-
-    const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!isDraggable || readOnly || !card) return
-        e.dataTransfer.setData('text/plain', card.id)
-        e.dataTransfer.effectAllowed = 'move'
-        onDragStart?.(card.id)
-    }
-
-    const handleDragEnd = () => {
-        onDragEnd?.()
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -77,19 +91,23 @@ export function Card({
         isDrawn && 'card--drawn',
         willAutoDiscard && 'card--will-auto-discard',
         readOnly && 'card--readonly',
-        isDraggable && !readOnly && card && 'card--draggable',
+        canDrag && 'card--draggable',
     ]
         .filter(Boolean)
         .join(' ')
 
     return (
         <div
+            ref={setNodeRef}
             className={className}
-            draggable={isDraggable && !readOnly && !!card}
+            style={{
+                transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+                opacity: isDragging ? 0.72 : undefined,
+            }}
             onClick={isInteractive ? handleClick : undefined}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
             onKeyDown={handleKeyDown}
+            {...attributes}
+            {...listeners}
             role={isInteractive ? 'button' : undefined}
             tabIndex={isInteractive ? 0 : undefined}
             aria-pressed={isInteractive ? selected : undefined}

@@ -341,6 +341,11 @@
     background: color-mix(in srgb, var(--secondary-container, #c0f19d) 18%, transparent);
 }
 
+.game-board__drag-overlay {
+    pointer-events: none;
+    z-index: 20;
+}
+
 .game-board .player-hand__cards {
     display: flex;
     gap: 0.75rem;

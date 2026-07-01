@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useDroppable } from '@dnd-kit/core'
 import './WordSlot.css'
 import { Card } from '../Card/Card'
 import type { CardData } from '../Card/Card'
@@ -34,40 +34,16 @@ export function WordSlot({
     onCardDragEnd,
     onCardSelected,
 }: WordSlotProps) {
-    const [isDragOver, setIsDragOver] = useState(false)
     const canPlace = !!onPlace
     const canDragCard = !!onCardDragStart
-
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!canPlace) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        setIsDragOver(true)
-    }
-
-    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!canPlace) return
-        // Only clear if we're actually leaving the slot boundary
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-            setIsDragOver(false)
-        }
-    }
-
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!canPlace) return
-        e.preventDefault()
-        setIsDragOver(false)
-        const cardId = e.dataTransfer.getData('text/plain')
-        if (cardId) {
-            onPlace?.(cardId, rowIndex, slotIndex)
-        }
-    }
+    const { isOver, setNodeRef } = useDroppable({
+        id: `word-slot:${rowIndex}:${slotIndex}`,
+        disabled: !canPlace,
+        data: { type: 'word-slot', rowIndex, slotIndex },
+    })
 
     const handleCardDragStart = (cardId: string) => {
         onCardDragStart?.(cardId, rowIndex, slotIndex)
-        // Pass cardId through dataTransfer so other slots can receive it
-        // (handled by Card's own onDragStart + HTML5 drag API)
-        void cardId
     }
 
     const handleCardDragEnd = () => {
@@ -83,17 +59,15 @@ export function WordSlot({
     const className = [
         'word-slot',
         card ? 'word-slot--filled' : 'word-slot--empty',
-        isDragOver && 'word-slot--drag-over',
+        isOver && 'word-slot--drag-over',
     ]
         .filter(Boolean)
         .join(' ')
 
     return (
         <div
+            ref={setNodeRef}
             className={className}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
             aria-label={
                 card
                     ? `Slot ${slotIndex + 1}, contains letter ${card.letter}`
@@ -111,6 +85,7 @@ export function WordSlot({
                     onClick={handleCardClick}
                     onDragStart={handleCardDragStart}
                     onDragEnd={handleCardDragEnd}
+                    dragData={{ source: 'board', cardId: card.id, rowIndex, slotIndex }}
                 />
             ) : (
                 <div className="word-slot__placeholder" aria-hidden="true" />

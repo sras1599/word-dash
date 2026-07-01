@@ -87,6 +87,7 @@
 ───────────────────────────────────────────── */
 .card--draggable {
     cursor: grab;
+    touch-action: none;
 }
 
 .card--draggable:active {

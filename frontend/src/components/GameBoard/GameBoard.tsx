@@ -1,10 +1,26 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
+import {
+    closestCenter,
+    DragOverlay,
+    DndContext,
+    KeyboardSensor,
+    pointerWithin,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type CollisionDetection,
+    type DragEndEvent,
+    type DragStartEvent,
+} from '@dnd-kit/core'
 import './GameBoard.css'
 import { CardPile, type CardPileProps } from '../CardPile/CardPile'
 import { PlayerHand } from '../PlayerHand/PlayerHand'
 import type { TurnPhase } from '../TurnIndicator/TurnIndicator'
 import { WordBoard, type WordBoardState } from '../WordBoard/WordBoard'
-import type { CardData } from '../Card/Card'
+import { Card, type CardData } from '../Card/Card'
+import { cx } from '../../lib/cx'
+import { Icon } from '../Icon/Icon'
+import { getGameBoardDropAction } from './dnd'
 
 export interface GameBoardLocalPlayer {
     id: string
@@ -37,6 +53,11 @@ type BoardDragSource = {
     cardId: string
     rowIndex: number
     slotIndex: number
+}
+
+const gameBoardCollisionDetection: CollisionDetection = (args) => {
+    const pointerCollisions = pointerWithin(args)
+    return pointerCollisions.length > 0 ? pointerCollisions : closestCenter(args)
 }
 
 export interface GameBoardProps {
@@ -96,10 +117,12 @@ export function GameBoard({
     onDiscard,
 }: GameBoardProps) {
     const boardDragSourceRef = useRef<BoardDragSource | null>(null)
+    const [activeDragCard, setActiveDragCard] = useState<CardData | null>(null)
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor))
 
     const isActiveTurn = localPlayer !== null && turn.currentPlayerId === localPlayer.id
-    const canPlaceInCurrentPhase = isActiveTurn && phase === 'playing' && (turn.phase === 'draw' || turn.phase === 'arrange')
-    const isArrangingPhase = isActiveTurn && turn.phase === 'arrange'
+    const canEditBoard = localPlayer !== null && phase === 'playing' && (turn.phase === 'draw' || turn.phase === 'arrange')
+    const canDiscard = isActiveTurn && phase === 'playing' && turn.phase === 'arrange'
     const isDrawPhase = isActiveTurn && turn.phase === 'draw'
 
     const handleBoardCardDragStart = (cardId: string, rowIndex: number, slotIndex: number) => {
@@ -110,14 +133,66 @@ export function GameBoard({
         boardDragSourceRef.current = null
     }
 
-    const handleDropOnHand = (cardId: string) => {
-        const source = boardDragSourceRef.current
-        boardDragSourceRef.current = null
-        if (!source || source.cardId !== cardId) {
+    const enableDropOnHand = () => undefined
+
+    const findLocalCard = (cardId: string): CardData | null => {
+        if (!localPlayer) return null
+
+        const handCard = localPlayer.hand.find((card) => card.id === cardId)
+        if (handCard) return handCard
+
+        for (const row of localPlayer.wordBoard.rows) {
+            for (const slot of row.slots) {
+                if (slot.card?.id === cardId) {
+                    return slot.card
+                }
+            }
+        }
+
+        return null
+    }
+
+    const handleDndDragStart = (event: DragStartEvent) => {
+        const data = event.active.data.current
+        const cardId = String(data?.cardId ?? event.active.id)
+        setActiveDragCard(findLocalCard(cardId))
+
+        if (data?.source !== 'board') {
             return
         }
 
-        onUnplace?.(source.rowIndex, source.slotIndex)
+        boardDragSourceRef.current = {
+            cardId: String(data.cardId),
+            rowIndex: Number(data.rowIndex),
+            slotIndex: Number(data.slotIndex),
+        }
+    }
+
+    const handleDndDragEnd = (event: DragEndEvent) => {
+        const source = boardDragSourceRef.current
+        boardDragSourceRef.current = null
+        setActiveDragCard(null)
+
+        const cardId = String(event.active.data.current?.cardId ?? event.active.id)
+        const action = getGameBoardDropAction(cardId, event.over ? String(event.over.id) : null, source, { canDiscard })
+        if (!action) return
+
+        switch (action.type) {
+            case 'place':
+                onPlace?.(action.cardId, action.rowIndex, action.slotIndex)
+                break
+            case 'unplace':
+                onUnplace?.(action.rowIndex, action.slotIndex)
+                break
+            case 'discard':
+                onDiscard?.(action.cardId)
+                break
+        }
+    }
+
+    const handleDndDragCancel = () => {
+        boardDragSourceRef.current = null
+        setActiveDragCard(null)
     }
 
     const drawPileProps: CardPileProps = {
@@ -133,7 +208,7 @@ export function GameBoard({
         topCard: discardTopCard,
         cardCount: discardTopCard ? 1 : 0,
         isActive: isDrawPhase,
-        isDropTarget: isArrangingPhase,
+        isDropTarget: canDiscard,
         onDraw,
         onDiscard,
     }
@@ -188,151 +263,144 @@ export function GameBoard({
     const totalBoardSlots = variation.wordLengths.reduce((sum, length) => sum + length, 0)
 
     return (
-        <div className="game-board" aria-label={`Game board, ${totalBoardSlots} word slots`}>
-            <section className="game-board__status-strip" aria-label="Player status">
-                {displayPlayers.map((player) => {
-                    const isLocal = player.id === localPlayerId
-                    const isCurrent = player.id === turn.currentPlayerId
+        <DndContext
+            sensors={sensors}
+            collisionDetection={gameBoardCollisionDetection}
+            onDragStart={handleDndDragStart}
+            onDragEnd={handleDndDragEnd}
+            onDragCancel={handleDndDragCancel}
+        >
+            <div className="game-board" aria-label={`Game board, ${totalBoardSlots} word slots`}>
+                <section className="game-board__status-strip" aria-label="Player status">
+                    {displayPlayers.map((player) => {
+                        const isLocal = player.id === localPlayerId
+                        const isCurrent = player.id === turn.currentPlayerId
 
-                    return (
-                        <article
-                            key={player.id}
-                            className={[
-                                'game-board__status-card',
-                                isLocal && 'game-board__status-card--local',
-                                isCurrent && 'game-board__status-card--active',
-                                !player.isConnected && 'game-board__status-card--disconnected',
-                            ]
-                                .filter(Boolean)
-                                .join(' ')}
-                        >
-                            {isLocal && isCurrent && <span className="game-board__status-badge">Your Turn</span>}
-
-                            <div className="game-board__status-main">
-                                <div
-                                    className={[
-                                        'game-board__status-avatar',
-                                        isLocal && 'game-board__status-avatar--local',
-                                    ]
-                                        .filter(Boolean)
-                                        .join(' ')}
-                                    aria-hidden="true"
-                                >
-                                    {getInitials(player.name)}
-                                </div>
-
-                                <div className="game-board__status-copy">
-                                    <p className="game-board__status-name">{isLocal ? 'You' : player.name}</p>
-                                    <p
-                                        className={[
-                                            'game-board__status-role',
-                                            isCurrent && 'game-board__status-role--active',
-                                            !player.isConnected && 'game-board__status-role--disconnected',
-                                        ]
-                                            .filter(Boolean)
-                                            .join(' ')}
-                                    >
-                                        {getPlayerStatus(player)}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div
-                                className={[
-                                    'game-board__status-count',
-                                    isCurrent && 'game-board__status-count--active',
-                                ]
-                                    .filter(Boolean)
-                                    .join(' ')}
+                        return (
+                            <article
+                                key={player.id}
+                                className={cx(
+                                    'game-board__status-card',
+                                    isLocal && 'game-board__status-card--local',
+                                    isCurrent && 'game-board__status-card--active',
+                                    !player.isConnected && 'game-board__status-card--disconnected',
+                                )}
                             >
-                                <span className="game-board__status-count-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none">
-                                        <path
-                                            d="M7 7.5h8.5a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 15.5 18.5H7A1.5 1.5 0 0 1 5.5 17V9A1.5 1.5 0 0 1 7 7.5Z"
-                                            stroke="currentColor"
-                                            strokeWidth="1.75"
-                                            strokeLinejoin="round"
-                                        />
-                                        <path
-                                            d="M9 5.5h8a1.5 1.5 0 0 1 1.5 1.5v8"
-                                            stroke="currentColor"
-                                            strokeWidth="1.75"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
-                                    </svg>
-                                </span>
-                                <span className="game-board__status-count-value">{getStatusCount(player)}</span>
-                            </div>
-                        </article>
-                    )
-                })}
-            </section>
+                                {isLocal && isCurrent && <span className="game-board__status-badge">Your Turn</span>}
 
-            {localPlayer && (
-                <section className="game-board__board-section" aria-labelledby="game-board-title">
-                    <div className="game-board__board-copy">
-                        <h1 className="game-board__board-title" id="game-board-title">
-                            Build Your Words
-                        </h1>
-                        <p className="game-board__board-subtitle">{boardSubtitle}</p>
+                                <div className="game-board__status-main">
+                                    <div
+                                        className={cx(
+                                            'game-board__status-avatar',
+                                            isLocal && 'game-board__status-avatar--local',
+                                        )}
+                                        aria-hidden="true"
+                                    >
+                                        {getInitials(player.name)}
+                                    </div>
+
+                                    <div className="game-board__status-copy">
+                                        <p className="game-board__status-name">{isLocal ? 'You' : player.name}</p>
+                                        <p
+                                            className={cx(
+                                                'game-board__status-role',
+                                                isCurrent && 'game-board__status-role--active',
+                                                !player.isConnected && 'game-board__status-role--disconnected',
+                                            )}
+                                        >
+                                            {getPlayerStatus(player)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div
+                                    className={cx(
+                                        'game-board__status-count',
+                                        isCurrent && 'game-board__status-count--active',
+                                    )}
+                                >
+                                    <span className="game-board__status-count-icon" aria-hidden="true">
+                                        <Icon name="cards" />
+                                    </span>
+                                    <span className="game-board__status-count-value">{getStatusCount(player)}</span>
+                                </div>
+                            </article>
+                        )
+                    })}
+                </section>
+
+                {localPlayer && (
+                    <section className="game-board__board-section" aria-labelledby="game-board-title">
+                        <div className="game-board__board-copy">
+                            <h1 className="game-board__board-title" id="game-board-title">
+                                Build Your Words
+                            </h1>
+                            <p className="game-board__board-subtitle">{boardSubtitle}</p>
+                        </div>
+
+                        <WordBoard
+                            wordBoard={localPlayer.wordBoard}
+                            willAutoDiscardCardId={willAutoDiscardCardId}
+                            onPlace={canEditBoard ? onPlace : undefined}
+                            onCardDragStart={canEditBoard ? handleBoardCardDragStart : undefined}
+                            onCardDragEnd={canEditBoard ? handleBoardCardDragEnd : undefined}
+                        />
+                    </section>
+                )}
+
+                <section className="game-board__piles" aria-label="Card piles">
+                    <div className="game-board__pile">
+                        <p className="game-board__pile-label">Draw</p>
+                        <CardPile {...drawPileProps} />
                     </div>
 
-                    <WordBoard
-                        wordBoard={localPlayer.wordBoard}
-                        willAutoDiscardCardId={willAutoDiscardCardId}
-                        onPlace={canPlaceInCurrentPhase ? onPlace : undefined}
-                        onCardDragStart={canPlaceInCurrentPhase ? handleBoardCardDragStart : undefined}
-                        onCardDragEnd={canPlaceInCurrentPhase ? handleBoardCardDragEnd : undefined}
-                    />
+                    <div className="game-board__pile">
+                        <p className="game-board__pile-label">Discard</p>
+                        <CardPile {...discardPileProps} />
+                    </div>
                 </section>
-            )}
 
-            <section className="game-board__piles" aria-label="Card piles">
-                <div className="game-board__pile">
-                    <p className="game-board__pile-label">Draw</p>
-                    <CardPile {...drawPileProps} />
-                </div>
+                {localPlayer && (
+                    <footer className="game-board__hand-footer">
+                        <div className="game-board__hand-shell">
+                            <div className="game-board__hand-content">
+                                <div className="game-board__hand-header">
+                                    <div className="game-board__hand-heading">
+                                        <h2 className="game-board__hand-title">Your Deck</h2>
+                                        <span className="game-board__hand-count">
+                                            {handCount} {handCount === 1 ? 'Card' : 'Cards'}
+                                        </span>
+                                    </div>
 
-                <div className="game-board__pile">
-                    <p className="game-board__pile-label">Discard</p>
-                    <CardPile {...discardPileProps} />
-                </div>
-            </section>
-
-            {localPlayer && (
-                <footer className="game-board__hand-footer">
-                    <div className="game-board__hand-shell">
-                        <div className="game-board__hand-content">
-                            <div className="game-board__hand-header">
-                                <div className="game-board__hand-heading">
-                                    <h2 className="game-board__hand-title">Your Deck</h2>
-                                    <span className="game-board__hand-count">
-                                        {handCount} {handCount === 1 ? 'Card' : 'Cards'}
+                                    <span className="game-board__hand-sort" aria-hidden="true">
+                                        Sort Hand
                                     </span>
                                 </div>
 
-                                <span className="game-board__hand-sort" aria-hidden="true">
-                                    Sort Hand
-                                </span>
+                                {localPlayer.hand.length > 0 ? (
+                                    <PlayerHand
+                                        hand={localPlayer.hand}
+                                        drawnCardId={drawnCardId}
+                                        willAutoDiscardCardId={willAutoDiscardCardId}
+                                        isDraggable={canEditBoard}
+                                        onDropOnHand={canEditBoard && onUnplace ? enableDropOnHand : undefined}
+                                        onDiscard={canDiscard ? onDiscard : undefined}
+                                    />
+                                ) : (
+                                    <p className="game-board__hand-empty">No cards in hand.</p>
+                                )}
                             </div>
-
-                            {localPlayer.hand.length > 0 ? (
-                                <PlayerHand
-                                    hand={localPlayer.hand}
-                                    drawnCardId={drawnCardId}
-                                    willAutoDiscardCardId={willAutoDiscardCardId}
-                                    isDraggable={canPlaceInCurrentPhase}
-                                    onDropOnHand={canPlaceInCurrentPhase ? handleDropOnHand : undefined}
-                                    onDiscard={isArrangingPhase ? onDiscard : undefined}
-                                />
-                            ) : (
-                                <p className="game-board__hand-empty">No cards in hand.</p>
-                            )}
                         </div>
+                    </footer>
+                )}
+            </div>
+            <DragOverlay>
+                {activeDragCard ? (
+                    <div className="game-board__drag-overlay">
+                        <Card card={{ ...activeDragCard, id: `${activeDragCard.id}:overlay` }} readOnly />
                     </div>
-                </footer>
-            )}
-        </div>
+                ) : null}
+            </DragOverlay>
+        </DndContext>
     )
 }

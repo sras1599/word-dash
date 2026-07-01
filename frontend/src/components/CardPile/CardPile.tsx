@@ -1,4 +1,5 @@
 import React from 'react'
+import { useDroppable } from '@dnd-kit/core'
 import './CardPile.css'
 import { Card, type CardData } from '../Card/Card'
 
@@ -26,13 +27,16 @@ export function CardPile({
     isActive = false,
     isDropTarget = false,
     onDraw,
-    onDiscard,
 }: CardPileProps) {
-    const [isDragOver, setIsDragOver] = React.useState(false)
-
     const isInteractive = isActive && !!onDraw
-    const canDrop = isDropTarget && type === 'discard'
+    const canRegisterDropArea = type === 'discard'
+    const canDrop = isDropTarget && canRegisterDropArea
     const isEmpty = cardCount === 0
+    const { isOver, setNodeRef } = useDroppable({
+        id: 'discard-pile',
+        disabled: !canRegisterDropArea,
+        data: { type: 'discard-pile', canDrop },
+    })
 
     const handleClick = () => {
         if (isInteractive) onDraw?.(type)
@@ -46,31 +50,12 @@ export function CardPile({
         }
     }
 
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!canDrop) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        setIsDragOver(true)
-    }
-
-    const handleDragLeave = () => {
-        setIsDragOver(false)
-    }
-
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-        if (!canDrop) return
-        e.preventDefault()
-        setIsDragOver(false)
-        const cardId = e.dataTransfer.getData('text/plain')
-        if (cardId) onDiscard?.(cardId)
-    }
-
     const className = [
         'card-pile',
         `card-pile--${type}`,
         isActive && 'card-pile--active',
         canDrop && 'card-pile--drop-target',
-        isDragOver && 'card-pile--drag-over',
+        canDrop && isOver && 'card-pile--drag-over',
         isInteractive && 'card-pile--interactive',
         isEmpty && 'card-pile--empty',
     ]
@@ -86,12 +71,10 @@ export function CardPile({
 
     return (
         <div
+            ref={setNodeRef}
             className={className}
             onClick={isInteractive ? handleClick : undefined}
             onKeyDown={isInteractive ? handleKeyDown : undefined}
-            onDragOver={canDrop ? handleDragOver : undefined}
-            onDragLeave={canDrop ? handleDragLeave : undefined}
-            onDrop={canDrop ? handleDrop : undefined}
             role={isInteractive ? 'button' : undefined}
             tabIndex={isInteractive ? 0 : undefined}
             aria-label={ariaLabel}
