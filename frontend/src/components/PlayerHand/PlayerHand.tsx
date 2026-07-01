@@ -7,6 +7,10 @@ export interface PlayerHandProps {
     hand: CardData[]
     /** The extra card drawn this turn. Null if not in arrange phase. */
     drawnCard?: CardData | null
+    /** ID of the drawn card when it is already present in the hand array. */
+    drawnCardId?: string | null
+    /** ID of the card that should flash before automatic discard. */
+    willAutoDiscardCardId?: string | null
     /** Whether cards can be dragged. Only true during local player's own turn. */
     isDraggable?: boolean
     /** The currently selected card id, for keyboard or click-based discard flow. */
@@ -26,6 +30,8 @@ export interface PlayerHandProps {
 export function PlayerHand({
     hand,
     drawnCard = null,
+    drawnCardId = null,
+    willAutoDiscardCardId = null,
     isDraggable = false,
     selectedCardId = null,
     onCardClick,
@@ -93,6 +99,8 @@ export function PlayerHand({
                         card={card}
                         draggable={isDraggable}
                         selected={selectedCardId === card.id}
+                        isDrawn={drawnCardId === card.id}
+                        willAutoDiscard={willAutoDiscardCardId === card.id}
                         onClick={() => handleCardClick(card.id)}
                         onDragStart={onDragStart}
                         onDragEnd={onDragEnd}
@@ -107,6 +115,7 @@ export function PlayerHand({
                                 card={drawnCard}
                                 draggable={isDraggable}
                                 isDrawn
+                                willAutoDiscard={willAutoDiscardCardId === drawnCard.id}
                                 selected={selectedCardId === drawnCard.id}
                                 onClick={() => handleCardClick(drawnCard.id)}
                                 onDragStart={onDragStart}

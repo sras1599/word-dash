@@ -32,14 +32,18 @@ export function WordSlot({
     onCardSelected,
 }: WordSlotProps) {
     const [isDragOver, setIsDragOver] = useState(false)
+    const canPlace = !!onPlace
+    const canDragCard = !!onCardDragStart
 
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        if (!canPlace) return
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
         setIsDragOver(true)
     }
 
     const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        if (!canPlace) return
         // Only clear if we're actually leaving the slot boundary
         if (!e.currentTarget.contains(e.relatedTarget as Node)) {
             setIsDragOver(false)
@@ -47,6 +51,7 @@ export function WordSlot({
     }
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        if (!canPlace) return
         e.preventDefault()
         setIsDragOver(false)
         const cardId = e.dataTransfer.getData('text/plain')
@@ -97,8 +102,8 @@ export function WordSlot({
             {card ? (
                 <Card
                     card={card}
-                    draggable={true}
-                    readOnly={false}
+                    draggable={canDragCard}
+                    readOnly={!canDragCard && !onCardSelected}
                     onClick={handleCardClick}
                     onDragStart={handleCardDragStart}
                     onDragEnd={handleCardDragEnd}

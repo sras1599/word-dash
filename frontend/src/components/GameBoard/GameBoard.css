@@ -1,90 +1,435 @@
-/* ─────────────────────────────────────────────
-   GameBoard – custom properties
-───────────────────────────────────────────── */
 .game-board {
-    --board-bg: #1a1a1a;
-    --board-gap: 16px;
-    --header-height: 56px;
-    --header-bg: #111111;
-    --header-padding: 0 20px;
-    --piles-gap: 40px;
-    --section-padding: 16px 20px;
-    --teal: #2db89c;
-
+    width: 100%;
     display: flex;
     flex-direction: column;
-    width: 100%;
-    min-height: 100dvh;
-    background: var(--board-bg);
-    color: #f5f5f0;
-    gap: var(--board-gap);
-    box-sizing: border-box;
+    gap: 2.75rem;
 }
 
-/* ─────────────────────────────────────────────
-   Header
-───────────────────────────────────────────── */
-.game-board__header {
+.game-board__status-main,
+.game-board__status-copy,
+.game-board__status-count,
+.game-board__hand-heading,
+.game-board__hand-header {
+    display: flex;
+    align-items: center;
+}
+
+.game-board__status-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+}
+
+.game-board__status-card {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: var(--header-height);
-    background: var(--header-bg);
-    padding: var(--header-padding);
-    flex-shrink: 0;
-    gap: 12px;
+    gap: 1rem;
+    padding: 1.2rem 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 36%, transparent);
+    border-radius: var(--radius-xl, 3rem);
+    background: color-mix(in srgb, var(--surface-container-lowest, #ffffff) 78%, transparent);
+    box-shadow: 0 12px 30px -22px color-mix(in srgb, var(--on-surface, #1b1b1b) 24%, transparent);
+    backdrop-filter: blur(24px);
 }
 
-.game-board__logo {
-    font-size: 1.4rem;
+.game-board__status-card--local {
+    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 32%, var(--surface-container-lowest, #ffffff));
+}
+
+.game-board__status-card--active {
+    border: 2px solid color-mix(in srgb, var(--primary, #bb000e) 18%, transparent);
+    box-shadow: 0 24px 44px -26px color-mix(in srgb, var(--primary, #bb000e) 34%, transparent);
+    transform: scale(1.02);
+}
+
+.game-board__status-card--disconnected {
+    opacity: 0.7;
+}
+
+.game-board__status-badge {
+    position: absolute;
+    top: -0.95rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.35rem 1rem;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--primary, #bb000e);
+    color: var(--on-primary, #ffffff);
+    font-family: var(--font-headline, inherit);
+    font-size: 0.78rem;
     font-weight: 800;
-    letter-spacing: 0.04em;
-    color: var(--teal);
-    white-space: nowrap;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--primary, #bb000e) 28%, transparent);
 }
 
-/* ─────────────────────────────────────────────
-   Opponents band
-───────────────────────────────────────────── */
-.game-board__opponents {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: var(--section-padding);
-    justify-content: center;
+.game-board__status-main {
+    gap: 0.9rem;
+    min-width: 0;
 }
 
-/* ─────────────────────────────────────────────
-   Card piles (draw + discard)
-───────────────────────────────────────────── */
-.game-board__piles {
-    display: flex;
-    flex-direction: row;
+.game-board__status-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius-full, 9999px);
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--piles-gap);
-    padding: var(--section-padding);
-    flex: 1;
+    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 84%, transparent);
+    color: var(--on-surface, #1b1b1b);
+    font-family: var(--font-headline, inherit);
+    font-size: 0.95rem;
+    font-weight: 800;
 }
 
-/* ─────────────────────────────────────────────
-   Local player area
-───────────────────────────────────────────── */
-.game-board__local-player {
+.game-board__status-avatar--local {
+    background: var(--primary-fixed, #ffdad5);
+    color: var(--primary, #bb000e);
+}
+
+.game-board__status-copy {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.12rem;
+    min-width: 0;
+}
+
+.game-board__status-name {
+    margin: 0;
+    font-family: var(--font-headline, inherit);
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.game-board__status-role,
+.game-board__board-subtitle,
+.game-board__hand-empty {
+    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 86%, transparent);
+}
+
+.game-board__status-role {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+
+.game-board__status-role--active {
+    color: var(--primary, #bb000e);
+    font-weight: 700;
+}
+
+.game-board__status-role--disconnected {
+    color: var(--on-surface-variant, #5e3f3b);
+}
+
+.game-board__status-count {
+    gap: 0.45rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: var(--radius-full, 9999px);
+    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 84%, transparent);
+    color: var(--on-surface, #1b1b1b);
+    flex-shrink: 0;
+}
+
+.game-board__status-count--active {
+    background: var(--primary, #bb000e);
+    color: var(--on-primary, #ffffff);
+}
+
+.game-board__status-count-icon,
+.game-board__status-count-icon svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: 0 0 auto;
+}
+
+.game-board__status-count-value {
+    font-family: var(--font-headline, inherit);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.game-board__board-section {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: var(--section-padding);
-    padding-bottom: 24px;
+    gap: 1.5rem;
 }
 
-.game-board__local-player .player-hand {
-    width: 60%;
+.game-board__board-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    text-align: center;
+}
+
+.game-board__board-title,
+.game-board__pile-label,
+.game-board__hand-count {
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.game-board__board-title {
+    margin: 0;
+    font-family: var(--font-headline, inherit);
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 56%, transparent);
+}
+
+.game-board__board-subtitle {
+    max-width: 36rem;
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.game-board .word-board {
+    width: min(100%, 42rem);
+    align-items: center;
+    gap: 1rem;
+}
+
+.game-board .word-board__row-wrapper {
     align-items: center;
 }
 
-.game-board__local-player .player-hand__cards {
+.game-board .word-board__row-label {
+    display: none;
+}
+
+.game-board .word-row {
+    gap: 1rem;
+    padding: 0.2rem;
+    background: transparent;
+}
+
+.game-board .word-row--valid {
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 26%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 24%, transparent);
+}
+
+.game-board .word-row--invalid {
+    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 54%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary, #bb000e) 20%, transparent);
+}
+
+.game-board .word-slot {
+    width: var(--page-game-card-width, 5rem);
+    border-radius: calc(var(--radius-lg, 2rem) - 0.35rem);
+}
+
+.game-board .word-slot--empty {
+    width: var(--page-game-card-width, 5rem);
+    aspect-ratio: 20 / 28;
+    border: 2px dashed color-mix(in srgb, var(--on-surface, #1b1b1b) 18%, transparent);
+    background: color-mix(in srgb, var(--surface-container-lowest, #ffffff) 45%, transparent);
+}
+
+.game-board .word-slot--filled {
+    border: 2px solid transparent;
+}
+
+.game-board .word-slot--drag-over {
+    border-color: var(--secondary, #406925);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--secondary-container, #c0f19d) 48%, transparent);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 24%, transparent);
+}
+
+.game-board__piles {
+    display: flex;
+    align-items: flex-end;
     justify-content: center;
+    gap: 3.75rem;
+    flex-wrap: wrap;
+}
+
+.game-board__pile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.game-board__pile-label {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 56%, transparent);
+}
+
+.game-board__hand-footer {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 4;
+}
+
+.game-board__hand-shell {
+    border-top: 1px solid color-mix(in srgb, var(--surface-container-lowest, #ffffff) 55%, transparent);
+    border-top-left-radius: var(--radius-xl, 3rem);
+    border-top-right-radius: var(--radius-xl, 3rem);
+    background: color-mix(in srgb, var(--surface-container-low, #f6f3f2) 96%, transparent);
+    box-shadow: 0 -20px 50px -15px color-mix(in srgb, var(--on-surface, #1b1b1b) 10%, transparent);
+    backdrop-filter: blur(18px);
+}
+
+.game-board__hand-content {
+    width: min(100%, 96rem);
+    margin: 0 auto;
+    padding: 1.75rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.game-board__hand-header {
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.game-board__hand-heading {
+    gap: 0.75rem;
+}
+
+.game-board__hand-title {
+    margin: 0;
+    font-family: var(--font-headline, inherit);
+    font-size: 1.9rem;
+    font-weight: 800;
+}
+
+.game-board__hand-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius-full, 9999px);
+    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 86%, transparent);
+    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 76%, transparent);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.game-board__hand-sort {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 1.45rem;
+    border-radius: var(--radius-full, 9999px);
+    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 84%, transparent);
+    color: var(--on-surface, #1b1b1b);
+    font-family: var(--font-headline, inherit);
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.game-board .player-hand {
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+}
+
+.game-board .player-hand--drag-over {
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--secondary, #406925) 34%, transparent);
+    border-radius: calc(var(--radius-lg, 2rem) - 0.35rem);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 18%, transparent);
+}
+
+.game-board .player-hand__cards {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding: 0.2rem 0 0.6rem;
+    scrollbar-width: none;
+}
+
+.game-board .player-hand__cards::-webkit-scrollbar {
+    display: none;
+}
+
+.game-board .player-hand__cards>.card {
+    flex: 0 0 auto;
+}
+
+.game-board .player-hand__cards>.card:hover {
+    transform: translateY(-1rem);
+}
+
+.game-board .player-hand__cards>.card:active {
+    transform: scale(0.95);
+}
+
+.game-board__hand-empty {
+    margin: 0;
+    padding: 1rem 0;
+}
+
+@media (max-width: 760px) {
+    .game-board {
+        gap: 2rem;
+    }
+
+    .game-board__status-strip {
+        grid-template-columns: 1fr;
+    }
+
+    .game-board__status-card--active {
+        transform: none;
+    }
+
+    .game-board .word-row {
+        gap: 0.65rem;
+    }
+
+    .game-board__piles {
+        gap: 2.5rem;
+    }
+
+    .game-board__hand-content {
+        padding: 1.15rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    }
+
+    .game-board__hand-title {
+        font-size: 1.45rem;
+    }
+
+    .game-board__hand-sort {
+        padding: 0.65rem 1rem;
+        font-size: 0.84rem;
+    }
+}
+
+@media (max-width: 560px) {
+    .game-board__status-card {
+        border-radius: calc(var(--radius-lg, 2rem) - 0.35rem);
+    }
+
+    .game-board__status-avatar {
+        width: 2.6rem;
+        height: 2.6rem;
+        font-size: 0.82rem;
+    }
+
+    .game-board__status-name {
+        font-size: 1rem;
+    }
+
+    .game-board__board-subtitle {
+        font-size: 0.88rem;
+    }
+
+    .game-board__piles {
+        gap: 1.5rem;
+    }
+
+    .game-board__hand-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

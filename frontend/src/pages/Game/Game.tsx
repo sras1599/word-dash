@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createWsClient, WsClient } from '../../lib/ws'
 import { session } from '../../lib/session'
+import { GameBoard } from '../../components/GameBoard/GameBoard'
 import { WordRow } from '../../components/WordRow/WordRow'
 import type { WordRowState } from '../../components/WordRow/WordRow'
-import { Card as PlayingCard, type CardData } from '../../components/Card/Card'
-import { CardPile } from '../../components/CardPile/CardPile'
+import type { CardData } from '../../components/Card/Card'
 import wordDashLogo from '../../assets/word-dash-logo.svg'
 import './Game.css'
 
@@ -53,12 +53,6 @@ type GameState = {
     hostPlayerId: string
 }
 
-type BoardDragSource = {
-    cardId: string
-    rowIndex: number
-    slotIndex: number
-}
-
 const LOCAL_COUNTDOWN_STEP_MS = 1000
 const URGENCY_THRESHOLD_MS = 15_000
 
@@ -75,24 +69,11 @@ function formatTime(ms: number): string {
     return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
-function getInitials(name: string): string {
-    const parts = name.trim().split(/\s+/).filter(Boolean)
-
-    if (parts.length === 0) {
-        return '?'
-    }
-
-    return parts
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() ?? '')
-        .join('')
-}
-
 function GameIcon({
     name,
     className,
 }: {
-    name: 'timer' | 'help' | 'settings' | 'stack'
+    name: 'timer' | 'help' | 'settings'
     className?: string
 }) {
     switch (name) {
@@ -139,24 +120,6 @@ function GameIcon({
                     />
                 </svg>
             )
-        case 'stack':
-            return (
-                <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none">
-                    <path
-                        d="M7 7.5h8.5a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 15.5 18.5H7A1.5 1.5 0 0 1 5.5 17V9A1.5 1.5 0 0 1 7 7.5Z"
-                        stroke="currentColor"
-                        strokeWidth="1.75"
-                        strokeLinejoin="round"
-                    />
-                    <path
-                        d="M9 5.5h8a1.5 1.5 0 0 1 1.5 1.5v8"
-                        stroke="currentColor"
-                        strokeWidth="1.75"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                </svg>
-            )
     }
 }
 
@@ -166,9 +129,7 @@ export function Game() {
     const localPlayerId = session.getPlayerId() ?? ''
 
     const [gameState, setGameState] = useState<GameState | null>(null)
-    const [isHandDragOver, setIsHandDragOver] = useState(false)
     const wsRef = useRef<WsClient | null>(null)
-    const boardDragSourceRef = useRef<BoardDragSource | null>(null)
 
     const canPlaceCard = (state: GameState | null) => {
         if (!state) return false
@@ -466,43 +427,6 @@ export function Game() {
         navigate('/')
     }
 
-    function handleBoardCardDragStart(cardId: string, rowIndex: number, slotIndex: number) {
-        boardDragSourceRef.current = { cardId, rowIndex, slotIndex }
-    }
-
-    function handleBoardCardDragEnd() {
-        boardDragSourceRef.current = null
-    }
-
-    function handleHandDragOver(e: DragEvent<HTMLDivElement>) {
-        if (!canPlaceCard(gameState)) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        setIsHandDragOver(true)
-    }
-
-    function handleHandDragLeave(e: DragEvent<HTMLDivElement>) {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-            setIsHandDragOver(false)
-        }
-    }
-
-    function handleHandDrop(e: DragEvent<HTMLDivElement>) {
-        if (!canPlaceCard(gameState)) return
-        e.preventDefault()
-        setIsHandDragOver(false)
-        const cardId = e.dataTransfer.getData('text/plain')
-        if (!cardId) return
-
-        const source = boardDragSourceRef.current
-        boardDragSourceRef.current = null
-        if (!source || source.cardId !== cardId) {
-            return
-        }
-
-        handleUnplace(source.rowIndex, source.slotIndex)
-    }
-
     if (!roomCode || !localPlayerId) {
         return (
             <div className="wd-page page-game page-game--error">
@@ -555,52 +479,15 @@ export function Game() {
         : null
     const isHost = currentGameState.hostPlayerId === localPlayerId
     const isLocalTurn = currentGameState.turn.currentPlayerId === localPlayerId
-    const isDrawPhase = currentGameState.phase === 'playing' && isLocalTurn && currentGameState.turn.phase === 'draw'
     const isArrangePhase = currentGameState.phase === 'playing' && isLocalTurn && currentGameState.turn.phase === 'arrange'
     const timerIsUrgent =
         currentGameState.phase === 'playing' &&
         currentGameState.turn.phase !== 'idle' &&
         currentGameState.turn.timeRemainingMs <= URGENCY_THRESHOLD_MS
     const drawnCardId = currentGameState.turn.drawnCard?.id ?? null
-    const drawnCardWillAutoDiscard = isArrangePhase && timerIsUrgent
-    const canArrangeCards = canPlaceCard(currentGameState)
     const localHand = localPlayerData?.hand ?? []
     const handCount = localPlayerData?.handCount ?? localHand.length
-    const displayPlayers = localPlayerData
-        ? opponents.length > 0
-            ? [opponents[0], localPlayerData, ...opponents.slice(1)]
-            : [localPlayerData]
-        : currentGameState.players
-    const boardRows = localPlayerData?.wordBoard.rows ?? []
     const currentTurnPlayer = currentGameState.players.find((p) => p.id === currentGameState.turn.currentPlayerId) ?? null
-
-    function getPlayerStatus(player: Player): string {
-        if (!player.isConnected) {
-            return 'Disconnected'
-        }
-
-        if (currentGameState.phase === 'finished') {
-            return player.id === currentGameState.winnerId ? 'Winner' : player.id === localPlayerId ? 'You' : 'Opponent'
-        }
-
-        if (currentGameState.phase === 'waiting') {
-            return 'Waiting'
-        }
-
-        if (player.id === currentGameState.turn.currentPlayerId) {
-            return currentGameState.turn.phase === 'draw'
-                ? player.id === localPlayerId
-                    ? 'Draw a card'
-                    : 'Drawing…'
-                : 'Playing...'
-        }
-
-        return player.id === localPlayerId ? 'You' : 'Opponent'
-    }
-
-    function getStatusCount(player: Player): number {
-        return player.id === localPlayerId ? handCount : player.handCount
-    }
 
     function getBoardSubtitle(): string {
         if (currentGameState.phase === 'finished') {
@@ -672,170 +559,26 @@ export function Game() {
             </nav>
 
             <main className="wd-content-layer page-game__main">
-                <section className="page-game__status-strip" aria-label="Player status">
-                    {displayPlayers.map((player) => {
-                        const isLocal = player.id === localPlayerId
-                        const isCurrent = player.id === currentGameState.turn.currentPlayerId
-
-                        return (
-                            <article
-                                key={player.id}
-                                className={[
-                                    'page-game__status-card',
-                                    isLocal && 'page-game__status-card--local',
-                                    isCurrent && 'page-game__status-card--active',
-                                    !player.isConnected && 'page-game__status-card--disconnected',
-                                ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                            >
-                                {isLocal && isCurrent && <span className="page-game__status-badge">Your Turn</span>}
-
-                                <div className="page-game__status-main">
-                                    <div
-                                        className={[
-                                            'page-game__status-avatar',
-                                            isLocal && 'page-game__status-avatar--local',
-                                        ]
-                                            .filter(Boolean)
-                                            .join(' ')}
-                                        aria-hidden="true"
-                                    >
-                                        {getInitials(player.name)}
-                                    </div>
-
-                                    <div className="page-game__status-copy">
-                                        <p className="page-game__status-name">{isLocal ? 'You' : player.name}</p>
-                                        <p
-                                            className={[
-                                                'page-game__status-role',
-                                                isCurrent && 'page-game__status-role--active',
-                                                !player.isConnected && 'page-game__status-role--disconnected',
-                                            ]
-                                                .filter(Boolean)
-                                                .join(' ')}
-                                        >
-                                            {getPlayerStatus(player)}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    className={[
-                                        'page-game__status-count',
-                                        isCurrent && 'page-game__status-count--active',
-                                    ]
-                                        .filter(Boolean)
-                                        .join(' ')}
-                                >
-                                    <GameIcon name="stack" className="page-game__status-count-icon" />
-                                    <span className="page-game__status-count-value">{getStatusCount(player)}</span>
-                                </div>
-                            </article>
-                        )
-                    })}
-                </section>
-
-                <section className="page-game__board-section" aria-labelledby="page-game-board-title">
-                    <div className="page-game__board-copy">
-                        <h1 className="page-game__board-title" id="page-game-board-title">
-                            Build Your Words
-                        </h1>
-                        <p className="page-game__board-subtitle">{getBoardSubtitle()}</p>
-                    </div>
-
-                    <div className="page-game__board" aria-label="Your word board">
-                        {boardRows.map((rowState, index) => (
-                            <div key={index} className="page-game__board-row">
-                                <WordRow
-                                    rowState={rowState}
-                                    rowIndex={index}
-                                    onPlace={canArrangeCards ? handlePlace : undefined}
-                                    onCardDragStart={canArrangeCards ? handleBoardCardDragStart : undefined}
-                                    onCardDragEnd={canArrangeCards ? handleBoardCardDragEnd : undefined}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="page-game__piles" aria-label="Card piles">
-                    <div className="page-game__pile">
-                        <p className="page-game__pile-label">Draw</p>
-                        <CardPile
-                            type="draw"
-                            topCard={null}
-                            cardCount={currentGameState.drawPileCount}
-                            isActive={isDrawPhase}
-                            onDraw={handleDraw}
-                        />
-                    </div>
-
-                    <div className="page-game__pile">
-                        <p className="page-game__pile-label">Discard</p>
-                        <CardPile
-                            type="discard"
-                            topCard={currentGameState.discardPileTop}
-                            cardCount={currentGameState.discardPileTop ? 1 : 0}
-                            isActive={isDrawPhase}
-                            isDropTarget={isArrangePhase}
-                            onDraw={handleDraw}
-                            onDiscard={handleDiscard}
-                        />
-                    </div>
-                </section>
+                <GameBoard
+                    phase={currentGameState.phase}
+                    localPlayerId={localPlayerId}
+                    winnerId={currentGameState.winnerId}
+                    localPlayer={localPlayerData ? { ...localPlayerData, hand: localHand } : null}
+                    opponents={opponents}
+                    turn={currentGameState.turn}
+                    variation={currentGameState.variation}
+                    discardTopCard={currentGameState.discardPileTop}
+                    drawPileCount={currentGameState.drawPileCount}
+                    boardSubtitle={getBoardSubtitle()}
+                    handCount={handCount}
+                    drawnCardId={drawnCardId}
+                    willAutoDiscardCardId={isArrangePhase && timerIsUrgent ? drawnCardId : null}
+                    onDraw={handleDraw}
+                    onPlace={handlePlace}
+                    onUnplace={handleUnplace}
+                    onDiscard={handleDiscard}
+                />
             </main>
-
-            <footer className="page-game__hand-footer">
-                <div className="page-game__hand-shell">
-                    <div className="page-game__hand-content">
-                        <div className="page-game__hand-header">
-                            <div className="page-game__hand-heading">
-                                <h2 className="page-game__hand-title">Your Deck</h2>
-                                <span className="page-game__hand-count">
-                                    {handCount} {handCount === 1 ? 'Card' : 'Cards'}
-                                </span>
-                            </div>
-
-                            <span className="page-game__hand-sort" aria-hidden="true">
-                                Sort Hand
-                            </span>
-                        </div>
-
-                        <div
-                            className={[
-                                'page-game__hand-track',
-                                isHandDragOver && 'page-game__hand-track--drag-over',
-                            ]
-                                .filter(Boolean)
-                                .join(' ')}
-                            role="region"
-                            aria-label="Your hand"
-                            onDragOver={canArrangeCards ? handleHandDragOver : undefined}
-                            onDragLeave={canArrangeCards ? handleHandDragLeave : undefined}
-                            onDrop={canArrangeCards ? handleHandDrop : undefined}
-                        >
-                            {localHand.length > 0 ? (
-                                localHand.map((card) => {
-                                    const isDrawnCard = card.id === drawnCardId
-
-                                    return (
-                                        <PlayingCard
-                                            key={card.id}
-                                            card={card}
-                                            draggable={canArrangeCards}
-                                            isDrawn={isDrawnCard}
-                                            willAutoDiscard={drawnCardWillAutoDiscard && isDrawnCard}
-                                        />
-                                    )
-                                })
-                            ) : (
-                                <p className="page-game__hand-empty">No cards in hand.</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </footer>
 
             {currentGameState.phase === 'finished' && winner && (
                 <div className="page-game__overlay" role="dialog" aria-modal="true" aria-label="Game over">

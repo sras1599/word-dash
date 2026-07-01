@@ -35,6 +35,7 @@ function emptyWordBoard(variation: GameBoardVariation) {
 }
 
 const DISCARD_TOP: CardData = { id: 'cx', letter: 'X' }
+const DRAWN_CARD: CardData = { id: 'drawn-n', letter: 'N' }
 
 function makeLocalPlayer(variation: GameBoardVariation, id = 'local'): GameBoardLocalPlayer {
     const handSize = variation.wordLengths.reduce((sum, n) => sum + n, 0)
@@ -78,6 +79,9 @@ const meta = {
     },
     tags: ['autodocs'],
     args: {
+        phase: 'playing',
+        localPlayerId: 'local',
+        winnerId: null,
         localPlayer: makeLocalPlayer(VARIATION_345, 'local'),
         opponents: [
             makeOpponent(VARIATION_345, 'opp-1', 'Bob'),
@@ -87,6 +91,10 @@ const meta = {
         // No discard pile at the very start of the first round
         discardTopCard: null,
         drawPileCount: 42,
+        boardSubtitle: 'Draw a card, then build or discard.',
+        handCount: 12,
+        drawnCardId: null,
+        willAutoDiscardCardId: null,
         turn: {
             currentPlayerId: 'local',
             phase: 'draw',
@@ -113,6 +121,7 @@ export const LocalArrangePhase: Story = {
     args: {
         // By the arrange phase the draw pile has already been used, so a discard card exists
         discardTopCard: DISCARD_TOP,
+        boardSubtitle: 'Arrange your cards before the timer expires.',
         turn: {
             currentPlayerId: 'local',
             phase: 'arrange',
@@ -125,6 +134,7 @@ export const LocalArrangePhase: Story = {
 /** Opponent's turn — local player cannot interact with anything. */
 export const OpponentTurn: Story = {
     args: {
+        boardSubtitle: 'Waiting for Bob.',
         turn: {
             currentPlayerId: 'opp-1',
             phase: 'draw',
@@ -138,6 +148,14 @@ export const OpponentTurn: Story = {
 export const TimerUrgent: Story = {
     args: {
         discardTopCard: DISCARD_TOP,
+        localPlayer: {
+            ...makeLocalPlayer(VARIATION_345, 'local'),
+            hand: [...makeLocalPlayer(VARIATION_345, 'local').hand, DRAWN_CARD],
+        },
+        handCount: 13,
+        boardSubtitle: 'Arrange your cards before the timer expires.',
+        drawnCardId: DRAWN_CARD.id,
+        willAutoDiscardCardId: DRAWN_CARD.id,
         turn: {
             currentPlayerId: 'local',
             phase: 'arrange',
@@ -180,6 +198,7 @@ export const Variation56: Story = {
     args: {
         variation: VARIATION_56,
         localPlayer: makeLocalPlayer(VARIATION_56, 'local'),
+        handCount: 11,
         opponents: [
             makeOpponent(VARIATION_56, 'opp-1', 'Bob'),
             makeOpponent(VARIATION_56, 'opp-2', 'Carol'),
@@ -192,6 +211,7 @@ export const Variation8: Story = {
     args: {
         variation: VARIATION_8,
         localPlayer: makeLocalPlayer(VARIATION_8, 'local'),
+        handCount: 8,
         opponents: [
             makeOpponent(VARIATION_8, 'opp-1', 'Bob'),
             makeOpponent(VARIATION_8, 'opp-2', 'Carol'),
