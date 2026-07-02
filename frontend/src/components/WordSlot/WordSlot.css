@@ -5,7 +5,8 @@
 .word-slot {
     --slot-drag-color: #2db89c;
     --slot-border-width: 2px;
-    --slot-radius: 8px;
+    --slot-width: var(--card-width, 80px);
+    --slot-radius: calc(var(--slot-width) * 0.09);
     --slot-transition: background-color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 
     position: relative;
@@ -22,7 +23,7 @@
 ───────────────────────────────────────────── */
 .word-slot--empty {
     border: var(--slot-border-width) dashed #b0b0a0;
-    width: 80px;
+    width: var(--slot-width);
     aspect-ratio: 2 / 3;
 }
 
@@ -31,6 +32,10 @@
 ───────────────────────────────────────────── */
 .word-slot--filled {
     border: var(--slot-border-width) solid transparent;
+}
+
+.word-slot>.card {
+    --card-width: var(--slot-width);
 }
 
 /* ─────────────────────────────────────────────

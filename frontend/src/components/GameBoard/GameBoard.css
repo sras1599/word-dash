@@ -219,13 +219,13 @@
 }
 
 .game-board .word-slot {
+    --slot-width: var(--page-game-card-width, 5rem);
     width: var(--page-game-card-width, 5rem);
-    border-radius: calc(var(--radius-lg, 2rem) - 0.35rem);
 }
 
 .game-board .word-slot--empty {
     width: var(--page-game-card-width, 5rem);
-    aspect-ratio: 20 / 28;
+    aspect-ratio: 2 / 3;
     border: 2px dashed color-mix(in srgb, var(--on-surface, #1b1b1b) 18%, transparent);
     background: color-mix(in srgb, var(--surface-container-lowest, #ffffff) 45%, transparent);
 }
@@ -350,7 +350,8 @@
     display: flex;
     gap: 0.75rem;
     overflow-x: auto;
-    padding: 0.2rem 0 0.6rem;
+    margin-top: -1rem;
+    padding: 1.2rem 0 0.6rem;
     scrollbar-width: none;
 }
 
