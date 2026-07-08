@@ -1,8 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { GameState } from '../../../lib/gameTypes'
+import type { Card, GameState } from '../../../lib/gameTypes'
 import { gameReducer } from './gameReducer'
 
-function createGameState(): GameState {
+function createGameState({
+    hand = [{ id: 'c1', letter: 'A' }],
+    turnPhase = 'draw',
+    discardPileTop = null,
+}: {
+    hand?: Card[]
+    turnPhase?: GameState['turn']['phase']
+    discardPileTop?: Card | null
+} = {}): GameState {
     return {
         roomCode: 'ABCD',
         variation: { wordLengths: [3] },
@@ -12,8 +20,8 @@ function createGameState(): GameState {
                 name: 'Host',
                 isReady: true,
                 isConnected: true,
-                handCount: 1,
-                hand: [{ id: 'c1', letter: 'A' }],
+                handCount: hand.length,
+                hand,
                 wordBoard: {
                     allComplete: false,
                     rows: [
@@ -38,10 +46,10 @@ function createGameState(): GameState {
             },
         ],
         drawPileCount: 10,
-        discardPileTop: null,
+        discardPileTop,
         turn: {
             currentPlayerId: 'p1',
-            phase: 'draw',
+            phase: turnPhase,
             timeRemainingMs: 90_000,
             drawnCard: null,
         },
@@ -107,7 +115,7 @@ describe('gameReducer', () => {
         expect(ticked?.turn.timeRemainingMs).toBe(59_000)
     })
 
-    it('optimistically removes or swaps a placed local card', () => {
+    it('optimistically places a hand card into an empty slot', () => {
         const placedIntoEmpty = gameReducer(createGameState(), {
             type: 'local/cardPlacedOptimistically',
             localPlayerId: 'p1',
@@ -115,9 +123,13 @@ describe('gameReducer', () => {
             rowIndex: 0,
             slotIndex: 0,
         })
+
+        expect(placedIntoEmpty?.players[0].wordBoard.rows[0].slots[0].card).toEqual({ id: 'c1', letter: 'A' })
         expect(placedIntoEmpty?.players[0].hand).toEqual([])
         expect(placedIntoEmpty?.players[0].handCount).toBe(0)
+    })
 
+    it('optimistically swaps a hand card into an occupied slot', () => {
         const swapped = gameReducer(createGameState(), {
             type: 'local/cardPlacedOptimistically',
             localPlayerId: 'p1',
@@ -125,7 +137,179 @@ describe('gameReducer', () => {
             rowIndex: 0,
             slotIndex: 1,
         })
+
+        expect(swapped?.players[0].wordBoard.rows[0].slots[1].card).toEqual({ id: 'c1', letter: 'A' })
         expect(swapped?.players[0].hand).toEqual([{ id: 'c2', letter: 'B' }])
         expect(swapped?.players[0].handCount).toBe(1)
+    })
+
+    it('optimistically moves a board card into an empty slot', () => {
+        const moved = gameReducer(createGameState({ hand: [] }), {
+            type: 'local/cardPlacedOptimistically',
+            localPlayerId: 'p1',
+            cardId: 'c2',
+            rowIndex: 0,
+            slotIndex: 0,
+        })
+
+        expect(moved?.players[0].wordBoard.rows[0].slots[0].card).toEqual({ id: 'c2', letter: 'B' })
+        expect(moved?.players[0].wordBoard.rows[0].slots[1].card).toBeNull()
+        expect(moved?.players[0].hand).toEqual([])
+        expect(moved?.players[0].handCount).toBe(0)
+    })
+
+    it('optimistically moves a board card into an occupied slot and returns displaced card to hand', () => {
+        const moved = gameReducer(
+            {
+                ...createGameState({ hand: [] }),
+                players: [
+                    {
+                        ...createGameState({ hand: [] }).players[0],
+                        wordBoard: {
+                            allComplete: false,
+                            rows: [
+                                {
+                                    targetLength: 3,
+                                    isComplete: false,
+                                    slots: [
+                                        { slotIndex: 0, card: { id: 'c3', letter: 'C' } },
+                                        { slotIndex: 1, card: { id: 'c2', letter: 'B' } },
+                                    ],
+                                },
+                            ],
+                        },
+                    },
+                    createGameState().players[1],
+                ],
+            },
+            {
+                type: 'local/cardPlacedOptimistically',
+                localPlayerId: 'p1',
+                cardId: 'c2',
+                rowIndex: 0,
+                slotIndex: 0,
+            },
+        )
+
+        expect(moved?.players[0].wordBoard.rows[0].slots[0].card).toEqual({ id: 'c2', letter: 'B' })
+        expect(moved?.players[0].wordBoard.rows[0].slots[1].card).toBeNull()
+        expect(moved?.players[0].hand).toEqual([{ id: 'c3', letter: 'C' }])
+        expect(moved?.players[0].handCount).toBe(1)
+    })
+
+    it('keeps a same-slot board move as a no-op', () => {
+        const state = createGameState({ hand: [] })
+        const moved = gameReducer(state, {
+            type: 'local/cardPlacedOptimistically',
+            localPlayerId: 'p1',
+            cardId: 'c2',
+            rowIndex: 0,
+            slotIndex: 1,
+        })
+
+        expect(moved).toEqual(state)
+    })
+
+    it('optimistically unplaces a board card into hand and marks completion incomplete', () => {
+        const state = createGameState({ hand: [] })
+        state.players[0].wordBoard.allComplete = true
+        state.players[0].wordBoard.rows[0].isComplete = true
+
+        const unplaced = gameReducer(state, {
+            type: 'local/cardUnplacedOptimistically',
+            localPlayerId: 'p1',
+            rowIndex: 0,
+            slotIndex: 1,
+        })
+
+        expect(unplaced?.players[0].wordBoard.rows[0].slots[1].card).toBeNull()
+        expect(unplaced?.players[0].wordBoard.rows[0].isComplete).toBe(false)
+        expect(unplaced?.players[0].wordBoard.allComplete).toBe(false)
+        expect(unplaced?.players[0].hand).toEqual([{ id: 'c2', letter: 'B' }])
+        expect(unplaced?.players[0].handCount).toBe(1)
+    })
+
+    it('optimistically discards from hand and advances to the next local player', () => {
+        const discarded = gameReducer(createGameState({ turnPhase: 'arrange' }), {
+            type: 'local/cardDiscardedOptimistically',
+            localPlayerId: 'p1',
+            cardId: 'c1',
+        })
+
+        expect(discarded?.players[0].hand).toEqual([])
+        expect(discarded?.players[0].handCount).toBe(0)
+        expect(discarded?.discardPileTop).toEqual({ id: 'c1', letter: 'A' })
+        expect(discarded?.turn.currentPlayerId).toBe('p2')
+        expect(discarded?.turn.phase).toBe('draw')
+        expect(discarded?.turn.drawnCard).toBeNull()
+        expect(discarded?.turn.timeRemainingMs).toBe(90_000)
+    })
+
+    it('optimistically discards from board and marks completion incomplete', () => {
+        const state = createGameState({ hand: [], turnPhase: 'arrange' })
+        state.players[0].wordBoard.allComplete = true
+        state.players[0].wordBoard.rows[0].isComplete = true
+
+        const discarded = gameReducer(state, {
+            type: 'local/cardDiscardedOptimistically',
+            localPlayerId: 'p1',
+            cardId: 'c2',
+        })
+
+        expect(discarded?.players[0].wordBoard.rows[0].slots[1].card).toBeNull()
+        expect(discarded?.players[0].wordBoard.rows[0].isComplete).toBe(false)
+        expect(discarded?.players[0].wordBoard.allComplete).toBe(false)
+        expect(discarded?.discardPileTop).toEqual({ id: 'c2', letter: 'B' })
+        expect(discarded?.turn.currentPlayerId).toBe('p2')
+        expect(discarded?.turn.phase).toBe('draw')
+    })
+
+    it('optimistically draws from discard only when the public top card exists', () => {
+        const discardedTop = { id: 'd1', letter: 'D' }
+        const drawn = gameReducer(createGameState({ discardPileTop: discardedTop }), {
+            type: 'local/discardPileDrawnOptimistically',
+            localPlayerId: 'p1',
+        })
+
+        expect(drawn?.players[0].hand).toEqual([
+            { id: 'c1', letter: 'A' },
+            discardedTop,
+        ])
+        expect(drawn?.players[0].handCount).toBe(2)
+        expect(drawn?.discardPileTop).toBeNull()
+        expect(drawn?.turn.phase).toBe('arrange')
+        expect(drawn?.turn.drawnCard).toEqual(discardedTop)
+
+        const drawPileState = createGameState()
+        const withoutPublicCard = gameReducer(drawPileState, {
+            type: 'local/discardPileDrawnOptimistically',
+            localPlayerId: 'p1',
+        })
+        expect(withoutPublicCard).toEqual(drawPileState)
+    })
+
+    it('does not duplicate a discard-pile card when the server draw event reconciles an optimistic draw', () => {
+        const discardedTop = { id: 'd1', letter: 'D' }
+        const optimistic = gameReducer(createGameState({ discardPileTop: discardedTop }), {
+            type: 'local/discardPileDrawnOptimistically',
+            localPlayerId: 'p1',
+        })
+
+        const reconciled = gameReducer(optimistic, {
+            type: 'game/cardDrawn',
+            localPlayerId: 'p1',
+            playerId: 'p1',
+            card: discardedTop,
+            drawPileCount: 10,
+            discardPileTop: null,
+            timeRemainingMs: 89_000,
+        })
+
+        expect(reconciled?.players[0].hand).toEqual([
+            { id: 'c1', letter: 'A' },
+            discardedTop,
+        ])
+        expect(reconciled?.players[0].handCount).toBe(2)
+        expect(reconciled?.turn.timeRemainingMs).toBe(89_000)
     })
 })

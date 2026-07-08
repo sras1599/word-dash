@@ -60,7 +60,7 @@ The backend is a monolith: one process, two protocol surfaces.
 - Room isolation: each room's game state is keyed by `roomCode` in an in-memory map. Rooms do not share state.
 - In-memory connection map: a per-process `map[playerID]*websocket.Conn` tracks live connections. On reconnect, the entry is replaced.
 - Server-authoritative timer: a goroutine per active room ticks every second on the backend, emits sparse warning events at key thresholds, and enforces timeout turn rotation.
-- No optimistic updates: clients wait for the server to confirm every card placement or move via `game:board_updated`.
+- Optimistic client updates: clients may immediately reflect safe public actions, then reconcile with authoritative `game:board_updated`, `game:turn_ended`, or `game:state` events. Draw-pile card identity remains server-owned.
 - Card privacy: draw pile card identities are never sent to clients. Clients only receive a count (`drawPileCount`) and the top card of the discard pile.
 
 ## Project Structure

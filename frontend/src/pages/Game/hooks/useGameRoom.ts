@@ -3,7 +3,7 @@ import { useMachine } from '@xstate/react'
 import type { Card, WordBoardState } from '../../../lib/gameTypes'
 import { createWsClient, type WsClient } from '../../../lib/ws'
 import { gameMachine } from '../state/gameMachine'
-import { canPlaceCard, LOCAL_COUNTDOWN_STEP_MS } from '../state/gameReducer'
+import { canDiscardCard, canDrawCard, canPlaceCard, LOCAL_COUNTDOWN_STEP_MS } from '../state/gameReducer'
 
 export function useGameRoom(roomCode: string | undefined, localPlayerId: string) {
     const [snapshot, send] = useMachine(gameMachine)
@@ -131,6 +131,13 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
     }, [send])
 
     function draw(source: 'draw' | 'discard') {
+        if (!canDrawCard(gameState, localPlayerId)) return
+        if (source === 'discard' && !gameState?.discardPileTop) return
+
+        if (source === 'discard') {
+            send({ type: 'LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY', localPlayerId })
+        }
+
         wsRef.current?.send('game:draw_card', { source })
     }
 
@@ -142,10 +149,18 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
     }
 
     function unplace(rowIndex: number, slotIndex: number) {
+        if (!canPlaceCard(gameState)) return
+
+        send({ type: 'LOCAL_CARD_UNPLACED_OPTIMISTICALLY', localPlayerId, rowIndex, slotIndex })
+
         wsRef.current?.send('game:unplace_card', { rowIndex, slotIndex })
     }
 
     function discard(cardId: string) {
+        if (!canDiscardCard(gameState, localPlayerId)) return
+
+        send({ type: 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY', localPlayerId, cardId })
+
         wsRef.current?.send('game:discard_card', { cardId })
     }
 

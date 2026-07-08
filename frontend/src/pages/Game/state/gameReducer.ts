@@ -1,5 +1,5 @@
 import { produce } from 'immer'
-import type { Card, GameState, TurnPhase, WordBoardState } from '../../../lib/gameTypes'
+import type { Card, GameState, TurnPhase, WordBoardState, GamePlayer } from '../../../lib/gameTypes'
 
 export const LOCAL_COUNTDOWN_STEP_MS = 1000
 
@@ -7,22 +7,22 @@ export type GameAction =
     | { type: 'game/state'; state: GameState }
     | { type: 'game/turnStarted'; currentPlayerId: string; timeRemainingMs: number }
     | {
-          type: 'game/cardDrawn'
-          localPlayerId: string
-          playerId: string
-          card: Card | null
-          drawPileCount: number
-          discardPileTop: Card | null
-          timeRemainingMs?: number
-      }
+        type: 'game/cardDrawn'
+        localPlayerId: string
+        playerId: string
+        card: Card | null
+        drawPileCount: number
+        discardPileTop: Card | null
+        timeRemainingMs?: number
+    }
     | {
-          type: 'game/boardUpdated'
-          localPlayerId: string
-          playerId: string
-          wordBoard: WordBoardState
-          handCount: number
-          hand?: Card[]
-      }
+        type: 'game/boardUpdated'
+        localPlayerId: string
+        playerId: string
+        wordBoard: WordBoardState
+        handCount: number
+        hand?: Card[]
+    }
     | { type: 'game/timerWarning'; currentPlayerId?: string; timeRemainingMs: number }
     | { type: 'game/turnEnded'; nextPlayerId: string; discardPileTop: Card; timeRemainingMs?: number }
     | { type: 'game/turnSkipped'; playerId: string; nextPlayerId?: string; timeRemainingMs?: number }
@@ -30,11 +30,100 @@ export type GameAction =
     | { type: 'game/playerConnectionChanged'; playerId: string; isConnected: boolean }
     | { type: 'local/timerTick' }
     | { type: 'local/cardPlacedOptimistically'; localPlayerId: string; cardId: string; rowIndex: number; slotIndex: number }
+    | { type: 'local/cardUnplacedOptimistically'; localPlayerId: string; rowIndex: number; slotIndex: number }
+    | { type: 'local/cardDiscardedOptimistically'; localPlayerId: string; cardId: string }
+    | { type: 'local/discardPileDrawnOptimistically'; localPlayerId: string }
 
 export function canPlaceCard(state: GameState | null): boolean {
     if (!state) return false
     if (state.phase !== 'playing') return false
     return state.turn.phase === 'draw' || state.turn.phase === 'arrange'
+}
+
+export function canDrawCard(state: GameState | null, localPlayerId: string): boolean {
+    if (!state) return false
+    if (state.phase !== 'playing') return false
+    if (state.turn.currentPlayerId !== localPlayerId) return false
+    return state.turn.phase === 'draw'
+}
+
+export function canDiscardCard(state: GameState | null, localPlayerId: string): boolean {
+    if (!state) return false
+    if (state.phase !== 'playing') return false
+    if (state.turn.currentPlayerId !== localPlayerId) return false
+    return state.turn.phase === 'arrange'
+}
+
+type BoardLocation = {
+    rowIndex: number
+    slotIndex: number
+}
+
+type CardLocation = { type: 'hand'; index: number } | ({ type: 'board' } & BoardLocation)
+
+function getSlot(wordBoard: WordBoardState, rowIndex: number, slotIndex: number) {
+    return wordBoard.rows[rowIndex]?.slots[slotIndex] ?? null
+}
+
+function markCardRemovedFromBoard(wordBoard: WordBoardState, rowIndex: number) {
+    const row = wordBoard.rows[rowIndex]
+    if (!row) return
+
+    row.isComplete = false
+    wordBoard.allComplete = false
+}
+
+function findCardLocation(player: NonNullable<GamePlayer>, cardId: string): CardLocation | null {
+    const hand = player.hand ?? []
+    const handIndex = hand.findIndex((card) => card.id === cardId)
+    if (handIndex !== -1) {
+        return { type: 'hand', index: handIndex }
+    }
+
+    for (let rowIndex = 0; rowIndex < player.wordBoard.rows.length; rowIndex += 1) {
+        const row = player.wordBoard.rows[rowIndex]
+        for (let slotIndex = 0; slotIndex < row.slots.length; slotIndex += 1) {
+            if (row.slots[slotIndex].card?.id === cardId) {
+                return { type: 'board', rowIndex, slotIndex }
+            }
+        }
+    }
+
+    return null
+}
+
+function removeCardAtLocation(
+    player: NonNullable<GamePlayer>,
+    location: CardLocation,
+): Card | null {
+    if (location.type === 'hand') {
+        const hand = player.hand ?? []
+        const [card] = hand.splice(location.index, 1)
+        player.hand = hand
+        player.handCount = hand.length
+        return card ?? null
+    }
+
+    const sourceSlot = getSlot(player.wordBoard, location.rowIndex, location.slotIndex)
+    const card = sourceSlot?.card ?? null
+    if (!sourceSlot || !card) return null
+
+    sourceSlot.card = null
+    markCardRemovedFromBoard(player.wordBoard, location.rowIndex)
+    return card
+}
+
+function addCardToHand(player: NonNullable<GamePlayer>, card: Card) {
+    const hand = player.hand ?? []
+    hand.push(card)
+    player.hand = hand
+    player.handCount = hand.length
+}
+
+function getNextPlayerId(state: GameState, currentPlayerId: string): string {
+    const currentIndex = state.players.findIndex((player) => player.id === currentPlayerId)
+    if (currentIndex === -1) return state.players[0]?.id ?? currentPlayerId
+    return state.players[(currentIndex + 1) % state.players.length]?.id ?? currentPlayerId
 }
 
 export function gameReducer(state: GameState | null, action: GameAction): GameState | null {
@@ -52,10 +141,16 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             case 'game/cardDrawn': {
                 const player = draft.players.find((p) => p.id === action.playerId)
                 if (player) {
-                    player.handCount += 1
                     if (player.id === action.localPlayerId) {
                         const newCard = action.card ?? { id: `unknown-${Date.now()}`, letter: '?' }
-                        player.hand = [...(player.hand ?? []), newCard]
+                        const hand = player.hand ?? []
+                        if (!hand.some((card) => card.id === newCard.id)) {
+                            hand.push(newCard)
+                        }
+                        player.hand = hand
+                        player.handCount = hand.length
+                    } else {
+                        player.handCount += 1
                     }
                 }
                 draft.drawPileCount = action.drawPileCount
@@ -119,18 +214,64 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             case 'local/cardPlacedOptimistically': {
                 if (!canPlaceCard(draft)) break
                 const player = draft.players.find((p) => p.id === action.localPlayerId)
-                const hand = player?.hand ?? []
-                const cardIndex = hand.findIndex((card) => card.id === action.cardId)
-                if (!player || cardIndex === -1) break
+                if (!player) break
 
-                const swappedCard = player.wordBoard.rows[action.rowIndex]?.slots[action.slotIndex]?.card ?? null
-                if (swappedCard) {
-                    hand[cardIndex] = swappedCard
-                } else {
-                    hand.splice(cardIndex, 1)
+                const source = findCardLocation(player, action.cardId)
+                const targetSlot = getSlot(player.wordBoard, action.rowIndex, action.slotIndex)
+                if (!source || !targetSlot) break
+                if (source.type === 'board' && source.rowIndex === action.rowIndex && source.slotIndex === action.slotIndex) {
+                    break
                 }
-                player.hand = hand
-                player.handCount = hand.length
+
+                const movingCard = removeCardAtLocation(player, source)
+                if (!movingCard) break
+
+                const displacedCard = targetSlot.card
+                targetSlot.card = movingCard
+                if (displacedCard) {
+                    addCardToHand(player, displacedCard)
+                }
+                break
+            }
+            case 'local/cardUnplacedOptimistically': {
+                if (!canPlaceCard(draft)) break
+                const player = draft.players.find((p) => p.id === action.localPlayerId)
+                const sourceSlot = player ? getSlot(player.wordBoard, action.rowIndex, action.slotIndex) : null
+                const card = sourceSlot?.card ?? null
+                if (!player || !sourceSlot || !card) break
+
+                sourceSlot.card = null
+                markCardRemovedFromBoard(player.wordBoard, action.rowIndex)
+                addCardToHand(player, card)
+                break
+            }
+            case 'local/cardDiscardedOptimistically': {
+                if (!canDiscardCard(draft, action.localPlayerId)) break
+                const player = draft.players.find((p) => p.id === action.localPlayerId)
+                if (!player) break
+
+                const source = findCardLocation(player, action.cardId)
+                if (!source) break
+
+                const discardedCard = removeCardAtLocation(player, source)
+                if (!discardedCard) break
+
+                draft.discardPileTop = discardedCard
+                draft.turn.currentPlayerId = getNextPlayerId(draft, draft.turn.currentPlayerId)
+                draft.turn.phase = 'draw' as TurnPhase
+                draft.turn.drawnCard = null
+                break
+            }
+            case 'local/discardPileDrawnOptimistically': {
+                if (!canDrawCard(draft, action.localPlayerId)) break
+                const player = draft.players.find((p) => p.id === action.localPlayerId)
+                const drawnCard = draft.discardPileTop
+                if (!player || !drawnCard) break
+
+                addCardToHand(player, drawnCard)
+                draft.discardPileTop = null
+                draft.turn.phase = 'arrange' as TurnPhase
+                draft.turn.drawnCard = drawnCard
                 break
             }
         }

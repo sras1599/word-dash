@@ -35,6 +35,9 @@ export type GameMachineEvent =
     | { type: 'PLAYER_CONNECTION_CHANGED'; playerId: string; isConnected: boolean }
     | { type: 'LOCAL_TIMER_TICK' }
     | { type: 'LOCAL_CARD_PLACED_OPTIMISTICALLY'; localPlayerId: string; cardId: string; rowIndex: number; slotIndex: number }
+    | { type: 'LOCAL_CARD_UNPLACED_OPTIMISTICALLY'; localPlayerId: string; rowIndex: number; slotIndex: number }
+    | { type: 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY'; localPlayerId: string; cardId: string }
+    | { type: 'LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY'; localPlayerId: string }
 
 function reduceGameEvent(context: GameMachineContext, event: GameMachineEvent): GameState | null {
     switch (event.type) {
@@ -102,6 +105,24 @@ function reduceGameEvent(context: GameMachineContext, event: GameMachineEvent): 
                 cardId: event.cardId,
                 rowIndex: event.rowIndex,
                 slotIndex: event.slotIndex,
+            })
+        case 'LOCAL_CARD_UNPLACED_OPTIMISTICALLY':
+            return gameReducer(context.gameState, {
+                type: 'local/cardUnplacedOptimistically',
+                localPlayerId: event.localPlayerId,
+                rowIndex: event.rowIndex,
+                slotIndex: event.slotIndex,
+            })
+        case 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY':
+            return gameReducer(context.gameState, {
+                type: 'local/cardDiscardedOptimistically',
+                localPlayerId: event.localPlayerId,
+                cardId: event.cardId,
+            })
+        case 'LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY':
+            return gameReducer(context.gameState, {
+                type: 'local/discardPileDrawnOptimistically',
+                localPlayerId: event.localPlayerId,
             })
         default:
             return context.gameState
@@ -198,6 +219,9 @@ export const gameMachine = setup({
                 PLAYER_CONNECTION_CHANGED: { actions: 'reduceGame' },
                 LOCAL_TIMER_TICK: { actions: 'reduceGame' },
                 LOCAL_CARD_PLACED_OPTIMISTICALLY: { actions: 'reduceGame' },
+                LOCAL_CARD_UNPLACED_OPTIMISTICALLY: { actions: 'reduceGame' },
+                LOCAL_CARD_DISCARDED_OPTIMISTICALLY: { target: '.draw', actions: 'reduceGame' },
+                LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY: { target: '.arrange', actions: 'reduceGame' },
             },
         },
         finished: {

@@ -55,7 +55,7 @@ The top-level layout component for the game screen. Assembles all gameplay sub-c
 
 ## Interactions
 
-`GameBoard` owns all dispatching to the server. Each child component fires callbacks; `GameBoard` translates them into WebSocket messages:
+`GameBoard` owns user interaction callbacks. The game state layer applies safe optimistic updates for public/local card moves, then sends the same WebSocket events so the next authoritative server event reconciles exact state:
 
 | Child callback                           | WebSocket event dispatched                          |
 |------------------------------------------|-----------------------------------------------------|

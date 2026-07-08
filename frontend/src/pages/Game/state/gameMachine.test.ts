@@ -50,4 +50,20 @@ describe('gameMachine', () => {
         expect(actor.getSnapshot().matches('finished')).toBe(true)
         expect(actor.getSnapshot().context.gameState?.winnerId).toBe('p1')
     })
+
+    it('applies local optimistic events without leaving the current playing substate', () => {
+        const actor = createActor(gameMachine).start()
+        const state = createGameState('playing', 'draw')
+        state.discardPileTop = { id: 'd1', letter: 'D' }
+
+        actor.send({ type: 'GAME_STATE', state })
+        actor.send({ type: 'LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY', localPlayerId: 'p1' })
+
+        expect(actor.getSnapshot().matches({ playing: 'arrange' })).toBe(true)
+        expect(actor.getSnapshot().context.gameState?.turn.phase).toBe('arrange')
+        expect(actor.getSnapshot().context.gameState?.players[0].hand).toEqual([
+            { id: 'c1', letter: 'A' },
+            { id: 'd1', letter: 'D' },
+        ])
+    })
 })

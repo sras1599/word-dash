@@ -129,6 +129,8 @@ Signals all clients to navigate to `/game/:roomCode`.
 
 ### Client -> Server
 
+Clients optimistically apply safe local updates for board placement, unplacement, discard, and drawing the public discard-pile top card. The WebSocket event shapes do not change; server events remain authoritative and reconcile local state. Draw-pile cards are never revealed optimistically because their identities are private until `game:card_drawn`.
+
 #### `game:player_connected`
 Optional manual re-sync event. Current clients do not need to send it because the server automatically syncs `game:state` when a game-phase socket connects.
 ```ts
