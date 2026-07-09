@@ -20,10 +20,16 @@ export interface WordRowProps {
     rowIndex: number
     /** ID of the card that should flash before automatic discard. */
     willAutoDiscardCardId?: string | null
+    /** Whether this row is selected for keyboard shortcuts. */
+    isSelected?: boolean
+    /** Selected slot index within this row. */
+    selectedSlotIndex?: number | null
     /** Called when a card is dropped into a slot. */
     onPlace?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a card is dragged out of a slot. */
     onUnplace?: (rowIndex: number, slotIndex: number) => void
+    /** Called when a slot is selected. */
+    onSlotSelected?: (rowIndex: number, slotIndex: number) => void
     /** Called when drag starts from a slot, with source coordinates. */
     onCardDragStart?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a drag operation from a slot ends. */
@@ -43,8 +49,11 @@ export function WordRow({
     rowState,
     rowIndex,
     willAutoDiscardCardId = null,
+    isSelected = false,
+    selectedSlotIndex = null,
     onPlace,
     onUnplace,
+    onSlotSelected,
     onCardDragStart,
     onCardDragEnd,
     onCardSelected,
@@ -55,6 +64,7 @@ export function WordRow({
         'word-row',
         isValid === true && 'word-row--valid',
         isValid === false && 'word-row--invalid',
+        isSelected && 'word-row--selected',
     ]
         .filter(Boolean)
         .join(' ')
@@ -73,8 +83,10 @@ export function WordRow({
                     rowIndex={rowIndex}
                     card={slot.card}
                     willAutoDiscardCardId={willAutoDiscardCardId}
+                    isSelected={selectedSlotIndex === slot.slotIndex}
                     onPlace={onPlace}
                     onUnplace={onUnplace}
+                    onSlotSelected={onSlotSelected}
                     onCardDragStart={onCardDragStart}
                     onCardDragEnd={onCardDragEnd}
                     onCardSelected={onCardSelected}

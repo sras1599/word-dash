@@ -12,10 +12,14 @@ export interface WordSlotProps {
     card: CardData | null
     /** ID of the card that should flash before automatic discard. */
     willAutoDiscardCardId?: string | null
+    /** Whether this slot is selected for keyboard shortcuts. */
+    isSelected?: boolean
     /** Called when a card is dropped into this slot. */
     onPlace?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when the card in this slot begins being dragged away. */
     onUnplace?: (rowIndex: number, slotIndex: number) => void
+    /** Called when this slot is selected. */
+    onSlotSelected?: (rowIndex: number, slotIndex: number) => void
     /** Called when drag starts from this slot, with source coordinates. */
     onCardDragStart?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a drag operation from this slot ends. */
@@ -29,7 +33,9 @@ export function WordSlot({
     rowIndex,
     card,
     willAutoDiscardCardId = null,
+    isSelected = false,
     onPlace,
+    onSlotSelected,
     onCardDragStart,
     onCardDragEnd,
     onCardSelected,
@@ -56,10 +62,15 @@ export function WordSlot({
         }
     }
 
+    const handleSlotClick = () => {
+        onSlotSelected?.(rowIndex, slotIndex)
+    }
+
     const className = [
         'word-slot',
         card ? 'word-slot--filled' : 'word-slot--empty',
         isOver && 'word-slot--drag-over',
+        isSelected && 'word-slot--selected',
     ]
         .filter(Boolean)
         .join(' ')
@@ -68,11 +79,13 @@ export function WordSlot({
         <div
             ref={setNodeRef}
             className={className}
+            onClick={onSlotSelected ? handleSlotClick : undefined}
             aria-label={
                 card
                     ? `Slot ${slotIndex + 1}, contains letter ${card.letter}`
                     : `Slot ${slotIndex + 1}, empty`
             }
+            aria-current={isSelected ? 'true' : undefined}
             data-slot-index={slotIndex}
             data-row-index={rowIndex}
         >
@@ -81,6 +94,7 @@ export function WordSlot({
                     card={card}
                     draggable={canDragCard}
                     readOnly={!canDragCard && !onCardSelected}
+                    selected={isSelected}
                     willAutoDiscard={card.id === willAutoDiscardCardId}
                     onClick={handleCardClick}
                     onDragStart={handleCardDragStart}

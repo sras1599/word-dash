@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { fn } from 'storybook/test'
+import { expect, fn, waitFor } from 'storybook/test'
 
 import { GameBoard } from './GameBoard'
 import type { GameBoardLocalPlayer, GameBoardOpponentPlayer, GameBoardTurn, GameBoardVariation } from './GameBoard'
@@ -38,6 +38,13 @@ function emptyWordBoard(variation: GameBoardVariation): WordBoardState {
 function wordBoardWithPlacedCard(variation: GameBoardVariation, card: CardData, rowIndex = 0, slotIndex = 0) {
     const board = emptyWordBoard(variation)
     board.rows[rowIndex].slots[slotIndex].card = card
+    return board
+}
+
+function keyboardShortcutBoard() {
+    const board = emptyWordBoard(VARIATION_345)
+    board.rows[0].slots[0].card = { id: 'placed-c', letter: 'C' }
+    board.rows[0].slots[2].card = { id: 'placed-a', letter: 'A' }
     return board
 }
 
@@ -124,6 +131,68 @@ type Story = StoryObj<typeof meta>
 
 /** Local player's draw phase — only the card piles are interactive. */
 export const LocalDrawPhase: Story = {}
+
+export const KeyboardShortcuts: Story = {
+    args: {
+        discardTopCard: DISCARD_TOP,
+        localPlayer: {
+            ...makeLocalPlayer(VARIATION_345, 'local'),
+            hand: [
+                { id: 'hand-b', letter: 'B' },
+                { id: 'hand-e', letter: 'E' },
+            ],
+            wordBoard: keyboardShortcutBoard(),
+        },
+        handCount: 2,
+        boardSubtitle: 'Arrange your cards before the timer expires.',
+        turn: {
+            currentPlayerId: 'local',
+            phase: 'draw',
+            timeRemainingMs: 30_000,
+            totalDurationMs: 60_000,
+        },
+    },
+    play: async ({ args, canvasElement, userEvent }) => {
+        await userEvent.keyboard('{Shift>}D{/Shift}')
+        await expect(args.onDraw).toHaveBeenCalledWith('draw')
+
+        await userEvent.keyboard('2')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-row-index', '1'))
+        await expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-slot-index', '0')
+
+        await userEvent.keyboard('{ArrowRight}')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-slot-index', '1'))
+
+        await userEvent.keyboard('1')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-row-index', '0'))
+        await expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-slot-index', '1')
+
+        await userEvent.keyboard('b')
+        await expect(args.onPlace).toHaveBeenCalledWith('hand-b', 0, 1)
+
+        await userEvent.keyboard('{ArrowRight}')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-slot-index', '2'))
+        const placeCallsBeforeSameLetter = getMockCallCount(args.onPlace)
+        await userEvent.keyboard('a')
+        await expect(args.onPlace).toHaveBeenCalledTimes(placeCallsBeforeSameLetter)
+
+        await userEvent.keyboard('{ArrowLeft}{ArrowLeft}')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-slot-index', '0'))
+        await userEvent.keyboard('{Shift>}{ArrowRight}{/Shift}')
+        await expect(args.onPlace).toHaveBeenCalledWith('placed-c', 0, 1)
+
+        await userEvent.keyboard('{ArrowRight}')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-slot-index', '2'))
+        await userEvent.keyboard('{Backspace}')
+        await expect(args.onUnplace).toHaveBeenCalledWith(0, 2)
+
+        await userEvent.keyboard('{Shift>}{Backspace}{/Shift}')
+        await expect(args.onClearWord).toHaveBeenCalledWith(0)
+
+        await userEvent.keyboard('{Shift>}{Delete}{/Shift}')
+        await expect(args.onClearBoard).toHaveBeenCalled()
+    },
+}
 
 /** Local player's arrange phase — hand and word board are interactive; discard pile accepts drops. */
 export const LocalArrangePhase: Story = {
@@ -280,4 +349,17 @@ export const Variation444: Story = {
             makeOpponent(VARIATION_444, 'opp-2', 'Carol'),
         ],
     },
+}
+
+function getSelectedSlot(canvasElement: HTMLElement): HTMLElement {
+    const selectedSlot = canvasElement.querySelector<HTMLElement>('.word-slot--selected')
+    if (!selectedSlot) {
+        throw new Error('Expected a selected word slot')
+    }
+
+    return selectedSlot
+}
+
+function getMockCallCount(mockFn: unknown): number {
+    return (mockFn as { mock?: { calls: unknown[] } }).mock?.calls.length ?? 0
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
     closestCenter,
     DragOverlay,
@@ -21,6 +21,7 @@ import { Card, type CardData } from '../Card/Card'
 import { cx } from '../../lib/cx'
 import { Icon } from '../Icon/Icon'
 import { getGameBoardDropAction } from './dnd'
+import { getShortcutAction, shouldIgnoreShortcutTarget, type BoardSelection } from './shortcuts'
 
 export interface GameBoardLocalPlayer {
     id: string
@@ -124,6 +125,7 @@ export function GameBoard({
 }: GameBoardProps) {
     const boardDragSourceRef = useRef<BoardDragSource | null>(null)
     const [activeDragCard, setActiveDragCard] = useState<CardData | null>(null)
+    const [selectedBoardSlot, setSelectedBoardSlot] = useState<BoardSelection | null>(null)
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor))
 
     const isActiveTurn = localPlayer !== null && turn.currentPlayerId === localPlayer.id
@@ -131,12 +133,87 @@ export function GameBoard({
     const canDiscard = isActiveTurn && phase === 'playing' && turn.phase === 'arrange'
     const isDrawPhase = isActiveTurn && turn.phase === 'draw'
 
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.isComposing || shouldIgnoreShortcutTarget(event.target)) return
+
+            const action = getShortcutAction(
+                {
+                    key: event.key,
+                    shiftKey: event.shiftKey,
+                    altKey: event.altKey,
+                    ctrlKey: event.ctrlKey,
+                    metaKey: event.metaKey,
+                },
+                {
+                    canDraw: isDrawPhase,
+                    canEditBoard,
+                    drawPileCount,
+                    hand: localPlayer?.hand ?? [],
+                    selection: selectedBoardSlot,
+                    wordBoard: localPlayer?.wordBoard ?? null,
+                },
+            )
+
+            if (action.type === 'none') return
+
+            event.preventDefault()
+
+            switch (action.type) {
+                case 'select':
+                    setSelectedBoardSlot(action.selection)
+                    break
+                case 'draw':
+                    onDraw?.('draw')
+                    break
+                case 'place':
+                    onPlace?.(action.cardId, action.rowIndex, action.slotIndex)
+                    if (action.selection) {
+                        setSelectedBoardSlot(action.selection)
+                    }
+                    break
+                case 'unplace':
+                    onUnplace?.(action.rowIndex, action.slotIndex)
+                    break
+                case 'clear-word':
+                    onClearWord?.(action.rowIndex)
+                    break
+                case 'clear-board':
+                    onClearBoard?.()
+                    break
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [
+        canEditBoard,
+        drawPileCount,
+        isDrawPhase,
+        localPlayer,
+        onClearBoard,
+        onClearWord,
+        onDraw,
+        onPlace,
+        onUnplace,
+        selectedBoardSlot,
+    ])
+
     const handleBoardCardDragStart = (cardId: string, rowIndex: number, slotIndex: number) => {
         boardDragSourceRef.current = { cardId, rowIndex, slotIndex }
     }
 
     const handleBoardCardDragEnd = () => {
         boardDragSourceRef.current = null
+    }
+
+    const handleSlotSelected = (rowIndex: number, slotIndex: number) => {
+        if (!canEditBoard) return
+        setSelectedBoardSlot({ rowIndex, slotIndex })
+    }
+
+    const handleBoardCardSelected = (_card: CardData, rowIndex: number, slotIndex: number) => {
+        handleSlotSelected(rowIndex, slotIndex)
     }
 
     const enableDropOnHand = () => undefined
@@ -367,10 +444,13 @@ export function GameBoard({
                         <WordBoard
                             wordBoard={localPlayer.wordBoard}
                             willAutoDiscardCardId={willAutoDiscardCardId}
+                            selectedSlot={selectedBoardSlot}
                             onPlace={canEditBoard ? onPlace : undefined}
                             onClearWord={canEditBoard ? onClearWord : undefined}
+                            onSlotSelected={canEditBoard ? handleSlotSelected : undefined}
                             onCardDragStart={canEditBoard ? handleBoardCardDragStart : undefined}
                             onCardDragEnd={canEditBoard ? handleBoardCardDragEnd : undefined}
+                            onCardSelected={canEditBoard ? handleBoardCardSelected : undefined}
                         />
                     </section>
                 )}

@@ -3,6 +3,7 @@ import { WordRow } from '../WordRow/WordRow'
 import type { WordRowState } from '../WordRow/WordRow'
 import type { CardData } from '../Card/Card'
 import { Icon } from '../Icon/Icon'
+import type { BoardSelection } from '../GameBoard/shortcuts'
 
 export interface WordBoardState {
     rows: WordRowState[]
@@ -20,6 +21,10 @@ export interface WordBoardProps {
     onUnplace?: (rowIndex: number, slotIndex: number) => void
     /** Called when all cards in a row should be returned to hand. */
     onClearWord?: (rowIndex: number) => void
+    /** Currently selected board slot for keyboard shortcuts. */
+    selectedSlot?: BoardSelection | null
+    /** Called when a word slot is selected. */
+    onSlotSelected?: (rowIndex: number, slotIndex: number) => void
     /** Called when drag starts from a slot, with source coordinates. */
     onCardDragStart?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a drag operation from a slot ends. */
@@ -34,6 +39,8 @@ export function WordBoard({
     onPlace,
     onUnplace,
     onClearWord,
+    selectedSlot = null,
+    onSlotSelected,
     onCardDragStart,
     onCardDragEnd,
     onCardSelected,
@@ -56,8 +63,11 @@ export function WordBoard({
                         rowState={rowState}
                         rowIndex={index}
                         willAutoDiscardCardId={willAutoDiscardCardId}
+                        isSelected={selectedSlot?.rowIndex === index}
+                        selectedSlotIndex={selectedSlot?.rowIndex === index ? selectedSlot.slotIndex : null}
                         onPlace={onPlace}
                         onUnplace={onUnplace}
+                        onSlotSelected={onSlotSelected}
                         onCardDragStart={onCardDragStart}
                         onCardDragEnd={onCardDragEnd}
                         onCardSelected={onCardSelected}

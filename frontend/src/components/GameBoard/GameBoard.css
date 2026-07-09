@@ -255,6 +255,11 @@
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary, #bb000e) 20%, transparent);
 }
 
+.game-board .word-row--selected {
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 20%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary, #406925) 28%, transparent);
+}
+
 .game-board .word-slot {
     --slot-width: var(--page-game-card-width, 5rem);
     width: var(--page-game-card-width, 5rem);
@@ -275,6 +280,14 @@
     border-color: var(--secondary, #406925);
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--secondary-container, #c0f19d) 48%, transparent);
     background: color-mix(in srgb, var(--secondary-container, #c0f19d) 24%, transparent);
+}
+
+.game-board .word-slot--selected {
+    border-color: var(--secondary, #406925);
+    box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--surface-container-lowest, #ffffff) 80%, transparent),
+        0 0 0 6px color-mix(in srgb, var(--secondary, #406925) 42%, transparent);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 28%, transparent);
 }
 
 .game-board__piles {
