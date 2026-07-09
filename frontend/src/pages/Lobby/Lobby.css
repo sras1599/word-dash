@@ -89,6 +89,11 @@
     gap: 0.5rem;
 }
 
+.page-lobby__topbar-actions {
+    min-width: 10.5rem;
+    justify-content: flex-end;
+}
+
 .page-lobby__nav-logo,
 .page-lobby__loading-logo {
     display: block;
@@ -144,6 +149,21 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     box-shadow: 0 12px 20px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.page-lobby__copy-status {
+    min-width: 4.75rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: color-mix(in srgb, var(--on-surface-variant) 72%, transparent);
+}
+
+.page-lobby__copy-status--copied {
+    color: var(--secondary, #406925);
+}
+
+.page-lobby__copy-status--failed {
+    color: var(--primary, #bb000e);
 }
 
 .page-lobby__bottom-nav-icon,

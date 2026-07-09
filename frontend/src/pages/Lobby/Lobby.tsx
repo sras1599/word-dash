@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageShell, type FloatingLetter } from '../../components/PageShell/PageShell'
 import { session } from '../../lib/session'
@@ -26,6 +26,7 @@ import { useLobbyRoom } from './hooks/useLobbyRoom'
 import './Lobby.css'
 
 const MAX_PLAYERS = 4
+const COPY_STATUS_RESET_MS = 1800
 
 const FLOATING_LETTERS: FloatingLetter[] = [
     { key: 'w', letter: 'W', className: 'page-lobby__floating-letter--w' },
@@ -45,6 +46,8 @@ export function Lobby() {
     const [customVariationError, setCustomVariationError] = useState('')
     const [activeVariationTabOverride, setActiveVariationTabOverride] = useState<VariationTab | null>(null)
     const [turnDurationDraft, setTurnDurationDraft] = useState<TurnDurationFields | null>(null)
+    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+    const copyStatusTimerRef = useRef<number | null>(null)
 
     const isHost = lobby !== null && lobby.hostPlayerId === localPlayerId
     const localPlayer = lobby?.players.find((player) => player.id === localPlayerId) ?? null
@@ -53,6 +56,24 @@ export function Lobby() {
     const activeVariationTab =
         activeVariationTabOverride ?? getVariationDifficulty(lobby?.variation.wordLengths ?? [3, 4, 5])
     const turnDurationFields = turnDurationDraft ?? turnDurationMsToFields(lobby?.turnDurationMs ?? 90_000)
+
+    useEffect(() => {
+        return () => {
+            if (copyStatusTimerRef.current !== null) {
+                window.clearTimeout(copyStatusTimerRef.current)
+            }
+        }
+    }, [])
+
+    function scheduleCopyStatusReset() {
+        if (copyStatusTimerRef.current !== null) {
+            window.clearTimeout(copyStatusTimerRef.current)
+        }
+        copyStatusTimerRef.current = window.setTimeout(() => {
+            setCopyStatus('idle')
+            copyStatusTimerRef.current = null
+        }, COPY_STATUS_RESET_MS)
+    }
 
     function handleReady() {
         sendReady(isLocalReady)
@@ -138,8 +159,20 @@ export function Lobby() {
         })
     }
 
-    function handleCopyRoomCode() {
-        void navigator.clipboard.writeText(`${roomCode}`)
+    async function handleCopyRoomCode() {
+        if (!roomCode || !navigator.clipboard) {
+            setCopyStatus('failed')
+            scheduleCopyStatusReset()
+            return
+        }
+
+        try {
+            await navigator.clipboard.writeText(roomCode)
+            setCopyStatus('copied')
+        } catch {
+            setCopyStatus('failed')
+        }
+        scheduleCopyStatusReset()
     }
 
     function goHome() {
@@ -167,7 +200,7 @@ export function Lobby() {
             floatingLetterClassName="page-lobby__floating-letter"
             floatingLetters={FLOATING_LETTERS}
         >
-            <LobbyTopBar roomCode={lobby.roomCode} onCopyRoomCode={handleCopyRoomCode} />
+            <LobbyTopBar roomCode={lobby.roomCode} onCopyRoomCode={handleCopyRoomCode} copyStatus={copyStatus} />
 
             <main className="wd-content-layer page-lobby__main">
                 <div className="page-lobby__grid">

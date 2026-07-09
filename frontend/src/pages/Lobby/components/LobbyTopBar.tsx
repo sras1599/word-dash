@@ -3,9 +3,12 @@ import { BrandLogo } from '../../../components/BrandLogo/BrandLogo'
 type LobbyTopBarProps = {
     roomCode: string
     onCopyRoomCode: () => void
+    copyStatus?: 'idle' | 'copied' | 'failed'
 }
 
-export function LobbyTopBar({ roomCode, onCopyRoomCode }: LobbyTopBarProps) {
+export function LobbyTopBar({ roomCode, onCopyRoomCode, copyStatus = 'idle' }: LobbyTopBarProps) {
+    const copyMessage = copyStatus === 'copied' ? 'Copied!' : copyStatus === 'failed' ? 'Copy failed' : ''
+
     return (
         <nav className="page-lobby__topbar" aria-label="Lobby navigation">
             <div className="page-lobby__topbar-brand">
@@ -20,6 +23,12 @@ export function LobbyTopBar({ roomCode, onCopyRoomCode }: LobbyTopBarProps) {
                 <button className="wd-btn wd-btn--lift page-lobby__copy-btn" type="button" onClick={onCopyRoomCode}>
                     Copy Room Code
                 </button>
+                <span
+                    className={`page-lobby__copy-status page-lobby__copy-status--${copyStatus}`}
+                    aria-live="polite"
+                >
+                    {copyMessage}
+                </span>
             </div>
         </nav>
     )
