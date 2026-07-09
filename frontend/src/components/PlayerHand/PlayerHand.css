@@ -22,8 +22,8 @@
 }
 
 .player-hand--drag-over {
-    box-shadow: inset 0 0 0 2px rgba(45, 184, 156, 0.8);
-    background: rgba(45, 184, 156, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(45, 184, 156, 0.5);
+    background: rgba(45, 184, 156, 0.06);
 }
 
 /* ─────────────────────────────────────────────
@@ -88,6 +88,6 @@
 }
 
 .player-hand__discard-btn:focus-visible {
-    outline: 3px solid #f5a623;
+    outline: 2px solid rgba(245, 166, 35, 0.75);
     outline-offset: 2px;
 }

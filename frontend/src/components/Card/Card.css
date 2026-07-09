@@ -65,7 +65,7 @@
 ───────────────────────────────────────────── */
 .card--drawn {
     border-color: var(--card-teal);
-    border-width: 2.5px;
+    border-width: 2px;
 }
 
 .card--will-auto-discard {
@@ -76,10 +76,7 @@
    State: selected
 ───────────────────────────────────────────── */
 .card--selected {
-    transform: translateY(-5px) scale(1.04);
-    box-shadow:
-        var(--card-shadow),
-        0 0 0 3px #f5a623;
+    transform: translateY(-2px);
 }
 
 /* ─────────────────────────────────────────────
@@ -106,7 +103,7 @@
    Interactive focus ring (keyboard nav)
 ───────────────────────────────────────────── */
 .card[role='button']:focus-visible {
-    outline: 3px solid var(--card-teal);
+    outline: 2px solid var(--card-teal);
     outline-offset: 2px;
 }
 
@@ -225,6 +222,7 @@
 }
 
 @keyframes card-auto-discard-flash {
+
     0%,
     100% {
         box-shadow:

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { CardData } from '../Card/Card'
 import type { WordBoardState } from '../WordBoard/WordBoard'
-import { getShortcutAction, type BoardSelection } from './shortcuts'
+import { getShortcutAction, type BoardSelection, type ShortcutKey, type ShortcutOptions } from './shortcuts'
 
 const HAND: CardData[] = [
     { id: 'hand-a-1', letter: 'A' },
@@ -34,48 +34,70 @@ function makeBoard(): WordBoardState {
     }
 }
 
-function action(key: string, selection: BoardSelection | null = { rowIndex: 0, slotIndex: 1 }) {
+function makeOptions(overrides: Partial<ShortcutOptions> = {}): ShortcutOptions {
+    return {
+        canDraw: true,
+        canDiscard: true,
+        canEditBoard: true,
+        drawPileCount: 12,
+        hand: HAND,
+        selectedHandCardId: null,
+        selection: { rowIndex: 0, slotIndex: 1 },
+        wordBoard: makeBoard(),
+        ...overrides,
+    }
+}
+
+function action(
+    keyInfo: string | ShortcutKey,
+    selection: BoardSelection | null = { rowIndex: 0, slotIndex: 1 },
+    overrides: Partial<ShortcutOptions> = {},
+) {
     return getShortcutAction(
-        { key },
-        {
-            canDraw: true,
-            canEditBoard: true,
-            drawPileCount: 12,
-            hand: HAND,
-            selection,
-            wordBoard: makeBoard(),
-        },
+        typeof keyInfo === 'string' ? { key: keyInfo } : keyInfo,
+        makeOptions({ selection, ...overrides }),
     )
 }
 
 describe('GameBoard shortcuts', () => {
     it('selects rows by number, choosing the first empty slot', () => {
-        expect(action('1')).toEqual({ type: 'select', selection: { rowIndex: 0, slotIndex: 1 } })
-        expect(action('2')).toEqual({ type: 'select', selection: { rowIndex: 1, slotIndex: 0 } })
+        expect(action('1')).toEqual({ type: 'select-board', selection: { rowIndex: 0, slotIndex: 1 } })
+        expect(action('2')).toEqual({ type: 'select-board', selection: { rowIndex: 1, slotIndex: 0 } })
         expect(action('9')).toEqual({ type: 'none' })
     })
 
     it('moves board selection with arrows and clamps at row boundaries', () => {
         expect(action('ArrowLeft', { rowIndex: 0, slotIndex: 1 })).toEqual({
-            type: 'select',
+            type: 'select-board',
             selection: { rowIndex: 0, slotIndex: 0 },
         })
         expect(action('ArrowLeft', { rowIndex: 0, slotIndex: 0 })).toEqual({
-            type: 'select',
+            type: 'select-board',
             selection: { rowIndex: 0, slotIndex: 0 },
         })
         expect(action('ArrowDown', { rowIndex: 0, slotIndex: 2 })).toEqual({
-            type: 'select',
+            type: 'select-board',
             selection: { rowIndex: 1, slotIndex: 1 },
         })
     })
 
-    it('places the first matching hand card for typed letters', () => {
+    it('places the first matching hand card for typed letters and advances to the next empty slot', () => {
+        const board = makeBoard()
+        board.rows[0].slots[2].card = null
+
         expect(action('a', { rowIndex: 0, slotIndex: 1 })).toEqual({
             type: 'place',
             cardId: 'hand-a-1',
             rowIndex: 0,
             slotIndex: 1,
+            selection: { rowIndex: 0, slotIndex: 1 },
+        })
+        expect(action('a', { rowIndex: 0, slotIndex: 1 }, { wordBoard: board })).toEqual({
+            type: 'place',
+            cardId: 'hand-a-1',
+            rowIndex: 0,
+            slotIndex: 1,
+            selection: { rowIndex: 0, slotIndex: 2 },
         })
     })
 
@@ -85,6 +107,7 @@ describe('GameBoard shortcuts', () => {
             cardId: 'hand-b',
             rowIndex: 0,
             slotIndex: 0,
+            selection: { rowIndex: 0, slotIndex: 1 },
         })
     })
 
@@ -96,14 +119,7 @@ describe('GameBoard shortcuts', () => {
     it('moves or swaps selected board cards within the same row with shift arrows', () => {
         expect(getShortcutAction(
             { key: 'ArrowRight', shiftKey: true },
-            {
-                canDraw: true,
-                canEditBoard: true,
-                drawPileCount: 12,
-                hand: HAND,
-                selection: { rowIndex: 0, slotIndex: 0 },
-                wordBoard: makeBoard(),
-            },
+            makeOptions({ selection: { rowIndex: 0, slotIndex: 0 } }),
         )).toEqual({
             type: 'place',
             cardId: 'board-c',
@@ -114,14 +130,7 @@ describe('GameBoard shortcuts', () => {
 
         expect(getShortcutAction(
             { key: 'ArrowLeft', shiftKey: true },
-            {
-                canDraw: true,
-                canEditBoard: true,
-                drawPileCount: 12,
-                hand: HAND,
-                selection: { rowIndex: 0, slotIndex: 2 },
-                wordBoard: makeBoard(),
-            },
+            makeOptions({ selection: { rowIndex: 0, slotIndex: 2 } }),
         )).toEqual({
             type: 'place',
             cardId: 'board-d',
@@ -134,30 +143,16 @@ describe('GameBoard shortcuts', () => {
     it('ignores shift arrows at word boundaries or from empty selected slots', () => {
         expect(getShortcutAction(
             { key: 'ArrowLeft', shiftKey: true },
-            {
-                canDraw: true,
-                canEditBoard: true,
-                drawPileCount: 12,
-                hand: HAND,
-                selection: { rowIndex: 0, slotIndex: 0 },
-                wordBoard: makeBoard(),
-            },
+            makeOptions({ selection: { rowIndex: 0, slotIndex: 0 } }),
         )).toEqual({ type: 'none' })
 
         expect(getShortcutAction(
             { key: 'ArrowRight', shiftKey: true },
-            {
-                canDraw: true,
-                canEditBoard: true,
-                drawPileCount: 12,
-                hand: HAND,
-                selection: { rowIndex: 0, slotIndex: 1 },
-                wordBoard: makeBoard(),
-            },
+            makeOptions({ selection: { rowIndex: 0, slotIndex: 1 } }),
         )).toEqual({ type: 'none' })
     })
 
-    it('routes clear shortcuts', () => {
+    it('routes clear and discard shortcuts', () => {
         expect(action('Backspace', { rowIndex: 0, slotIndex: 0 })).toEqual({
             type: 'unplace',
             rowIndex: 0,
@@ -165,39 +160,54 @@ describe('GameBoard shortcuts', () => {
         })
         expect(getShortcutAction(
             { key: 'Backspace', shiftKey: true },
-            {
-                canDraw: true,
-                canEditBoard: true,
-                drawPileCount: 12,
-                hand: HAND,
-                selection: { rowIndex: 0, slotIndex: 1 },
-                wordBoard: makeBoard(),
-            },
+            makeOptions({ selection: { rowIndex: 0, slotIndex: 1 } }),
         )).toEqual({ type: 'clear-word', rowIndex: 0 })
         expect(getShortcutAction(
-            { key: 'Delete', shiftKey: true },
-            {
-                canDraw: true,
-                canEditBoard: true,
-                drawPileCount: 12,
-                hand: HAND,
-                selection: { rowIndex: 0, slotIndex: 1 },
-                wordBoard: makeBoard(),
-            },
+            { key: 'Delete', shiftKey: true, altKey: true },
+            makeOptions({ selection: { rowIndex: 0, slotIndex: 1 } }),
         )).toEqual({ type: 'clear-board' })
+        expect(action('Delete')).toEqual({ type: 'none' })
+        expect(action({ key: 'Delete', shiftKey: true }, { rowIndex: 0, slotIndex: 0 })).toEqual({
+            type: 'discard',
+            cardId: 'board-c',
+            source: 'board',
+        })
+        expect(action({ key: 'Delete', shiftKey: true }, { rowIndex: 0, slotIndex: 0 }, {
+            selectedHandCardId: 'hand-b',
+        })).toEqual({
+            type: 'discard',
+            cardId: 'hand-b',
+            source: 'hand',
+        })
+        expect(action({ key: 'Delete', shiftKey: true }, { rowIndex: 0, slotIndex: 0 }, {
+            canDiscard: false,
+            selectedHandCardId: 'hand-b',
+        })).toEqual({ type: 'none' })
+    })
+
+    it('routes hand and board selection shortcuts', () => {
+        expect(action({ key: 'H', shiftKey: true })).toEqual({ type: 'select-hand', cardId: 'hand-a-1' })
+        expect(action({ key: 'H', shiftKey: true }, null, { hand: [] })).toEqual({ type: 'none' })
+        expect(action({ key: 'B', shiftKey: true }, { rowIndex: 1, slotIndex: 1 })).toEqual({
+            type: 'select-board',
+            selection: { rowIndex: 1, slotIndex: 1 },
+        })
+        expect(action({ key: 'B', shiftKey: true }, null)).toEqual({
+            type: 'select-board',
+            selection: { rowIndex: 0, slotIndex: 1 },
+        })
     })
 
     it('draws only for shift d and leaves enter and space alone', () => {
         expect(getShortcutAction(
             { key: 'D', shiftKey: true },
-            {
+            makeOptions({
                 canDraw: true,
                 canEditBoard: false,
                 drawPileCount: 12,
-                hand: HAND,
                 selection: null,
                 wordBoard: null,
-            },
+            }),
         )).toEqual({ type: 'draw' })
 
         expect(action('Enter')).toEqual({ type: 'none' })
@@ -207,14 +217,10 @@ describe('GameBoard shortcuts', () => {
     it('ignores board shortcuts when editing is disabled', () => {
         expect(getShortcutAction(
             { key: '1' },
-            {
-                canDraw: true,
+            makeOptions({
                 canEditBoard: false,
-                drawPileCount: 12,
-                hand: HAND,
                 selection: null,
-                wordBoard: makeBoard(),
-            },
+            }),
         )).toEqual({ type: 'none' })
     })
 })

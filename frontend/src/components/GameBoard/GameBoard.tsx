@@ -126,12 +126,14 @@ export function GameBoard({
     const boardDragSourceRef = useRef<BoardDragSource | null>(null)
     const [activeDragCard, setActiveDragCard] = useState<CardData | null>(null)
     const [selectedBoardSlot, setSelectedBoardSlot] = useState<BoardSelection | null>(null)
+    const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(null)
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor))
 
     const isActiveTurn = localPlayer !== null && turn.currentPlayerId === localPlayer.id
     const canEditBoard = localPlayer !== null && phase === 'playing' && (turn.phase === 'draw' || turn.phase === 'arrange')
     const canDiscard = isActiveTurn && phase === 'playing' && turn.phase === 'arrange'
     const isDrawPhase = isActiveTurn && turn.phase === 'draw'
+    const visibleSelectedBoardSlot = selectedHandCardId ? null : selectedBoardSlot
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -147,9 +149,11 @@ export function GameBoard({
                 },
                 {
                     canDraw: isDrawPhase,
+                    canDiscard,
                     canEditBoard,
                     drawPileCount,
                     hand: localPlayer?.hand ?? [],
+                    selectedHandCardId,
                     selection: selectedBoardSlot,
                     wordBoard: localPlayer?.wordBoard ?? null,
                 },
@@ -160,20 +164,34 @@ export function GameBoard({
             event.preventDefault()
 
             switch (action.type) {
-                case 'select':
+                case 'select-board':
                     setSelectedBoardSlot(action.selection)
+                    setSelectedHandCardId(null)
+                    break
+                case 'select-hand':
+                    setSelectedHandCardId(action.cardId)
                     break
                 case 'draw':
                     onDraw?.('draw')
                     break
                 case 'place':
                     onPlace?.(action.cardId, action.rowIndex, action.slotIndex)
+                    setSelectedHandCardId(null)
                     if (action.selection) {
                         setSelectedBoardSlot(action.selection)
                     }
                     break
                 case 'unplace':
                     onUnplace?.(action.rowIndex, action.slotIndex)
+                    setSelectedHandCardId(null)
+                    break
+                case 'discard':
+                    onDiscard?.(action.cardId)
+                    if (action.source === 'hand') {
+                        setSelectedHandCardId(null)
+                    } else {
+                        setSelectedBoardSlot(null)
+                    }
                     break
                 case 'clear-word':
                     onClearWord?.(action.rowIndex)
@@ -188,15 +206,18 @@ export function GameBoard({
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [
         canEditBoard,
+        canDiscard,
         drawPileCount,
         isDrawPhase,
         localPlayer,
         onClearBoard,
         onClearWord,
         onDraw,
+        onDiscard,
         onPlace,
         onUnplace,
         selectedBoardSlot,
+        selectedHandCardId,
     ])
 
     const handleBoardCardDragStart = (cardId: string, rowIndex: number, slotIndex: number) => {
@@ -210,10 +231,32 @@ export function GameBoard({
     const handleSlotSelected = (rowIndex: number, slotIndex: number) => {
         if (!canEditBoard) return
         setSelectedBoardSlot({ rowIndex, slotIndex })
+        setSelectedHandCardId(null)
     }
 
     const handleBoardCardSelected = (_card: CardData, rowIndex: number, slotIndex: number) => {
         handleSlotSelected(rowIndex, slotIndex)
+    }
+
+    const handleHandCardSelected = (cardId: string) => {
+        if (!canEditBoard) return
+        setSelectedHandCardId(cardId)
+    }
+
+    const handleDiscard = (cardId: string) => {
+        onDiscard?.(cardId)
+
+        if (selectedHandCardId === cardId) {
+            setSelectedHandCardId(null)
+        }
+
+        const selectedBoardCard = selectedBoardSlot
+            ? localPlayer?.wordBoard.rows[selectedBoardSlot.rowIndex]?.slots[selectedBoardSlot.slotIndex]?.card
+            : null
+
+        if (selectedBoardCard?.id === cardId) {
+            setSelectedBoardSlot(null)
+        }
     }
 
     const enableDropOnHand = () => undefined
@@ -293,7 +336,7 @@ export function GameBoard({
         isActive: isDrawPhase,
         isDropTarget: canDiscard,
         onDraw,
-        onDiscard,
+        onDiscard: handleDiscard,
     }
 
     const displayPlayers = localPlayer
@@ -444,7 +487,7 @@ export function GameBoard({
                         <WordBoard
                             wordBoard={localPlayer.wordBoard}
                             willAutoDiscardCardId={willAutoDiscardCardId}
-                            selectedSlot={selectedBoardSlot}
+                            selectedSlot={visibleSelectedBoardSlot}
                             onPlace={canEditBoard ? onPlace : undefined}
                             onClearWord={canEditBoard ? onClearWord : undefined}
                             onSlotSelected={canEditBoard ? handleSlotSelected : undefined}
@@ -485,8 +528,10 @@ export function GameBoard({
                                     drawnCardId={drawnCardId}
                                     willAutoDiscardCardId={willAutoDiscardCardId}
                                     isDraggable={canEditBoard}
+                                    selectedCardId={selectedHandCardId}
+                                    onCardClick={handleHandCardSelected}
                                     onDropOnHand={canEditBoard && onUnplace ? enableDropOnHand : undefined}
-                                    onDiscard={canDiscard ? onDiscard : undefined}
+                                    onDiscard={canDiscard ? handleDiscard : undefined}
                                 />
                             </div>
                         </div>

@@ -22,19 +22,19 @@
    Valid word — all slots filled and recognised
 ───────────────────────────────────────────── */
 .word-row--valid {
-    background-color: rgba(45, 184, 156, 0.1);
-    box-shadow: 0 0 0 2px var(--row-valid-color);
+    background-color: rgba(45, 184, 156, 0.06);
+    box-shadow: 0 0 0 1px rgba(45, 184, 156, 0.55);
 }
 
 /* ─────────────────────────────────────────────
    Invalid word — all slots filled but unrecognised
 ───────────────────────────────────────────── */
 .word-row--invalid {
-    background-color: rgba(232, 35, 26, 0.07);
-    box-shadow: 0 0 0 2px var(--row-invalid-color);
+    background-color: rgba(232, 35, 26, 0.05);
+    box-shadow: 0 0 0 1px rgba(232, 35, 26, 0.45);
 }
 
 .word-row--selected {
-    background-color: rgba(45, 184, 156, 0.08);
-    box-shadow: 0 0 0 2px rgba(45, 184, 156, 0.28);
+    background-color: rgba(45, 184, 156, 0.05);
+    box-shadow: 0 0 0 1px rgba(45, 184, 156, 0.22);
 }

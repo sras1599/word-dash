@@ -246,18 +246,18 @@
 }
 
 .game-board .word-row--valid {
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 26%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 24%, transparent);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 16%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 18%, transparent);
 }
 
 .game-board .word-row--invalid {
-    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 54%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary, #bb000e) 20%, transparent);
+    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 34%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary, #bb000e) 14%, transparent);
 }
 
 .game-board .word-row--selected {
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 20%, transparent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary, #406925) 28%, transparent);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 12%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 18%, transparent);
 }
 
 .game-board .word-slot {
@@ -278,16 +278,16 @@
 
 .game-board .word-slot--drag-over {
     border-color: var(--secondary, #406925);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--secondary-container, #c0f19d) 48%, transparent);
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 24%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary-container, #c0f19d) 34%, transparent);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 14%, transparent);
 }
 
 .game-board .word-slot--selected {
     border-color: var(--secondary, #406925);
     box-shadow:
-        0 0 0 2px color-mix(in srgb, var(--surface-container-lowest, #ffffff) 80%, transparent),
-        0 0 0 6px color-mix(in srgb, var(--secondary, #406925) 42%, transparent);
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 28%, transparent);
+        0 0 0 1px color-mix(in srgb, var(--surface-container-lowest, #ffffff) 78%, transparent),
+        0 0 0 3px color-mix(in srgb, var(--secondary, #406925) 28%, transparent);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 16%, transparent);
 }
 
 .game-board__piles {
@@ -373,9 +373,9 @@
 }
 
 .game-board .player-hand--drag-over {
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--secondary, #406925) 34%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 28%, transparent);
     border-radius: calc(var(--radius-lg, 2rem) - 0.35rem);
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 18%, transparent);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 10%, transparent);
 }
 
 .game-board__drag-overlay {
@@ -401,7 +401,7 @@
 }
 
 .game-board .player-hand__cards>.card:hover {
-    transform: translateY(-1rem);
+    transform: translateY(-0.35rem);
 }
 
 .game-board .player-hand__cards>.card:active {

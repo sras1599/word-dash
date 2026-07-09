@@ -82,22 +82,10 @@
 
 /* ─────────────────────────────────────────────
    Modifier: active (local player's draw phase)
-   Pulsing teal glow signals the player to act.
+   Subtle static cue signals the player to act.
 ───────────────────────────────────────────── */
 .card-pile--active .card-pile__stack {
-    animation: pile-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pile-pulse {
-
-    0%,
-    100% {
-        filter: drop-shadow(0 0 0px rgba(45, 184, 156, 0));
-    }
-
-    50% {
-        filter: drop-shadow(0 0 8px rgba(45, 184, 156, 0.85));
-    }
+    filter: drop-shadow(0 0 4px rgba(45, 184, 156, 0.28));
 }
 
 /* ─────────────────────────────────────────────
@@ -108,12 +96,12 @@
 }
 
 .card-pile--interactive:hover .card-pile__stack>.card {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     transition: transform 0.15s ease;
 }
 
 .card-pile--interactive:focus-visible {
-    outline: 3px solid var(--pile-teal);
+    outline: 2px solid var(--pile-teal);
     outline-offset: 4px;
     border-radius: 4px;
 }
