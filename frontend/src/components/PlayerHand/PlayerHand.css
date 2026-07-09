@@ -15,6 +15,12 @@
     border-radius: 10px;
 }
 
+.player-hand--empty {
+    width: 100%;
+    min-height: 5.5rem;
+    justify-content: center;
+}
+
 .player-hand--drag-over {
     box-shadow: inset 0 0 0 2px rgba(45, 184, 156, 0.8);
     background: rgba(45, 184, 156, 0.12);
@@ -28,6 +34,10 @@
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 8px;
+}
+
+.player-hand__empty {
+    margin: 0;
 }
 
 /* ─────────────────────────────────────────────

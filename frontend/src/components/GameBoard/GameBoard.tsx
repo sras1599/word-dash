@@ -377,18 +377,14 @@ export function GameBoard({
                                     </span>
                                 </div>
 
-                                {localPlayer.hand.length > 0 ? (
-                                    <PlayerHand
-                                        hand={localPlayer.hand}
-                                        drawnCardId={drawnCardId}
-                                        willAutoDiscardCardId={willAutoDiscardCardId}
-                                        isDraggable={canEditBoard}
-                                        onDropOnHand={canEditBoard && onUnplace ? enableDropOnHand : undefined}
-                                        onDiscard={canDiscard ? onDiscard : undefined}
-                                    />
-                                ) : (
-                                    <p className="game-board__hand-empty">No cards in hand.</p>
-                                )}
+                                <PlayerHand
+                                    hand={localPlayer.hand}
+                                    drawnCardId={drawnCardId}
+                                    willAutoDiscardCardId={willAutoDiscardCardId}
+                                    isDraggable={canEditBoard}
+                                    onDropOnHand={canEditBoard && onUnplace ? enableDropOnHand : undefined}
+                                    onDiscard={canDiscard ? onDiscard : undefined}
+                                />
                             </div>
                         </div>
                     </footer>

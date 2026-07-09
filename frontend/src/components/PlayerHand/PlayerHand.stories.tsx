@@ -59,6 +59,15 @@ export const Draggable: Story = {
     },
 }
 
+/** Empty hand remains a visible drop target during arrange phase. */
+export const EmptyDropTarget: Story = {
+    args: {
+        hand: [],
+        isDraggable: true,
+        onDropOnHand: fn(),
+    },
+}
+
 /** A card in the hand is selected, revealing the Discard button. */
 export const CardSelected: Story = {
     args: {

@@ -15,6 +15,8 @@ export interface PlayerHandProps {
     isDraggable?: boolean
     /** The currently selected card id, for keyboard or click-based discard flow. */
     selectedCardId?: string | null
+    /** Message shown when the hand contains no cards. */
+    emptyLabel?: string
     /** Called when a card is clicked. */
     onCardClick?: (cardId: string) => void
     /** Called when a drag starts, receives the card id. */
@@ -34,6 +36,7 @@ export function PlayerHand({
     willAutoDiscardCardId = null,
     isDraggable = false,
     selectedCardId = null,
+    emptyLabel = 'No cards in hand.',
     onCardClick,
     onDragStart,
     onDragEnd,
@@ -57,6 +60,7 @@ export function PlayerHand({
 
     const className = [
         'player-hand',
+        hand.length === 0 && !drawnCard && 'player-hand--empty',
         canDropOnHand && 'player-hand--drop-target',
         isOver && 'player-hand--drag-over',
     ]
@@ -71,6 +75,10 @@ export function PlayerHand({
             aria-label="Your hand"
         >
             <div className="player-hand__cards">
+                {hand.length === 0 && !drawnCard && (
+                    <p className="player-hand__empty">{emptyLabel}</p>
+                )}
+
                 {hand.map((card) => (
                     <Card
                         key={card.id}

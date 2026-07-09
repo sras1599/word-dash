@@ -105,7 +105,7 @@
 
 .game-board__status-role,
 .game-board__board-subtitle,
-.game-board__hand-empty {
+.game-board .player-hand__empty {
     color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 86%, transparent);
 }
 
@@ -369,11 +369,6 @@
 
 .game-board .player-hand__cards>.card:active {
     transform: scale(0.95);
-}
-
-.game-board__hand-empty {
-    margin: 0;
-    padding: 1rem 0;
 }
 
 @media (max-width: 760px) {

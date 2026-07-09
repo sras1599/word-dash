@@ -138,6 +138,26 @@ export const LocalArrangePhase: Story = {
     },
 }
 
+/** Arrange phase after all cards have been placed; hand remains a drop target. */
+export const EmptyHandArrangePhase: Story = {
+    args: {
+        discardTopCard: DISCARD_TOP,
+        localPlayer: {
+            ...makeLocalPlayer(VARIATION_345, 'local'),
+            hand: [],
+            wordBoard: wordBoardWithPlacedCard(VARIATION_345, { id: 'placed-a', letter: 'A' }),
+        },
+        handCount: 0,
+        boardSubtitle: 'Arrange your cards before the timer expires.',
+        turn: {
+            currentPlayerId: 'local',
+            phase: 'arrange',
+            timeRemainingMs: 30_000,
+            totalDurationMs: 60_000,
+        },
+    },
+}
+
 /** Opponent's turn — local player cannot interact with anything. */
 export const OpponentTurn: Story = {
     args: {
