@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 import { WordRow } from '../../../components/WordRow/WordRow'
 import type { GamePlayer } from '../../../lib/gameTypes'
 
@@ -8,6 +10,19 @@ type GameOverDialogProps = {
     onHome: () => void
 }
 
+function getWinningRowStyle(slotCount: number): CSSProperties {
+    const safeSlotCount = Math.max(slotCount, 1)
+    const cardWidthRem = 3.8
+    const gapRem = 0.55
+    const rowPaddingRem = 0.4
+    const maxWidthRem = safeSlotCount * cardWidthRem + (safeSlotCount - 1) * gapRem + rowPaddingRem
+
+    return {
+        '--overlay-slot-count': safeSlotCount,
+        '--overlay-row-max-width': `${maxWidthRem}rem`,
+    } as CSSProperties
+}
+
 export function GameOverDialog({ winner, isHost, onPlayAgain, onHome }: GameOverDialogProps) {
     return (
         <div className="page-game__overlay" role="dialog" aria-modal="true" aria-label="Game over">
@@ -16,7 +31,13 @@ export function GameOverDialog({ winner, isHost, onPlayAgain, onHome }: GameOver
                 <h2 className="page-game__overlay-heading">{winner.name} wins!</h2>
                 <section className="page-game__overlay-words" aria-label="Winning words">
                     {winner.wordBoard.rows.map((row, index) => (
-                        <WordRow key={index} rowState={row} rowIndex={index} />
+                        <div
+                            className="page-game__overlay-word-row"
+                            key={index}
+                            style={getWinningRowStyle(row.slots.length)}
+                        >
+                            <WordRow rowState={row} rowIndex={index} />
+                        </div>
                     ))}
                 </section>
                 <div className="page-game__overlay-actions">

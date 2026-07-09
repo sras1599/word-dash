@@ -613,8 +613,53 @@
     width: 100%;
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 0.8rem;
     pointer-events: none;
+}
+
+.page-game__overlay-word-row {
+    --overlay-slot-count: 1;
+    --overlay-row-gap: clamp(0.35rem, 1.4vw, 0.55rem);
+    --overlay-row-max-width: 100%;
+
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.page-game .page-game__overlay-word-row .word-row {
+    width: min(100%, var(--overlay-row-max-width));
+    display: grid;
+    grid-template-columns: repeat(var(--overlay-slot-count), minmax(0, 1fr));
+    justify-content: center;
+    gap: var(--overlay-row-gap);
+    padding: 0.2rem;
+}
+
+.page-game .page-game__overlay-word-row .word-slot {
+    --slot-width: 100%;
+    width: 100%;
+    min-width: 0;
+}
+
+.page-game .page-game__overlay-word-row .word-slot--empty,
+.page-game .page-game__overlay-word-row .word-slot--filled {
+    width: 100%;
+}
+
+.page-game .page-game__overlay-word-row .card {
+    --card-width: 100%;
+    font-size: clamp(0.72rem, 1.65vw, 0.9rem);
+}
+
+.page-game .page-game__overlay-word-row .card__letter--top,
+.page-game .page-game__overlay-word-row .card__letter--bottom {
+    font-size: clamp(0.45rem, 0.72em, 0.65rem);
+}
+
+.page-game .page-game__overlay-word-row .card__letter--center {
+    font-size: clamp(1.15rem, 2.2em, 2.25rem);
 }
 
 .page-game__overlay-actions {
