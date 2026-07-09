@@ -102,8 +102,9 @@ func DrawCard(state *room.GameState, playerID string, source string) (*room.Card
 }
 
 // PlaceCard moves a card from the player's hand or board onto the specified
-// slot on their word board. If the target slot already holds a card, that card
-// is swapped back into the hand.
+// slot on their word board. If a hand card is placed onto an occupied slot, the
+// displaced board card moves to the end of the hand. If a board card is placed
+// onto an occupied slot, the two board cards swap positions.
 //
 // After the placement the affected row's IsComplete flag and the board's
 // AllComplete flag are recomputed using dict.
@@ -152,23 +153,20 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 	switch cardRef.location {
 	case cardLocationHand:
 		if slot.Card != nil {
-			// Swap: put the existing slot card back in the hand at the same index.
-			player.Hand[cardRef.handIndex] = *slot.Card
-		} else {
-			// No card in slot: remove the card from the hand.
-			player.Hand = append(player.Hand[:cardRef.handIndex], player.Hand[cardRef.handIndex+1:]...)
+			displaced := *slot.Card
+			player.Hand = append(player.Hand, displaced)
 		}
+		player.Hand = append(player.Hand[:cardRef.handIndex], player.Hand[cardRef.handIndex+1:]...)
 	case cardLocationBoard:
 		if slot.Card != nil {
 			displaced := *slot.Card
-			if _, err := removeCardFromBoard(player, cardRef.rowIndex, cardRef.slotIndex); err != nil {
-				return err
-			}
-			player.Hand = append(player.Hand, displaced)
-		} else {
-			if _, err := removeCardFromBoard(player, cardRef.rowIndex, cardRef.slotIndex); err != nil {
-				return err
-			}
+			sourceSlot := &player.WordBoard.Rows[cardRef.rowIndex].Slots[cardRef.slotIndex]
+			sourceSlot.Card = &displaced
+			break
+		}
+
+		if _, err := removeCardFromBoard(player, cardRef.rowIndex, cardRef.slotIndex); err != nil {
+			return err
 		}
 	}
 
@@ -177,9 +175,9 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 	slot.Card = &placed
 
 	// Recompute completeness flags.
-	row := &player.WordBoard.Rows[rowIndex]
-	row.IsComplete = computeRowComplete(row, dict)
+	recomputeRowsComplete(player, dict, cardRef.rowIndex, rowIndex)
 	player.WordBoard.AllComplete = computeBoardAllComplete(player.WordBoard)
+	row := &player.WordBoard.Rows[rowIndex]
 	playerName := ""
 	if p, err := state.GetPlayer(playerID); err == nil {
 		playerName = p.Name
@@ -195,6 +193,19 @@ func PlaceCard(state *room.GameState, playerID, cardID string, rowIndex, slotInd
 	)
 
 	return nil
+}
+
+func recomputeRowsComplete(player *room.Player, dict dictionary.DictionaryChecker, rowIndices ...int) {
+	seen := make(map[int]bool, len(rowIndices))
+	for _, rowIndex := range rowIndices {
+		if rowIndex < 0 || rowIndex >= len(player.WordBoard.Rows) || seen[rowIndex] {
+			continue
+		}
+
+		row := &player.WordBoard.Rows[rowIndex]
+		row.IsComplete = computeRowComplete(row, dict)
+		seen[rowIndex] = true
+	}
 }
 
 // UnplaceCard removes a card from the specified board slot and returns it to

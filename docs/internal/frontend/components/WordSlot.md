@@ -51,4 +51,4 @@ Empty slots show a subtle dashed or outlined box. Filled slots render a `Card` c
 - When `isValid` is `true`, the slot/card renders with a green tint or check indicator (the entire `WordRow` turns green simultaneously).
 - When `isValid` is `false` and all slots are filled, the slot renders with a red tint to indicate the word is not in the dictionary.
 - When `isActive` is false (not the player's turn), drop events are ignored and the slot renders in a locked/muted style.
-- A slot can only hold one card at a time. Dropping a card onto an already-filled slot should trigger a swap: the existing card returns to the hand, and the new card takes the slot. This swap is handled server-side.
+- A slot can only hold one card at a time. Dropping a hand card onto an already-filled slot moves the displaced board card to the end of hand; dropping a board card onto an already-filled slot swaps the two board cards. This is handled server-side and mirrored optimistically by the game state layer.

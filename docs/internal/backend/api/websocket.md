@@ -61,6 +61,8 @@ All messages in both directions are JSON objects with the shape:
 
 Draw and discard events must come from the current turn holder. Board-edit events (`game:place_card` and `game:unplace_card`) apply only to the sender's own board and are accepted during any player's `draw` or `arrange` turn phase. Events received outside their valid phase, or turn-owned events from a non-current player, are rejected with `game:error`.
 
+`game:place_card` accepts cards from the sender's hand or board. Hand cards placed onto occupied slots displace the old board card to the end of the sender's hand; board cards placed onto occupied slots swap with the target board card in place, including across word rows.
+
 ### Server -> Client
 
 | Event                      | Payload |
@@ -85,6 +87,6 @@ Clients should render a local one-second countdown between server events. The se
 |-----------------|---------|
 | `NOT_YOUR_TURN` | Event received from a player who is not the active player |
 | `INVALID_PHASE` | Event received during the wrong turn phase |
-| `INVALID_CARD`  | `cardId` does not exist in the player's hand |
+| `INVALID_CARD`  | `cardId` does not exist in the player's hand or board |
 | `INVALID_SLOT`  | `rowIndex` or `slotIndex` is out of range |
 | `ROOM_NOT_FOUND`| WS upgrade attempted with an unknown `roomCode` |

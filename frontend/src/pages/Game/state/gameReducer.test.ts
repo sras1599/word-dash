@@ -129,8 +129,8 @@ describe('gameReducer', () => {
         expect(placedIntoEmpty?.players[0].handCount).toBe(0)
     })
 
-    it('optimistically swaps a hand card into an occupied slot', () => {
-        const swapped = gameReducer(createGameState(), {
+    it('optimistically places a hand card into an occupied slot and appends the displaced card', () => {
+        const swapped = gameReducer(createGameState({ hand: [{ id: 'c1', letter: 'A' }, { id: 'c4', letter: 'D' }] }), {
             type: 'local/cardPlacedOptimistically',
             localPlayerId: 'p1',
             cardId: 'c1',
@@ -139,8 +139,8 @@ describe('gameReducer', () => {
         })
 
         expect(swapped?.players[0].wordBoard.rows[0].slots[1].card).toEqual({ id: 'c1', letter: 'A' })
-        expect(swapped?.players[0].hand).toEqual([{ id: 'c2', letter: 'B' }])
-        expect(swapped?.players[0].handCount).toBe(1)
+        expect(swapped?.players[0].hand).toEqual([{ id: 'c4', letter: 'D' }, { id: 'c2', letter: 'B' }])
+        expect(swapped?.players[0].handCount).toBe(2)
     })
 
     it('optimistically moves a board card into an empty slot', () => {
@@ -158,7 +158,7 @@ describe('gameReducer', () => {
         expect(moved?.players[0].handCount).toBe(0)
     })
 
-    it('optimistically moves a board card into an occupied slot and returns displaced card to hand', () => {
+    it('optimistically swaps a board card with an occupied slot', () => {
         const moved = gameReducer(
             {
                 ...createGameState({ hand: [] }),
@@ -192,9 +192,57 @@ describe('gameReducer', () => {
         )
 
         expect(moved?.players[0].wordBoard.rows[0].slots[0].card).toEqual({ id: 'c2', letter: 'B' })
-        expect(moved?.players[0].wordBoard.rows[0].slots[1].card).toBeNull()
-        expect(moved?.players[0].hand).toEqual([{ id: 'c3', letter: 'C' }])
-        expect(moved?.players[0].handCount).toBe(1)
+        expect(moved?.players[0].wordBoard.rows[0].slots[1].card).toEqual({ id: 'c3', letter: 'C' })
+        expect(moved?.players[0].hand).toEqual([])
+        expect(moved?.players[0].handCount).toBe(0)
+    })
+
+    it('optimistically swaps board cards across rows', () => {
+        const moved = gameReducer(
+            {
+                ...createGameState({ hand: [] }),
+                variation: { wordLengths: [2, 2] },
+                players: [
+                    {
+                        ...createGameState({ hand: [] }).players[0],
+                        wordBoard: {
+                            allComplete: false,
+                            rows: [
+                                {
+                                    targetLength: 2,
+                                    isComplete: false,
+                                    slots: [
+                                        { slotIndex: 0, card: { id: 'c3', letter: 'C' } },
+                                        { slotIndex: 1, card: { id: 'c2', letter: 'B' } },
+                                    ],
+                                },
+                                {
+                                    targetLength: 2,
+                                    isComplete: false,
+                                    slots: [
+                                        { slotIndex: 0, card: { id: 'c4', letter: 'D' } },
+                                        { slotIndex: 1, card: null },
+                                    ],
+                                },
+                            ],
+                        },
+                    },
+                    createGameState().players[1],
+                ],
+            },
+            {
+                type: 'local/cardPlacedOptimistically',
+                localPlayerId: 'p1',
+                cardId: 'c4',
+                rowIndex: 0,
+                slotIndex: 1,
+            },
+        )
+
+        expect(moved?.players[0].wordBoard.rows[0].slots[1].card).toEqual({ id: 'c4', letter: 'D' })
+        expect(moved?.players[0].wordBoard.rows[1].slots[0].card).toEqual({ id: 'c2', letter: 'B' })
+        expect(moved?.players[0].hand).toEqual([])
+        expect(moved?.players[0].handCount).toBe(0)
     })
 
     it('keeps a same-slot board move as a no-op', () => {

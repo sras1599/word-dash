@@ -371,10 +371,6 @@ export function GameBoard({
                                             {handCount} {handCount === 1 ? 'Card' : 'Cards'}
                                         </span>
                                     </div>
-
-                                    <span className="game-board__hand-sort" aria-hidden="true">
-                                        Sort Hand
-                                    </span>
                                 </div>
 
                                 <PlayerHand

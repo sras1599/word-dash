@@ -74,3 +74,4 @@ The top-level layout component for the game screen. Assembles all gameplay sub-c
 - The "is arrange phase" flag is `isActiveTurn && gameState.turn.phase === 'arrange'`.
 - The component is purely a layout/orchestration layer — no game logic lives here beyond deriving these flags and routing callbacks to WebSocket events.
 - On the "draw phase", only `CardPile` is interactive. On the "arrange phase", `PlayerHand`, `WordBoard`/`WordSlot`, and `CardPile` (for discard) are interactive.
+- Dropping a board card onto an occupied board slot swaps the two board cards, including across rows. Dropping a hand card onto an occupied board slot moves the displaced board card to the end of the hand.

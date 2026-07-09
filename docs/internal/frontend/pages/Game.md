@@ -81,6 +81,7 @@ The game page has distinct visual states driven by `GameState.turn.phase` and `G
 | Click draw pile (local player's turn)       | Sends `game:draw_card { source: 'draw' }`. Server responds with the drawn card; it appears in hand.|
 | Click discard pile (local player's turn)    | Top card moves into hand optimistically, then `game:card_drawn` reconciles pile and timer state.   |
 | Drag card from hand → WordSlot              | Card is placed optimistically, then `game:board_updated` reconciles board and hand state.          |
+| Drag card from WordSlot → occupied WordSlot | Board cards swap slots optimistically, then `game:board_updated` reconciles board and hand state. |
 | Drag card from WordSlot → hand              | Card returns to hand optimistically, then `game:board_updated` reconciles board and hand state.    |
 | Drag card from hand → discard pile          | Card is discarded optimistically, local turn advances, then `game:turn_ended` reconciles state.    |
 | Discard button (with card selected)         | Same as drag to discard pile.                                                                      |

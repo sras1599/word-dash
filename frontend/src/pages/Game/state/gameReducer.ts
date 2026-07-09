@@ -223,6 +223,18 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                     break
                 }
 
+                if (source.type === 'board' && targetSlot.card) {
+                    const sourceSlot = getSlot(player.wordBoard, source.rowIndex, source.slotIndex)
+                    if (!sourceSlot?.card) break
+
+                    const movingCard = sourceSlot.card
+                    sourceSlot.card = targetSlot.card
+                    targetSlot.card = movingCard
+                    markCardRemovedFromBoard(player.wordBoard, source.rowIndex)
+                    markCardRemovedFromBoard(player.wordBoard, action.rowIndex)
+                    break
+                }
+
                 const movingCard = removeCardAtLocation(player, source)
                 if (!movingCard) break
 

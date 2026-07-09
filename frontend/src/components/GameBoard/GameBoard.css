@@ -316,19 +316,6 @@
     font-weight: 700;
 }
 
-.game-board__hand-sort {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.8rem 1.45rem;
-    border-radius: var(--radius-full, 9999px);
-    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 84%, transparent);
-    color: var(--on-surface, #1b1b1b);
-    font-family: var(--font-headline, inherit);
-    font-size: 0.92rem;
-    font-weight: 700;
-}
-
 .game-board .player-hand {
     background: transparent;
     padding: 0;
@@ -398,11 +385,6 @@
 
     .game-board__hand-title {
         font-size: 1.45rem;
-    }
-
-    .game-board__hand-sort {
-        padding: 0.65rem 1rem;
-        font-size: 0.84rem;
     }
 }
 

@@ -45,6 +45,63 @@ func TestPlaceCardCompletesRowOnlyWhenDictionaryAcceptsWord(t *testing.T) {
 	}
 }
 
+func TestPlaceCardAppendsDisplacedBoardCardWhenHandCardPlacedOnOccupiedSlot(t *testing.T) {
+	state := newPlacementTestState()
+
+	if err := PlaceCard(state, "player-1", "card-c", 0, 0, testDictionary{}); err != nil {
+		t.Fatalf("place initial card: %v", err)
+	}
+	if err := PlaceCard(state, "player-1", "card-a", 0, 0, testDictionary{}); err != nil {
+		t.Fatalf("replace occupied slot: %v", err)
+	}
+
+	player := state.Players[0]
+	if got := player.WordBoard.Rows[0].Slots[0].Card; got == nil || got.ID != "card-a" {
+		t.Fatalf("slot card = %#v, want card-a", got)
+	}
+	if got := cardIDs(player.Hand); !equalStrings(got, []string{"card-t", "card-c"}) {
+		t.Fatalf("hand card IDs = %v, want [card-t card-c]", got)
+	}
+}
+
+func TestPlaceCardSwapsBoardCardsInOccupiedSlots(t *testing.T) {
+	state := newBoardSwapTestState([]int{3})
+
+	if err := PlaceCard(state, "player-1", "card-b", 0, 0, testDictionary{}); err != nil {
+		t.Fatalf("swap board cards: %v", err)
+	}
+
+	player := state.Players[0]
+	if got := player.WordBoard.Rows[0].Slots[0].Card; got == nil || got.ID != "card-b" {
+		t.Fatalf("slot 0 card = %#v, want card-b", got)
+	}
+	if got := player.WordBoard.Rows[0].Slots[1].Card; got == nil || got.ID != "card-a" {
+		t.Fatalf("slot 1 card = %#v, want card-a", got)
+	}
+	if got := len(player.Hand); got != 0 {
+		t.Fatalf("hand length = %d, want 0", got)
+	}
+}
+
+func TestPlaceCardSwapsBoardCardsAcrossRows(t *testing.T) {
+	state := newBoardSwapTestState([]int{2, 2})
+
+	if err := PlaceCard(state, "player-1", "card-c", 0, 1, testDictionary{}); err != nil {
+		t.Fatalf("swap board cards across rows: %v", err)
+	}
+
+	player := state.Players[0]
+	if got := player.WordBoard.Rows[0].Slots[1].Card; got == nil || got.ID != "card-c" {
+		t.Fatalf("row 0 slot 1 card = %#v, want card-c", got)
+	}
+	if got := player.WordBoard.Rows[1].Slots[0].Card; got == nil || got.ID != "card-b" {
+		t.Fatalf("row 1 slot 0 card = %#v, want card-b", got)
+	}
+	if got := len(player.Hand); got != 0 {
+		t.Fatalf("hand length = %d, want 0", got)
+	}
+}
+
 func TestUnplaceCardAllowsOwnBoardEditsDuringDrawAndArrange(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -280,6 +337,54 @@ func newPlacementTestState() *room.GameState {
 			},
 		},
 	}
+}
+
+func newBoardSwapTestState(wordLengths []int) *room.GameState {
+	board := room.NewWordBoard(room.Variation{WordLengths: wordLengths})
+	cardA := room.Card{ID: "card-a", Letter: "A"}
+	cardB := room.Card{ID: "card-b", Letter: "B"}
+	cardC := room.Card{ID: "card-c", Letter: "C"}
+	board.Rows[0].Slots[0].Card = &cardA
+	board.Rows[0].Slots[1].Card = &cardB
+	if len(board.Rows) > 1 {
+		board.Rows[1].Slots[0].Card = &cardC
+	}
+
+	return &room.GameState{
+		RoomCode: "ABC123",
+		Phase:    room.GamePhasePlaying,
+		Turn: room.Turn{
+			CurrentPlayerID: "player-1",
+			Phase:           room.TurnPhaseArrange,
+		},
+		Players: []room.Player{
+			{
+				ID:        "player-1",
+				Hand:      []room.Card{},
+				WordBoard: board,
+			},
+		},
+	}
+}
+
+func cardIDs(cards []room.Card) []string {
+	ids := make([]string, len(cards))
+	for i, card := range cards {
+		ids[i] = card.ID
+	}
+	return ids
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func newAutoDiscardTestState() *room.GameState {
