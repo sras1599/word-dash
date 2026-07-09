@@ -15,6 +15,8 @@ var eventHandlers = map[string]eventHandler{
 	"game:draw_card":         routeGameDrawCard,
 	"game:place_card":        routeGamePlaceCard,
 	"game:unplace_card":      routeGameUnplaceCard,
+	"game:clear_word":        routeGameClearWord,
+	"game:clear_board":       routeGameClearBoard,
 	"game:discard_card":      routeGameDiscardCard,
 }
 
@@ -107,6 +109,16 @@ func routeGamePlaceCard(h *Hub, c *client, roomCode, playerID string, raw json.R
 // routeGameUnplaceCard forwards unplace-card payloads to the handler.
 func routeGameUnplaceCard(h *Hub, c *client, roomCode, playerID string, raw json.RawMessage) {
 	h.handleGameUnplaceCard(c, roomCode, playerID, raw)
+}
+
+// routeGameClearWord forwards clear-word payloads to the handler.
+func routeGameClearWord(h *Hub, c *client, roomCode, playerID string, raw json.RawMessage) {
+	h.handleGameClearWord(c, roomCode, playerID, raw)
+}
+
+// routeGameClearBoard forwards clear-board payloads to the handler.
+func routeGameClearBoard(h *Hub, c *client, roomCode, playerID string, raw json.RawMessage) {
+	h.handleGameClearBoard(c, roomCode, playerID)
 }
 
 // routeGameDiscardCard forwards discard-card payloads to the handler.

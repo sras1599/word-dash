@@ -57,11 +57,15 @@ All messages in both directions are JSON objects with the shape:
 | `game:draw_card`    | `{ "source": "draw" \| "discard" }` | `draw`      |
 | `game:place_card`   | `{ "cardId", "rowIndex", "slotIndex" }` | `draw` or `arrange` |
 | `game:unplace_card` | `{ "rowIndex", "slotIndex" }`       | `draw` or `arrange` |
+| `game:clear_word`   | `{ "rowIndex": number }`            | `draw` or `arrange` |
+| `game:clear_board`  | `{}` or _(none)_                    | `draw` or `arrange` |
 | `game:discard_card` | `{ "cardId" }`                        | `arrange`   |
 
-Draw and discard events must come from the current turn holder. Board-edit events (`game:place_card` and `game:unplace_card`) apply only to the sender's own board and are accepted during any player's `draw` or `arrange` turn phase. Events received outside their valid phase, or turn-owned events from a non-current player, are rejected with `game:error`.
+Draw and discard events must come from the current turn holder. Board-edit events (`game:place_card`, `game:unplace_card`, `game:clear_word`, and `game:clear_board`) apply only to the sender's own board and are accepted during any player's `draw` or `arrange` turn phase. Events received outside their valid phase, or turn-owned events from a non-current player, are rejected with `game:error`.
 
 `game:place_card` accepts cards from the sender's hand or board. Hand cards placed onto occupied slots displace the old board card to the end of the sender's hand; board cards placed onto occupied slots swap with the target board card in place, including across word rows.
+
+`game:clear_word` returns all cards in the requested word row to the sender's hand in slot order. `game:clear_board` returns all placed board cards to the sender's hand in row-major order. Empty slots and empty rows are ignored.
 
 ### Server -> Client
 
@@ -70,7 +74,7 @@ Draw and discard events must come from the current turn holder. Board-edit event
 | `game:state`               | Full `GameState` snapshot. Sent to all players on game start and to the reconnecting player on reconnect. |
 | `game:turn_started`        | `{ currentPlayerId, timeRemainingMs: 60000 }` |
 | `game:card_drawn`          | `{ playerId, source, card: Card \| null, drawPileCount, discardPileTop, timeRemainingMs }`. `card` is `null` for non-drawing players. |
-| `game:board_updated`       | `{ playerId, wordBoard: WordBoard }`. Broadcast to all players after every `place` or `unplace` action. |
+| `game:board_updated`       | `{ playerId, wordBoard: WordBoard }`. Broadcast to all players after every `place`, `unplace`, `clear_word`, or `clear_board` action. |
 | `game:timer_warning`       | `{ currentPlayerId, timeRemainingMs }`. Emitted only when remaining time crosses warning thresholds (`10s`, `5s`, `1s`). |
 | `game:turn_ended`          | `{ playerId, reason: "discarded" \| "timeout", discardedCard: Card, discardPileTop: Card, nextPlayerId, timeRemainingMs }` |
 | `game:turn_skipped`        | `{ playerId, reason: "disconnected", nextPlayerId, timeRemainingMs }` |

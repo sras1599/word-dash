@@ -277,6 +277,87 @@ describe('gameReducer', () => {
         expect(unplaced?.players[0].handCount).toBe(1)
     })
 
+    it('optimistically clears a word row into hand and marks completion incomplete', () => {
+        const state = createGameState({ hand: [{ id: 'c1', letter: 'A' }] })
+        state.players[0].wordBoard.allComplete = true
+        state.players[0].wordBoard.rows[0].isComplete = true
+        state.players[0].wordBoard.rows[0].slots[0].card = { id: 'c3', letter: 'C' }
+
+        const cleared = gameReducer(state, {
+            type: 'local/wordClearedOptimistically',
+            localPlayerId: 'p1',
+            rowIndex: 0,
+        })
+
+        expect(cleared?.players[0].wordBoard.rows[0].slots[0].card).toBeNull()
+        expect(cleared?.players[0].wordBoard.rows[0].slots[1].card).toBeNull()
+        expect(cleared?.players[0].wordBoard.rows[0].isComplete).toBe(false)
+        expect(cleared?.players[0].wordBoard.allComplete).toBe(false)
+        expect(cleared?.players[0].hand).toEqual([
+            { id: 'c1', letter: 'A' },
+            { id: 'c3', letter: 'C' },
+            { id: 'c2', letter: 'B' },
+        ])
+        expect(cleared?.players[0].handCount).toBe(3)
+    })
+
+    it('optimistically clears the whole board into hand in row-major order', () => {
+        const state = createGameState({ hand: [] })
+        state.players[0].wordBoard = {
+            allComplete: true,
+            rows: [
+                {
+                    targetLength: 2,
+                    isComplete: true,
+                    slots: [
+                        { slotIndex: 0, card: { id: 'c1', letter: 'A' } },
+                        { slotIndex: 1, card: null },
+                    ],
+                },
+                {
+                    targetLength: 2,
+                    isComplete: true,
+                    slots: [
+                        { slotIndex: 0, card: { id: 'c2', letter: 'B' } },
+                        { slotIndex: 1, card: { id: 'c3', letter: 'C' } },
+                    ],
+                },
+            ],
+        }
+
+        const cleared = gameReducer(state, {
+            type: 'local/boardClearedOptimistically',
+            localPlayerId: 'p1',
+        })
+
+        expect(cleared?.players[0].hand).toEqual([
+            { id: 'c1', letter: 'A' },
+            { id: 'c2', letter: 'B' },
+            { id: 'c3', letter: 'C' },
+        ])
+        expect(cleared?.players[0].handCount).toBe(3)
+        expect(cleared?.players[0].wordBoard.allComplete).toBe(false)
+        expect(cleared?.players[0].wordBoard.rows.every((row) => !row.isComplete)).toBe(true)
+        expect(cleared?.players[0].wordBoard.rows.flatMap((row) => row.slots).every((slot) => slot.card === null)).toBe(true)
+    })
+
+    it('keeps invalid optimistic clear actions as no-ops', () => {
+        const state = createGameState({ hand: [] })
+
+        const invalidRow = gameReducer(state, {
+            type: 'local/wordClearedOptimistically',
+            localPlayerId: 'p1',
+            rowIndex: 9,
+        })
+        expect(invalidRow).toEqual(state)
+
+        const nonPlaying = gameReducer({ ...state, phase: 'finished' }, {
+            type: 'local/boardClearedOptimistically',
+            localPlayerId: 'p1',
+        })
+        expect(nonPlaying).toEqual({ ...state, phase: 'finished' })
+    })
+
     it('optimistically discards from hand and advances to the next local player', () => {
         const discarded = gameReducer(createGameState({ turnPhase: 'arrange' }), {
             type: 'local/cardDiscardedOptimistically',

@@ -129,7 +129,7 @@ Signals all clients to navigate to `/game/:roomCode`.
 
 ### Client -> Server
 
-Clients optimistically apply safe local updates for board placement, unplacement, discard, and drawing the public discard-pile top card. The WebSocket event shapes do not change; server events remain authoritative and reconcile local state. Draw-pile cards are never revealed optimistically because their identities are private until `game:card_drawn`.
+Clients optimistically apply safe local updates for board placement, unplacement, row clearing, board clearing, discard, and drawing the public discard-pile top card. Server events remain authoritative and reconcile local state. Draw-pile cards are never revealed optimistically because their identities are private until `game:card_drawn`.
 
 #### `game:player_connected`
 Optional manual re-sync event. Current clients do not need to send it because the server automatically syncs `game:state` when a game-phase socket connects.
@@ -165,6 +165,22 @@ Valid during any player's draw or arrange phase; the server applies it only to t
   rowIndex: number;
   slotIndex: number;
 }
+```
+
+#### `game:clear_word`
+Remove all cards from one word row back to hand in slot order.
+Valid during any player's draw or arrange phase; the server applies it only to the sender's own board.
+```ts
+{
+  rowIndex: number;
+}
+```
+
+#### `game:clear_board`
+Remove all cards from the word board back to hand in row-major order.
+Valid during any player's draw or arrange phase; the server applies it only to the sender's own board.
+```ts
+{}
 ```
 
 #### `game:discard_card`
@@ -209,7 +225,7 @@ When a player draws from the draw pile, only that player receives the actual car
 ```
 
 #### `game:board_updated`
-Sent after a `place_card` or `unplace_card` action.
+Sent after a `place_card`, `unplace_card`, `clear_word`, or `clear_board` action.
 ```ts
 {
   playerId: string;

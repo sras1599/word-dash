@@ -43,7 +43,7 @@ export function Game() {
     const { roomCode } = useParams<{ roomCode: string }>()
     const navigate = useNavigate()
     const localPlayerId = session.getPlayerId() ?? ''
-    const { gameState, draw, place, unplace, discard, restartLobby, close } = useGameRoom(roomCode, localPlayerId)
+    const { gameState, draw, place, unplace, clearWord, clearBoard, discard, restartLobby, close } = useGameRoom(roomCode, localPlayerId)
 
     function handlePlayAgain() {
         restartLobby()
@@ -136,6 +136,8 @@ export function Game() {
                     onDraw={draw}
                     onPlace={place}
                     onUnplace={unplace}
+                    onClearWord={clearWord}
+                    onClearBoard={clearBoard}
                     onDiscard={discard}
                 />
             </main>

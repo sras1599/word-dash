@@ -182,6 +182,10 @@ type unplaceCardRequest struct {
 	SlotIndex int `json:"slotIndex"`
 }
 
+type clearWordRequest struct {
+	RowIndex int `json:"rowIndex"`
+}
+
 type discardCardRequest struct {
 	CardID string `json:"cardId"`
 }

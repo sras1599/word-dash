@@ -93,6 +93,10 @@ export interface GameBoardProps {
     onPlace?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a card is removed from a word slot. */
     onUnplace?: (rowIndex: number, slotIndex: number) => void
+    /** Called when all cards in a word row should be returned to hand. */
+    onClearWord?: (rowIndex: number) => void
+    /** Called when all cards on the word board should be returned to hand. */
+    onClearBoard?: () => void
     /** Called when a card is discarded. */
     onDiscard?: (cardId: string) => void
 }
@@ -114,6 +118,8 @@ export function GameBoard({
     onDraw,
     onPlace,
     onUnplace,
+    onClearWord,
+    onClearBoard,
     onDiscard,
 }: GameBoardProps) {
     const boardDragSourceRef = useRef<BoardDragSource | null>(null)
@@ -260,7 +266,12 @@ export function GameBoard({
         return player.id === localPlayerId ? handCount : 'handCount' in player ? player.handCount : player.hand.length
     }
 
+    function hasPlacedBoardCards(wordBoard: WordBoardState): boolean {
+        return wordBoard.rows.some((row) => row.slots.some((slot) => slot.card !== null))
+    }
+
     const totalBoardSlots = variation.wordLengths.reduce((sum, length) => sum + length, 0)
+    const canClearBoard = canEditBoard && localPlayer !== null && hasPlacedBoardCards(localPlayer.wordBoard)
 
     return (
         <DndContext
@@ -331,17 +342,33 @@ export function GameBoard({
 
                 {localPlayer && (
                     <section className="game-board__board-section" aria-labelledby="game-board-title">
-                        <div className="game-board__board-copy">
-                            <h1 className="game-board__board-title" id="game-board-title">
-                                Build Your Words
-                            </h1>
-                            <p className="game-board__board-subtitle">{boardSubtitle}</p>
+                        <div className="game-board__board-header">
+                            <div className="game-board__board-copy">
+                                <h1 className="game-board__board-title" id="game-board-title">
+                                    Build Your Words
+                                </h1>
+                                <p className="game-board__board-subtitle">{boardSubtitle}</p>
+                            </div>
+
+                            {canClearBoard && onClearBoard && (
+                                <button
+                                    className="game-board__clear-board-btn"
+                                    type="button"
+                                    onClick={onClearBoard}
+                                    aria-label="Clear word board"
+                                    title="Clear board"
+                                >
+                                    <Icon name="clear" className="game-board__clear-icon" />
+                                    <span>Clear Board</span>
+                                </button>
+                            )}
                         </div>
 
                         <WordBoard
                             wordBoard={localPlayer.wordBoard}
                             willAutoDiscardCardId={willAutoDiscardCardId}
                             onPlace={canEditBoard ? onPlace : undefined}
+                            onClearWord={canEditBoard ? onClearWord : undefined}
                             onCardDragStart={canEditBoard ? handleBoardCardDragStart : undefined}
                             onCardDragEnd={canEditBoard ? handleBoardCardDragEnd : undefined}
                         />

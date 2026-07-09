@@ -92,6 +92,7 @@ const meta = {
         wordBoard: partialBoard,
         onPlace: fn(),
         onUnplace: fn(),
+        onClearWord: fn(),
         onCardSelected: fn(),
     },
 } satisfies Meta<typeof WordBoard>

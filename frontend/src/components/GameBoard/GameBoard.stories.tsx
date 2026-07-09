@@ -111,6 +111,8 @@ const meta = {
         onDraw: fn(),
         onPlace: fn(),
         onUnplace: fn(),
+        onClearWord: fn(),
+        onClearBoard: fn(),
         onDiscard: fn(),
     },
 } satisfies Meta<typeof GameBoard>

@@ -52,6 +52,37 @@
     gap: 8px;
 }
 
+.word-board__clear-row-btn {
+    width: 2.35rem;
+    height: 2.35rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: var(--radius-full, 9999px);
+    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 82%, transparent);
+    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 86%, transparent);
+    cursor: pointer;
+    transition: transform 0.18s ease, background-color 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+}
+
+.word-board__clear-row-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background: var(--primary-container, #ffdad5);
+    color: var(--on-primary-container, #410002);
+}
+
+.word-board__clear-row-btn:disabled {
+    cursor: default;
+    opacity: 0.28;
+}
+
+.word-board__clear-row-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
 /* ─────────────────────────────────────────────
    Row label — "Word 1 (3)"
 ───────────────────────────────────────────── */

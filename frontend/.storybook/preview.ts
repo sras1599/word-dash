@@ -1,9 +1,23 @@
 import type { Preview } from '@storybook/react-vite'
+import { createElement } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { initialize, mswLoader } from 'msw-storybook-addon'
 
 initialize({ onUnhandledRequest: 'bypass' })
 
 const preview: Preview = {
+  decorators: [
+    (Story) => {
+      const client = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      })
+
+      return createElement(QueryClientProvider, { client }, createElement(Story))
+    },
+  ],
   loaders: [mswLoader],
   parameters: {
     controls: {

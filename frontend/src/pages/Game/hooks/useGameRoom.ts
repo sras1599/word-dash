@@ -156,6 +156,22 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
         wsRef.current?.send('game:unplace_card', { rowIndex, slotIndex })
     }
 
+    function clearWord(rowIndex: number) {
+        if (!canPlaceCard(gameState)) return
+
+        send({ type: 'LOCAL_WORD_CLEARED_OPTIMISTICALLY', localPlayerId, rowIndex })
+
+        wsRef.current?.send('game:clear_word', { rowIndex })
+    }
+
+    function clearBoard() {
+        if (!canPlaceCard(gameState)) return
+
+        send({ type: 'LOCAL_BOARD_CLEARED_OPTIMISTICALLY', localPlayerId })
+
+        wsRef.current?.send('game:clear_board', {})
+    }
+
     function discard(cardId: string) {
         if (!canDiscardCard(gameState, localPlayerId)) return
 
@@ -177,6 +193,8 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
         draw,
         place,
         unplace,
+        clearWord,
+        clearBoard,
         discard,
         restartLobby,
         close,

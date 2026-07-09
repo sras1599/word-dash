@@ -9,6 +9,7 @@ import {
     Settings,
     SlidersHorizontal,
     Timer,
+    Trash2,
     User,
     Users,
     type LucideIcon,
@@ -27,6 +28,7 @@ type IconName =
     | 'help'
     | 'settings'
     | 'cards'
+    | 'clear'
 
 type IconProps = {
     name: IconName
@@ -46,6 +48,7 @@ const ICONS: Record<IconName, LucideIcon> = {
     help: CircleHelp,
     settings: Settings,
     cards: Layers,
+    clear: Trash2,
 }
 
 export function Icon({ name, className }: IconProps) {

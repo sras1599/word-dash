@@ -197,6 +197,153 @@ func TestUnplaceCardValidatesSlotAndCard(t *testing.T) {
 	}
 }
 
+func TestClearWordReturnsRowCardsToHandInSlotOrder(t *testing.T) {
+	state := newClearTestState(room.TurnPhaseArrange)
+
+	if err := ClearWord(state, "player-2", 0); err != nil {
+		t.Fatalf("clear word: %v", err)
+	}
+
+	player := state.Players[1]
+	if got := cardIDs(player.Hand); !equalStrings(got, []string{"card-hand", "card-a", "card-b"}) {
+		t.Fatalf("hand card IDs = %v, want [card-hand card-a card-b]", got)
+	}
+	for slotIndex, slot := range player.WordBoard.Rows[0].Slots {
+		if slot.Card != nil {
+			t.Fatalf("row 0 slot %d card = %#v, want nil", slotIndex, slot.Card)
+		}
+	}
+	if player.WordBoard.Rows[0].IsComplete {
+		t.Fatal("row 0 complete = true, want false")
+	}
+	if player.WordBoard.AllComplete {
+		t.Fatal("board complete = true, want false")
+	}
+	if got := state.Players[1].WordBoard.Rows[1].Slots[0].Card; got == nil || got.ID != "card-c" {
+		t.Fatalf("row 1 slot 0 card = %#v, want card-c", got)
+	}
+}
+
+func TestClearWordAllowsEmptyRowsAsNoOp(t *testing.T) {
+	state := newClearTestState(room.TurnPhaseDraw)
+
+	if err := ClearWord(state, "player-2", 2); err != nil {
+		t.Fatalf("clear empty word: %v", err)
+	}
+
+	player := state.Players[1]
+	if got := cardIDs(player.Hand); !equalStrings(got, []string{"card-hand"}) {
+		t.Fatalf("hand card IDs = %v, want [card-hand]", got)
+	}
+	if player.WordBoard.Rows[2].IsComplete {
+		t.Fatal("empty row complete = true, want false")
+	}
+	if player.WordBoard.AllComplete {
+		t.Fatal("board complete = true, want false")
+	}
+}
+
+func TestClearBoardReturnsCardsToHandInRowMajorOrder(t *testing.T) {
+	state := newClearTestState(room.TurnPhaseArrange)
+
+	if err := ClearBoard(state, "player-2"); err != nil {
+		t.Fatalf("clear board: %v", err)
+	}
+
+	player := state.Players[1]
+	if got := cardIDs(player.Hand); !equalStrings(got, []string{"card-hand", "card-a", "card-b", "card-c"}) {
+		t.Fatalf("hand card IDs = %v, want [card-hand card-a card-b card-c]", got)
+	}
+	for rowIndex, row := range player.WordBoard.Rows {
+		if row.IsComplete {
+			t.Fatalf("row %d complete = true, want false", rowIndex)
+		}
+		for slotIndex, slot := range row.Slots {
+			if slot.Card != nil {
+				t.Fatalf("row %d slot %d card = %#v, want nil", rowIndex, slotIndex, slot.Card)
+			}
+		}
+	}
+	if player.WordBoard.AllComplete {
+		t.Fatal("board complete = true, want false")
+	}
+}
+
+func TestClearActionsValidateState(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(*room.GameState)
+		run     func(*room.GameState) error
+		want    error
+		wantErr bool
+	}{
+		{
+			name: "clear word rejects idle turn phase",
+			mutate: func(state *room.GameState) {
+				state.Turn.Phase = room.TurnPhaseIdle
+			},
+			run:  func(state *room.GameState) error { return ClearWord(state, "player-2", 0) },
+			want: ErrInvalidPhase,
+		},
+		{
+			name: "clear board rejects idle turn phase",
+			mutate: func(state *room.GameState) {
+				state.Turn.Phase = room.TurnPhaseIdle
+			},
+			run:  func(state *room.GameState) error { return ClearBoard(state, "player-2") },
+			want: ErrInvalidPhase,
+		},
+		{
+			name: "clear word rejects non-playing game phase",
+			mutate: func(state *room.GameState) {
+				state.Phase = room.GamePhaseFinished
+			},
+			run:     func(state *room.GameState) error { return ClearWord(state, "player-2", 0) },
+			wantErr: true,
+		},
+		{
+			name: "clear board rejects non-playing game phase",
+			mutate: func(state *room.GameState) {
+				state.Phase = room.GamePhaseWaiting
+			},
+			run:     func(state *room.GameState) error { return ClearBoard(state, "player-2") },
+			wantErr: true,
+		},
+		{
+			name: "clear word rejects invalid row",
+			run:  func(state *room.GameState) error { return ClearWord(state, "player-2", 9) },
+			want: ErrInvalidSlot,
+		},
+		{
+			name: "clear word rejects unknown player",
+			run:  func(state *room.GameState) error { return ClearWord(state, "missing-player", 0) },
+			want: room.ErrPlayerNotFound,
+		},
+		{
+			name: "clear board rejects unknown player",
+			run:  func(state *room.GameState) error { return ClearBoard(state, "missing-player") },
+			want: room.ErrPlayerNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := newClearTestState(room.TurnPhaseArrange)
+			if tt.mutate != nil {
+				tt.mutate(state)
+			}
+
+			err := tt.run(state)
+			if tt.want != nil && !errors.Is(err, tt.want) {
+				t.Fatalf("error = %v, want %v", err, tt.want)
+			}
+			if tt.wantErr && err == nil {
+				t.Fatal("error = nil, want non-nil")
+			}
+		})
+	}
+}
+
 func TestAutoDiscardDrawnCardRemovesDrawnCardFromHand(t *testing.T) {
 	state := newAutoDiscardTestState()
 
@@ -440,6 +587,40 @@ func newUnplaceTestState(turnPhase room.TurnPhase) *room.GameState {
 			{
 				ID:        "player-2",
 				Hand:      []room.Card{},
+				WordBoard: board,
+			},
+		},
+	}
+}
+
+func newClearTestState(turnPhase room.TurnPhase) *room.GameState {
+	board := room.NewWordBoard(room.Variation{WordLengths: []int{3, 2, 1}})
+	cardA := room.Card{ID: "card-a", Letter: "A"}
+	cardB := room.Card{ID: "card-b", Letter: "B"}
+	cardC := room.Card{ID: "card-c", Letter: "C"}
+	board.Rows[0].Slots[0].Card = &cardA
+	board.Rows[0].Slots[2].Card = &cardB
+	board.Rows[0].IsComplete = true
+	board.Rows[1].Slots[0].Card = &cardC
+	board.Rows[1].IsComplete = true
+	board.AllComplete = true
+
+	return &room.GameState{
+		RoomCode: "ABC123",
+		Phase:    room.GamePhasePlaying,
+		Turn: room.Turn{
+			CurrentPlayerID: "player-1",
+			Phase:           turnPhase,
+		},
+		Players: []room.Player{
+			{
+				ID:        "player-1",
+				Hand:      []room.Card{},
+				WordBoard: room.NewWordBoard(room.Variation{WordLengths: []int{3, 2, 1}}),
+			},
+			{
+				ID:        "player-2",
+				Hand:      []room.Card{{ID: "card-hand", Letter: "H"}},
 				WordBoard: board,
 			},
 		},

@@ -212,6 +212,76 @@ func applyUnplaceCard(state *room.GameState, playerID string, req unplaceCardReq
 	return nil
 }
 
+// handleGameClearWord processes moving all cards in a row back into hand.
+func (h *Hub) handleGameClearWord(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
+	req, ok := decodeClearWord(c, rawPayload)
+	if !ok {
+		return
+	}
+	state, update, ok := h.clearWord(c, roomCode, playerID, req)
+	if ok {
+		h.broadcastBoardUpdated(&state, playerID, update)
+	}
+}
+
+// decodeClearWord decodes the clear-word request payload.
+func decodeClearWord(c *client, rawPayload json.RawMessage) (clearWordRequest, bool) {
+	var req clearWordRequest
+	return req, decodePayload(c, rawPayload, &req)
+}
+
+// clearWord applies the clear-row action through the room store.
+func (h *Hub) clearWord(c *client, roomCode, playerID string, req clearWordRequest) (room.GameState, boardUpdate, bool) {
+	var update boardUpdate
+	state, err := h.store.UpdateGameState(roomCode, func(state *room.GameState) error {
+		return applyClearWord(state, playerID, req, &update)
+	})
+	if err != nil {
+		sendErr(c, gameErrorCode(err), err.Error())
+		return state, update, false
+	}
+	return state, update, true
+}
+
+// applyClearWord mutates state and captures the updated board view.
+func applyClearWord(state *room.GameState, playerID string, req clearWordRequest, update *boardUpdate) error {
+	if err := game.ClearWord(state, playerID, req.RowIndex); err != nil {
+		return err
+	}
+	*update = boardUpdateFor(state, playerID)
+	return nil
+}
+
+// handleGameClearBoard processes moving every board card back into hand.
+func (h *Hub) handleGameClearBoard(c *client, roomCode, playerID string) {
+	state, update, ok := h.clearBoard(c, roomCode, playerID)
+	if ok {
+		h.broadcastBoardUpdated(&state, playerID, update)
+	}
+}
+
+// clearBoard applies the clear-board action through the room store.
+func (h *Hub) clearBoard(c *client, roomCode, playerID string) (room.GameState, boardUpdate, bool) {
+	var update boardUpdate
+	state, err := h.store.UpdateGameState(roomCode, func(state *room.GameState) error {
+		return applyClearBoard(state, playerID, &update)
+	})
+	if err != nil {
+		sendErr(c, gameErrorCode(err), err.Error())
+		return state, update, false
+	}
+	return state, update, true
+}
+
+// applyClearBoard mutates state and captures the updated board view.
+func applyClearBoard(state *room.GameState, playerID string, update *boardUpdate) error {
+	if err := game.ClearBoard(state, playerID); err != nil {
+		return err
+	}
+	*update = boardUpdateFor(state, playerID)
+	return nil
+}
+
 // handleGameDiscardCard processes discarding a card and ending the turn.
 func (h *Hub) handleGameDiscardCard(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
 	req, ok := decodeDiscardCard(c, rawPayload)

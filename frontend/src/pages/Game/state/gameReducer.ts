@@ -31,6 +31,8 @@ export type GameAction =
     | { type: 'local/timerTick' }
     | { type: 'local/cardPlacedOptimistically'; localPlayerId: string; cardId: string; rowIndex: number; slotIndex: number }
     | { type: 'local/cardUnplacedOptimistically'; localPlayerId: string; rowIndex: number; slotIndex: number }
+    | { type: 'local/wordClearedOptimistically'; localPlayerId: string; rowIndex: number }
+    | { type: 'local/boardClearedOptimistically'; localPlayerId: string }
     | { type: 'local/cardDiscardedOptimistically'; localPlayerId: string; cardId: string }
     | { type: 'local/discardPileDrawnOptimistically'; localPlayerId: string }
 
@@ -118,6 +120,30 @@ function addCardToHand(player: NonNullable<GamePlayer>, card: Card) {
     hand.push(card)
     player.hand = hand
     player.handCount = hand.length
+}
+
+function clearWordRow(player: NonNullable<GamePlayer>, rowIndex: number) {
+    const row = player.wordBoard.rows[rowIndex]
+    if (!row) return
+
+    let cleared = false
+    for (const slot of row.slots) {
+        if (!slot.card) continue
+        addCardToHand(player, slot.card)
+        slot.card = null
+        cleared = true
+    }
+
+    row.isComplete = false
+    if (cleared || player.wordBoard.allComplete) {
+        player.wordBoard.allComplete = false
+    }
+}
+
+function clearWordBoard(player: NonNullable<GamePlayer>) {
+    for (let rowIndex = 0; rowIndex < player.wordBoard.rows.length; rowIndex += 1) {
+        clearWordRow(player, rowIndex)
+    }
 }
 
 function getNextPlayerId(state: GameState, currentPlayerId: string): string {
@@ -255,6 +281,22 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 sourceSlot.card = null
                 markCardRemovedFromBoard(player.wordBoard, action.rowIndex)
                 addCardToHand(player, card)
+                break
+            }
+            case 'local/wordClearedOptimistically': {
+                if (!canPlaceCard(draft)) break
+                const player = draft.players.find((p) => p.id === action.localPlayerId)
+                if (!player) break
+
+                clearWordRow(player, action.rowIndex)
+                break
+            }
+            case 'local/boardClearedOptimistically': {
+                if (!canPlaceCard(draft)) break
+                const player = draft.players.find((p) => p.id === action.localPlayerId)
+                if (!player) break
+
+                clearWordBoard(player)
                 break
             }
             case 'local/cardDiscardedOptimistically': {

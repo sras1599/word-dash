@@ -2,6 +2,7 @@ import './WordBoard.css'
 import { WordRow } from '../WordRow/WordRow'
 import type { WordRowState } from '../WordRow/WordRow'
 import type { CardData } from '../Card/Card'
+import { Icon } from '../Icon/Icon'
 
 export interface WordBoardState {
     rows: WordRowState[]
@@ -17,6 +18,8 @@ export interface WordBoardProps {
     onPlace?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a card is dragged out of a slot. */
     onUnplace?: (rowIndex: number, slotIndex: number) => void
+    /** Called when all cards in a row should be returned to hand. */
+    onClearWord?: (rowIndex: number) => void
     /** Called when drag starts from a slot, with source coordinates. */
     onCardDragStart?: (cardId: string, rowIndex: number, slotIndex: number) => void
     /** Called when a drag operation from a slot ends. */
@@ -30,6 +33,7 @@ export function WordBoard({
     willAutoDiscardCardId = null,
     onPlace,
     onUnplace,
+    onClearWord,
     onCardDragStart,
     onCardDragEnd,
     onCardSelected,
@@ -58,6 +62,18 @@ export function WordBoard({
                         onCardDragEnd={onCardDragEnd}
                         onCardSelected={onCardSelected}
                     />
+                    {onClearWord && (
+                        <button
+                            className="word-board__clear-row-btn"
+                            type="button"
+                            onClick={() => onClearWord(index)}
+                            disabled={!rowState.slots.some((slot) => slot.card !== null)}
+                            aria-label={`Clear word row ${index + 1}`}
+                            title={`Clear word ${index + 1}`}
+                        >
+                            <Icon name="clear" className="word-board__clear-row-icon" />
+                        </button>
+                    )}
                 </div>
             ))}
         </div>

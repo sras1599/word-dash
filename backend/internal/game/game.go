@@ -208,17 +208,21 @@ func recomputeRowsComplete(player *room.Player, dict dictionary.DictionaryChecke
 	}
 }
 
+func validateBoardEdit(state *room.GameState, playerID string) (*room.Player, error) {
+	if state.Phase != room.GamePhasePlaying {
+		return nil, fmt.Errorf("game not in playing phase")
+	}
+	if state.Turn.Phase != room.TurnPhaseDraw && state.Turn.Phase != room.TurnPhaseArrange {
+		return nil, ErrInvalidPhase
+	}
+
+	return state.GetPlayer(playerID)
+}
+
 // UnplaceCard removes a card from the specified board slot and returns it to
 // the player's hand.
 func UnplaceCard(state *room.GameState, playerID string, rowIndex, slotIndex int) error {
-	if state.Phase != room.GamePhasePlaying {
-		return fmt.Errorf("game not in playing phase")
-	}
-	if state.Turn.Phase != room.TurnPhaseDraw && state.Turn.Phase != room.TurnPhaseArrange {
-		return ErrInvalidPhase
-	}
-
-	player, err := state.GetPlayer(playerID)
+	player, err := validateBoardEdit(state, playerID)
 	if err != nil {
 		return err
 	}
@@ -234,6 +238,74 @@ func UnplaceCard(state *room.GameState, playerID string, rowIndex, slotIndex int
 		"player", fmt.Sprintf("%s (%s)", playerID, player.Name),
 		"row", rowIndex,
 		"slot", slotIndex,
+	)
+
+	return nil
+}
+
+// ClearWord removes every placed card from a word row and returns those cards
+// to the player's hand in slot order.
+func ClearWord(state *room.GameState, playerID string, rowIndex int) error {
+	player, err := validateBoardEdit(state, playerID)
+	if err != nil {
+		return err
+	}
+
+	if rowIndex < 0 || rowIndex >= len(player.WordBoard.Rows) {
+		return ErrInvalidSlot
+	}
+
+	row := &player.WordBoard.Rows[rowIndex]
+	clearedCount := 0
+	for slotIndex := range row.Slots {
+		slot := &row.Slots[slotIndex]
+		if slot.Card == nil {
+			continue
+		}
+		player.Hand = append(player.Hand, *slot.Card)
+		slot.Card = nil
+		clearedCount++
+	}
+
+	row.IsComplete = false
+	player.WordBoard.AllComplete = computeBoardAllComplete(player.WordBoard)
+	slog.Info("game: word cleared",
+		"roomCode", state.RoomCode,
+		"player", fmt.Sprintf("%s (%s)", playerID, player.Name),
+		"row", rowIndex,
+		"clearedCards", clearedCount,
+	)
+
+	return nil
+}
+
+// ClearBoard removes every placed card from the player's board and returns
+// those cards to their hand in row-major order.
+func ClearBoard(state *room.GameState, playerID string) error {
+	player, err := validateBoardEdit(state, playerID)
+	if err != nil {
+		return err
+	}
+
+	clearedCount := 0
+	for rowIndex := range player.WordBoard.Rows {
+		row := &player.WordBoard.Rows[rowIndex]
+		for slotIndex := range row.Slots {
+			slot := &row.Slots[slotIndex]
+			if slot.Card == nil {
+				continue
+			}
+			player.Hand = append(player.Hand, *slot.Card)
+			slot.Card = nil
+			clearedCount++
+		}
+		row.IsComplete = false
+	}
+	player.WordBoard.AllComplete = false
+	slog.Info("game: board cleared",
+		"roomCode", state.RoomCode,
+		"player", fmt.Sprintf("%s (%s)", playerID, player.Name),
+		"clearedCards", clearedCount,
 	)
 
 	return nil

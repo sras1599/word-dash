@@ -36,6 +36,8 @@ export type GameMachineEvent =
     | { type: 'LOCAL_TIMER_TICK' }
     | { type: 'LOCAL_CARD_PLACED_OPTIMISTICALLY'; localPlayerId: string; cardId: string; rowIndex: number; slotIndex: number }
     | { type: 'LOCAL_CARD_UNPLACED_OPTIMISTICALLY'; localPlayerId: string; rowIndex: number; slotIndex: number }
+    | { type: 'LOCAL_WORD_CLEARED_OPTIMISTICALLY'; localPlayerId: string; rowIndex: number }
+    | { type: 'LOCAL_BOARD_CLEARED_OPTIMISTICALLY'; localPlayerId: string }
     | { type: 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY'; localPlayerId: string; cardId: string }
     | { type: 'LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY'; localPlayerId: string }
 
@@ -112,6 +114,17 @@ function reduceGameEvent(context: GameMachineContext, event: GameMachineEvent): 
                 localPlayerId: event.localPlayerId,
                 rowIndex: event.rowIndex,
                 slotIndex: event.slotIndex,
+            })
+        case 'LOCAL_WORD_CLEARED_OPTIMISTICALLY':
+            return gameReducer(context.gameState, {
+                type: 'local/wordClearedOptimistically',
+                localPlayerId: event.localPlayerId,
+                rowIndex: event.rowIndex,
+            })
+        case 'LOCAL_BOARD_CLEARED_OPTIMISTICALLY':
+            return gameReducer(context.gameState, {
+                type: 'local/boardClearedOptimistically',
+                localPlayerId: event.localPlayerId,
             })
         case 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY':
             return gameReducer(context.gameState, {
@@ -220,6 +233,8 @@ export const gameMachine = setup({
                 LOCAL_TIMER_TICK: { actions: 'reduceGame' },
                 LOCAL_CARD_PLACED_OPTIMISTICALLY: { actions: 'reduceGame' },
                 LOCAL_CARD_UNPLACED_OPTIMISTICALLY: { actions: 'reduceGame' },
+                LOCAL_WORD_CLEARED_OPTIMISTICALLY: { actions: 'reduceGame' },
+                LOCAL_BOARD_CLEARED_OPTIMISTICALLY: { actions: 'reduceGame' },
                 LOCAL_CARD_DISCARDED_OPTIMISTICALLY: { target: '.draw', actions: 'reduceGame' },
                 LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY: { target: '.arrange', actions: 'reduceGame' },
             },
