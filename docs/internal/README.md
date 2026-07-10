@@ -24,7 +24,7 @@ A turn lasts for a limited time and gives the player some advantages which can h
 A turn has three phases:
 
 1. **Draw phase** — The player draws the top card from either the draw pile or the discard pile. They now temporarily hold one more card than their target hand size (e.g. 13 cards in the 3, 4, 5 variation).
-2. **Arrange phase** — A turn timer (1 minute) starts. The player may rearrange their cards freely, trying to form all required words with their new hand.
+2. **Arrange phase** — The same turn timer continues from the draw phase. The player may rearrange their cards freely, trying to form all required words with their new hand.
 3. **Swap phase** — Before the timer expires, the player must discard exactly one card from their hand. This brings them back to their normal hand size. They can discard the card they just drew (effectively passing) or any other card. If the timer expires before the player swaps, the game automatically discards the card drawn that turn.
 
 After the swap phase, the turn passes clockwise to the next player.

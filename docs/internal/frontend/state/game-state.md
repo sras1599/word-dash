@@ -40,7 +40,7 @@ type Variation = {
 /** Phase of a player's turn */
 type TurnPhase =
   | 'draw'     // player must draw a card to begin their turn
-  | 'arrange'  // player has drawn and timer is running; they arrange cards
+  | 'arrange'  // player has drawn and continues with the same turn timer
   | 'idle';    // it is not this player's turn
 
 /** State of the active turn */

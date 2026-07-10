@@ -142,9 +142,14 @@ func (h *Hub) handleTurnTimeout(roomCode string) {
 		h.autoDiscardTimedOutTurn(roomCode, skippedPlayerID)
 		return
 	}
-	if previousState == nil || !canSkipDisconnected(previousState) || isCurrentPlayerConnected(previousState) {
+	if previousState == nil || !canSkipDisconnected(previousState) {
 		slog.Warn("timer: expired outside skippable state", "roomCode", roomCode, "player", skippedPlayerID)
 		return
+	}
+
+	reason := "timeout"
+	if !isCurrentPlayerConnected(previousState) {
+		reason = "disconnected"
 	}
 
 	nextState, err := h.store.NextTurn(roomCode)
@@ -153,7 +158,7 @@ func (h *Hub) handleTurnTimeout(roomCode string) {
 		return
 	}
 	h.logTurnTimeout(roomCode, skippedPlayerID, previousState, nextState)
-	h.broadcastTurnSkipped(roomCode, skippedPlayerID, "disconnected", nextState)
+	h.broadcastTurnSkipped(roomCode, skippedPlayerID, reason, nextState)
 	h.skipDisconnectedTurns(roomCode)
 	h.syncFinalGameState(roomCode)
 }
@@ -218,7 +223,8 @@ func (h *Hub) syncFinalGameState(roomCode string) {
 
 // skipDisconnectedTurns rotates past disconnected players in draw phase.
 func (h *Hub) skipDisconnectedTurns(roomCode string) {
-	for {
+	maxSkips := h.maxDisconnectedSkips(roomCode)
+	for range maxSkips {
 		state, ok := h.nextDisconnectedTurn(roomCode)
 		if !ok {
 			return
@@ -227,6 +233,16 @@ func (h *Hub) skipDisconnectedTurns(roomCode string) {
 			return
 		}
 	}
+}
+
+// maxDisconnectedSkips bounds chained skips so an all-disconnected room cannot
+// spin forever.
+func (h *Hub) maxDisconnectedSkips(roomCode string) int {
+	state, err := h.store.Get(roomCode)
+	if err != nil {
+		return 0
+	}
+	return len(state.Players)
 }
 
 // nextDisconnectedTurn loads a skippable disconnected current turn.

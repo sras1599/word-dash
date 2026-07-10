@@ -102,6 +102,29 @@ func TestPlaceCardSwapsBoardCardsAcrossRows(t *testing.T) {
 	}
 }
 
+func TestDrawCardPreservesRemainingTurnTime(t *testing.T) {
+	state := newDrawCardTestState()
+	state.Turn.TimeRemainingMs = 5_000
+
+	drawn, err := DrawCard(state, "player-1", "draw")
+	if err != nil {
+		t.Fatalf("draw card: %v", err)
+	}
+
+	if drawn == nil || drawn.ID != "card-drawn" {
+		t.Fatalf("drawn card = %#v, want card-drawn", drawn)
+	}
+	if state.Turn.Phase != room.TurnPhaseArrange {
+		t.Fatalf("turn phase = %q, want arrange", state.Turn.Phase)
+	}
+	if state.Turn.TimeRemainingMs != 5_000 {
+		t.Fatalf("time remaining = %d, want 5000", state.Turn.TimeRemainingMs)
+	}
+	if state.Turn.DrawnCard == nil || state.Turn.DrawnCard.ID != "card-drawn" {
+		t.Fatalf("turn drawn card = %#v, want card-drawn", state.Turn.DrawnCard)
+	}
+}
+
 func TestUnplaceCardAllowsOwnBoardEditsDuringDrawAndArrange(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -562,6 +585,28 @@ func newAutoDiscardTestState() *room.GameState {
 		DrawPile:       []room.Card{{ID: "card-b", Letter: "B"}},
 		DrawPileCount:  1,
 		DiscardPile:    []room.Card{},
+	}
+}
+
+func newDrawCardTestState() *room.GameState {
+	return &room.GameState{
+		RoomCode: "ABC123",
+		Phase:    room.GamePhasePlaying,
+		Turn: room.Turn{
+			CurrentPlayerID: "player-1",
+			Phase:           room.TurnPhaseDraw,
+			TimeRemainingMs: 60_000,
+		},
+		Players: []room.Player{
+			{
+				ID:        "player-1",
+				Hand:      []room.Card{},
+				WordBoard: room.NewWordBoard(room.Variation{WordLengths: []int{2}}),
+			},
+		},
+		TurnDurationMs: 60_000,
+		DrawPile:       []room.Card{{ID: "card-drawn", Letter: "D"}},
+		DrawPileCount:  1,
 	}
 }
 

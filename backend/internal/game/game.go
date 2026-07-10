@@ -84,7 +84,6 @@ func DrawCard(state *room.GameState, playerID string, source string) (*room.Card
 
 	// Update turn state
 	state.Turn.Phase = room.TurnPhaseArrange
-	state.Turn.TimeRemainingMs = state.TurnDurationMs
 	state.Turn.DrawnCard = &drawnCard
 	playerName := ""
 	if p, err := state.GetPlayer(playerID); err == nil {

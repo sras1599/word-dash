@@ -21,8 +21,8 @@ idle -> draw -> arrange -> (discard) -> idle (next player)
 ```
 
 - `idle`: Between turns. No events accepted.
-- `draw`: Active player must draw exactly one card from the draw pile or discard pile. Hand size = normal + 1. Players may still place or unplace cards on their own boards.
-- `arrange`: 60-second timer is running. Players may freely place and unplace cards on their own boards. All `game:board_updated` events are broadcast.
+- `draw`: Active player must draw exactly one card from the draw pile or discard pile. The turn timer is already running. Hand size = normal + 1 after the draw. Players may still place or unplace cards on their own boards.
+- `arrange`: The same turn timer continues from draw phase. Players may freely place and unplace cards on their own boards. All `game:board_updated` events are broadcast.
 - `discard` / `timeout`: Active player discards exactly one card, returning to normal hand size. If the timer expires first, the drawn card is automatically discarded.
 
 ## Rules Enforced Server-Side
