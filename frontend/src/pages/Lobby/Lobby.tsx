@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { PageShell, type FloatingLetter } from '../../components/PageShell/PageShell'
 import { session } from '../../lib/session'
 import { customVariationSchema, turnDurationSchema } from '../../lib/schemas'
+import { useDocumentTitle } from '../../lib/useDocumentTitle'
 import {
     getPresetDisplayLabel,
     getVariationDifficulty,
@@ -41,6 +42,7 @@ export function Lobby() {
     const navigate = useNavigate()
     const localPlayerId = session.getPlayerId() ?? ''
     const { lobby, pageStatus, sendReady, startGame, updateSettings } = useLobbyRoom(roomCode, localPlayerId)
+    useDocumentTitle('Lobby')
 
     const [customInput, setCustomInput] = useState('')
     const [customVariationError, setCustomVariationError] = useState('')

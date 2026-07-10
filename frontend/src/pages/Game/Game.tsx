@@ -3,6 +3,7 @@ import { GameBoard } from '../../components/GameBoard/GameBoard'
 import { PageShell, type FloatingLetter } from '../../components/PageShell/PageShell'
 import type { GamePlayer, GameState } from '../../lib/gameTypes'
 import { session } from '../../lib/session'
+import { useDocumentTitle } from '../../lib/useDocumentTitle'
 import { GameOverDialog } from './components/GameOverDialog'
 import { GameStateScreen } from './components/GameStateScreen'
 import { GameTopBar } from './components/GameTopBar'
@@ -39,11 +40,43 @@ function getBoardSubtitle(
     return `Waiting for ${currentTurnPlayer?.name ?? 'the next player'}.`
 }
 
+function getGameTitle(
+    roomCode: string | undefined,
+    gameState: GameState | null,
+    localPlayerId: string,
+): string {
+    const roomLabel = roomCode ? roomCode.toUpperCase() : 'Game'
+
+    if (!gameState) {
+        return `${roomLabel} - Loading`
+    }
+
+    if (gameState.phase === 'finished') {
+        const winner = gameState.winnerId
+            ? gameState.players.find((player) => player.id === gameState.winnerId)
+            : null
+
+        return winner ? `${winner.name} won ${roomLabel}` : `${roomLabel} - Game Over`
+    }
+
+    if (gameState.phase === 'waiting') {
+        return `${roomLabel} - Preparing`
+    }
+
+    if (gameState.turn.currentPlayerId === localPlayerId) {
+        return `Your Turn - ${roomLabel}`
+    }
+
+    const currentPlayer = gameState.players.find((player) => player.id === gameState.turn.currentPlayerId)
+    return currentPlayer ? `${currentPlayer.name}'s Turn - ${roomLabel}` : `${roomLabel} - Playing`
+}
+
 export function Game() {
     const { roomCode } = useParams<{ roomCode: string }>()
     const navigate = useNavigate()
     const localPlayerId = session.getPlayerId() ?? ''
     const { gameState, draw, place, unplace, clearWord, clearBoard, discard, restartLobby, close } = useGameRoom(roomCode, localPlayerId)
+    useDocumentTitle(getGameTitle(roomCode, gameState, localPlayerId))
 
     function handlePlayAgain() {
         restartLobby()

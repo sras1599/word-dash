@@ -1,6 +1,7 @@
 import { BrandLogo } from '../../components/BrandLogo/BrandLogo'
 import { PageShell, type FloatingLetter } from '../../components/PageShell/PageShell'
 import { cx } from '../../lib/cx'
+import { useDocumentTitle } from '../../lib/useDocumentTitle'
 import { CreateGamePanel } from './components/CreateGamePanel'
 import { JoinGamePanel } from './components/JoinGamePanel'
 import { useHomeActions } from './hooks/useHomeActions'
@@ -21,6 +22,8 @@ const FLOATING_LETTERS: FloatingLetter[] = [
 ]
 
 export function Home() {
+    useDocumentTitle('Home')
+
     const {
         panel,
         createForm,
