@@ -22,7 +22,7 @@ Use this skill to turn a UI idea into several concrete, reviewable prototype var
    - Prefer existing component APIs, CSS custom properties, utilities, and Storybook conventions.
 
 3. Create prototype specs:
-   - Generate 3-5 distinct variants unless the user asks for a different count.
+   - Generate at least 5 distinct variants unless the user explicitly asks for more.
    - Give each variant a concise intent, such as crisp, playful, minimal, premium, dense, or animated.
    - Include the states the user needs to compare, including hover, focus, selected, disabled, loading, error, or active when relevant.
    - For animation variants, specify duration, easing, trigger, and reduced-motion behavior before implementation.
@@ -30,8 +30,11 @@ Use this skill to turn a UI idea into several concrete, reviewable prototype var
 4. Implement temporary Storybook experiments:
    - Use Storybook titles under `Experiments/...`, for example `Experiments/Game/Card Selection`.
    - Include a `Current` or baseline story when a direct comparison is useful.
-   - Prefer side-by-side stories and compact comparison matrices for visual review.
-   - Keep production components untouched until the user chooses a direction. If a prototype needs alternate styling, isolate it in experiment-only wrappers, CSS classes, or local story render functions.
+   - Always create a comparison matrix story that shows all prototype variants side by side.
+   - Always create a separate story for each individual prototype variant so it can be inspected on its own.
+   - Keep production components untouched until the user chooses a direction.
+   - Inherit the target component's base styling by default. Prototype CSS must override only what is necessary for the specific experiment or state being tested.
+   - If a prototype needs alternate styling, scope it to experiment-only wrappers, CSS classes, or local story render functions without restyling the component shell, dimensions, typography, or surrounding surface unless that is the explicit experiment.
    - Avoid adding app routes or permanent toggles unless Storybook cannot represent the requested interaction.
 
 5. Preserve quality constraints:
