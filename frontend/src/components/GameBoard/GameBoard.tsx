@@ -509,6 +509,7 @@ export function GameBoard({
 
                         <WordBoard
                             wordBoard={localPlayer.wordBoard}
+                            drawnCardId={drawnCardId}
                             willAutoDiscardCardId={willAutoDiscardCardId}
                             selectedSlot={visibleSelectedBoardSlot}
                             onPlace={canEditBoard ? onPlace : undefined}

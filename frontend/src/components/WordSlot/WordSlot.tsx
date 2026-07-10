@@ -10,6 +10,8 @@ export interface WordSlotProps {
     rowIndex: number
     /** Card currently placed here. `null` means the slot is empty. */
     card: CardData | null
+    /** ID of the drawn card when this slot contains it. */
+    drawnCardId?: string | null
     /** ID of the card that should flash before automatic discard. */
     willAutoDiscardCardId?: string | null
     /** Whether this slot is selected for keyboard shortcuts. */
@@ -32,6 +34,7 @@ export function WordSlot({
     slotIndex,
     rowIndex,
     card,
+    drawnCardId = null,
     willAutoDiscardCardId = null,
     isSelected = false,
     onPlace,
@@ -94,6 +97,7 @@ export function WordSlot({
                     card={card}
                     draggable={canDragCard}
                     readOnly={!canDragCard && !onCardSelected}
+                    isDrawn={card.id === drawnCardId}
                     selected={isSelected}
                     willAutoDiscard={card.id === willAutoDiscardCardId}
                     onClick={handleCardClick}

@@ -7,6 +7,8 @@
     --card-width: 80px;
     --card-teal: #2db89c;
     --card-red: #E8231A;
+    --card-green: #406925;
+    --card-gold: #fabd00;
     --card-face-bg: #fafaf0;
     --card-face-border: #deded4;
     --card-back-bg: #111111;
@@ -66,8 +68,42 @@
    State: drawn this turn
 ───────────────────────────────────────────── */
 .card--drawn {
-    border-color: var(--card-teal);
+    background:
+        radial-gradient(circle at 20% 18%, color-mix(in srgb, var(--card-gold) 30%, transparent), transparent 24%),
+        radial-gradient(circle at 80% 82%, color-mix(in srgb, var(--card-teal) 18%, transparent), transparent 28%),
+        var(--card-face-bg);
+    border-color: color-mix(in srgb, var(--card-gold) 58%, var(--card-teal));
     border-width: 2px;
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--card-gold) 26%, transparent),
+        0 10px 18px -13px color-mix(in srgb, var(--card-gold) 65%, transparent),
+        var(--card-shadow);
+}
+
+.card--drawn::before,
+.card--drawn::after {
+    position: absolute;
+    z-index: 1;
+    color: color-mix(in srgb, var(--card-gold) 78%, var(--card-red));
+    content: '+';
+    font-family: inherit;
+    font-size: calc(var(--card-width) * 0.2);
+    font-weight: 900;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.card--drawn::before {
+    top: 0.42rem;
+    right: 0.36rem;
+    transform: rotate(12deg);
+}
+
+.card--drawn::after {
+    bottom: 0.36rem;
+    left: 0.42rem;
+    color: color-mix(in srgb, var(--card-teal) 72%, var(--card-green));
+    transform: rotate(-18deg);
 }
 
 .card--will-auto-discard {
@@ -230,14 +266,14 @@
         box-shadow:
             var(--card-shadow),
             0 0 0 0 rgba(232, 35, 26, 0);
-        border-color: var(--card-teal);
+        border-color: var(--card-face-border);
     }
 
     50% {
         box-shadow:
             var(--card-shadow),
             0 0 0 4px rgba(232, 35, 26, 0.75);
-        border-color: var(--card-red);
+        border-color: var(--card-face-border);
     }
 }
 

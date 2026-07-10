@@ -13,6 +13,8 @@ export interface WordBoardState {
 export interface WordBoardProps {
     /** Full word board state from GameState for the local player. */
     wordBoard: WordBoardState
+    /** ID of the drawn card, even if it has been placed on the board. */
+    drawnCardId?: string | null
     /** ID of the card that should flash before automatic discard. */
     willAutoDiscardCardId?: string | null
     /** Called when a card is dropped into a slot. */
@@ -35,6 +37,7 @@ export interface WordBoardProps {
 
 export function WordBoard({
     wordBoard,
+    drawnCardId = null,
     willAutoDiscardCardId = null,
     onPlace,
     onUnplace,
@@ -62,6 +65,7 @@ export function WordBoard({
                     <WordRow
                         rowState={rowState}
                         rowIndex={index}
+                        drawnCardId={drawnCardId}
                         willAutoDiscardCardId={willAutoDiscardCardId}
                         isSelected={selectedSlot?.rowIndex === index}
                         selectedSlotIndex={selectedSlot?.rowIndex === index ? selectedSlot.slotIndex : null}
