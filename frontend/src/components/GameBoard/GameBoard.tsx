@@ -151,8 +151,10 @@ export function GameBoard({
                     canDraw: isDrawPhase,
                     canDiscard,
                     canEditBoard,
+                    canDrawFromDiscard: discardTopCard !== null,
                     drawPileCount,
                     hand: localPlayer?.hand ?? [],
+                    isBoardSelected: selectedHandCardId === null,
                     selectedHandCardId,
                     selection: selectedBoardSlot,
                     wordBoard: localPlayer?.wordBoard ?? null,
@@ -172,7 +174,7 @@ export function GameBoard({
                     setSelectedHandCardId(action.cardId)
                     break
                 case 'draw':
-                    onDraw?.('draw')
+                    onDraw?.(action.source)
                     break
                 case 'place':
                     onPlace?.(action.cardId, action.rowIndex, action.slotIndex)
@@ -207,6 +209,7 @@ export function GameBoard({
     }, [
         canEditBoard,
         canDiscard,
+        discardTopCard,
         drawPileCount,
         isDrawPhase,
         localPlayer,
@@ -531,7 +534,6 @@ export function GameBoard({
                                     selectedCardId={selectedHandCardId}
                                     onCardClick={handleHandCardSelected}
                                     onDropOnHand={canEditBoard && onUnplace ? enableDropOnHand : undefined}
-                                    onDiscard={canDiscard ? handleDiscard : undefined}
                                 />
                             </div>
                         </div>

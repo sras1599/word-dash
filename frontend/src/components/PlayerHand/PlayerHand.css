@@ -61,33 +61,3 @@
     align-items: flex-end;
     position: relative;
 }
-
-/* ─────────────────────────────────────────────
-   Discard button — only shown when a card is
-   selected and onDiscard is provided.
-───────────────────────────────────────────── */
-.player-hand__discard-btn {
-    padding: 6px 20px;
-    border-radius: 6px;
-    border: none;
-    background: #E8231A;
-    color: #fff;
-    font-size: 0.875rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: background 0.15s ease, transform 0.1s ease;
-}
-
-.player-hand__discard-btn:hover {
-    background: #c41c14;
-}
-
-.player-hand__discard-btn:active {
-    transform: scale(0.97);
-}
-
-.player-hand__discard-btn:focus-visible {
-    outline: 2px solid rgba(245, 166, 35, 0.75);
-    outline-offset: 2px;
-}

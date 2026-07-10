@@ -153,8 +153,23 @@ export const KeyboardShortcuts: Story = {
         },
     },
     play: async ({ args, canvasElement, userEvent }) => {
+        await userEvent.keyboard('{Shift>}{Alt>}D{/Alt}{/Shift}')
+        await expect(args.onDraw).toHaveBeenCalledWith('discard')
+
         await userEvent.keyboard('{Shift>}D{/Shift}')
         await expect(args.onDraw).toHaveBeenCalledWith('draw')
+
+        await userEvent.keyboard('{Shift>}H{/Shift}')
+        await waitFor(() => expect(getSelectedHandCard(canvasElement)).toHaveAttribute('aria-label', 'Letter B'))
+
+        await userEvent.keyboard('{ArrowRight}')
+        await waitFor(() => expect(getSelectedHandCard(canvasElement)).toHaveAttribute('aria-label', 'Letter E'))
+
+        await userEvent.keyboard('{ArrowLeft}')
+        await waitFor(() => expect(getSelectedHandCard(canvasElement)).toHaveAttribute('aria-label', 'Letter B'))
+
+        await userEvent.keyboard('{Shift>}B{/Shift}')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-row-index', '0'))
 
         await userEvent.keyboard('2')
         await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-row-index', '1'))
@@ -162,6 +177,19 @@ export const KeyboardShortcuts: Story = {
 
         await userEvent.keyboard('{ArrowRight}')
         await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-slot-index', '1'))
+
+        await userEvent.keyboard('3')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-row-index', '2'))
+        await expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-slot-index', '0')
+
+        await userEvent.keyboard('{ArrowDown}')
+        await waitFor(() => expect(getSelectedHandCard(canvasElement)).toHaveAttribute('aria-label', 'Letter B'))
+
+        await userEvent.keyboard('{ArrowUp}')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-row-index', '2'))
+
+        await userEvent.keyboard('{Shift>}B{/Shift}')
+        await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-row-index', '2'))
 
         await userEvent.keyboard('1')
         await waitFor(() => expect(getSelectedSlot(canvasElement)).toHaveAttribute('data-row-index', '0'))
@@ -206,6 +234,13 @@ export const LocalArrangePhase: Story = {
             timeRemainingMs: 30_000,
             totalDurationMs: 60_000,
         },
+    },
+    play: async ({ args, canvasElement, userEvent }) => {
+        await userEvent.keyboard('{Shift>}H{/Shift}')
+        await waitFor(() => expect(getSelectedHandCard(canvasElement)).toHaveAttribute('aria-label', 'Letter A'))
+
+        await userEvent.keyboard('{Shift>}D{/Shift}')
+        await expect(args.onDiscard).toHaveBeenCalledWith('c1')
     },
 }
 
@@ -358,6 +393,15 @@ function getSelectedSlot(canvasElement: HTMLElement): HTMLElement {
     }
 
     return selectedSlot
+}
+
+function getSelectedHandCard(canvasElement: HTMLElement): HTMLElement {
+    const selectedCard = canvasElement.querySelector<HTMLElement>('.player-hand .card--selected')
+    if (!selectedCard) {
+        throw new Error('Expected a selected hand card')
+    }
+
+    return selectedCard
 }
 
 function getMockCallCount(mockFn: unknown): number {

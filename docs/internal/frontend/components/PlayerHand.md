@@ -35,7 +35,7 @@ The drawn card is visually separated — pushed to the right or given a distinct
 | `hand`        | `Card[]`                 | The player's normal hand cards.                                           |
 | `drawnCard`   | `Card \| null`           | The extra card drawn this turn. Null if not in arrange phase.             |
 | `isDraggable` | `boolean`                | Whether cards can be dragged. Only true during local player's own turn.   |
-| `selectedCardId` | `string \| null`      | The currently selected card, for keyboard or click-based discard flow.   |
+| `selectedCardId` | `string \| null`      | The currently selected card, for keyboard navigation.                    |
 
 ---
 
@@ -45,8 +45,8 @@ The drawn card is visually separated — pushed to the right or given a distinct
 |-------------------------------|--------------------------------------------------------------------------------------------------|
 | Drag card from hand           | Initiates drag with `cardId` as data. The card dims in-place while being dragged.                |
 | Drop card back onto hand      | If dragged from a `WordSlot`, the card returns to the hand. Parent handles the `unplace_card` event. |
-| Click card (selectable)       | Marks the card as `selected`. A second click deselects. Only one card selected at a time.        |
-| Click **Discard** (selected)  | Fires `onDiscard(selectedCardId)`. Handled by the game page to dispatch discard event.           |
+| Click card (selectable)       | Marks the card as `selected`. Only one card is selected at a time.                              |
+| `Shift+D` with card selected  | Handled by `GameBoard` to dispatch discard during the arrange phase.                            |
 
 ---
 
@@ -56,4 +56,4 @@ The drawn card is visually separated — pushed to the right or given a distinct
 - During dragging, the original card position shows a ghost / dimmed placeholder so the hand layout does not collapse.
 - `drawnCard` is always shown last (rightmost), and uses the `isDrawn` prop on `Card` to show the teal border.
 - When `isDraggable` is false, all cards show the non-interactive locked style (slightly muted, no hover effect).
-- The component does not decide what is valid to discard — it simply fires callbacks and lets the game page and server enforce the rules.
+- The component does not decide what is valid to discard; `GameBoard` and the server enforce discard rules.

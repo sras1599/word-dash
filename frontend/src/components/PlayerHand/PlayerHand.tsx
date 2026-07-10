@@ -13,7 +13,7 @@ export interface PlayerHandProps {
     willAutoDiscardCardId?: string | null
     /** Whether cards can be dragged. Only true during local player's own turn. */
     isDraggable?: boolean
-    /** The currently selected card id, for keyboard or click-based discard flow. */
+    /** The currently selected card id, for keyboard navigation. */
     selectedCardId?: string | null
     /** Message shown when the hand contains no cards. */
     emptyLabel?: string
@@ -25,8 +25,6 @@ export interface PlayerHandProps {
     onDragEnd?: () => void
     /** Called when a card is dropped onto the hand area. */
     onDropOnHand?: (cardId: string) => void
-    /** Called when the selected card should be discarded. */
-    onDiscard?: (cardId: string) => void
 }
 
 export function PlayerHand({
@@ -41,7 +39,6 @@ export function PlayerHand({
     onDragStart,
     onDragEnd,
     onDropOnHand,
-    onDiscard,
 }: PlayerHandProps) {
     const handleCardClick = (cardId: string) => {
         onCardClick?.(cardId)
@@ -53,10 +50,6 @@ export function PlayerHand({
         disabled: !canDropOnHand,
         data: { type: 'player-hand' },
     })
-
-    const handleDiscardClick = () => {
-        if (selectedCardId) onDiscard?.(selectedCardId)
-    }
 
     const className = [
         'player-hand',
@@ -114,15 +107,6 @@ export function PlayerHand({
                 )}
             </div>
 
-            {selectedCardId && onDiscard && (
-                <button
-                    className="player-hand__discard-btn"
-                    onClick={handleDiscardClick}
-                    aria-label="Discard selected card"
-                >
-                    Discard
-                </button>
-            )}
         </div>
     )
 }

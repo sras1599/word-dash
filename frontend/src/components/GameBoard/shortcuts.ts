@@ -10,7 +10,7 @@ export type ShortcutAction =
     | { type: 'none' }
     | { type: 'select-board'; selection: BoardSelection | null }
     | { type: 'select-hand'; cardId: string | null }
-    | { type: 'draw' }
+    | { type: 'draw'; source: 'draw' | 'discard' }
     | { type: 'place'; cardId: string; rowIndex: number; slotIndex: number; selection?: BoardSelection }
     | { type: 'unplace'; rowIndex: number; slotIndex: number }
     | { type: 'discard'; cardId: string; source: 'hand' | 'board' }
@@ -29,8 +29,10 @@ export type ShortcutOptions = {
     canDraw: boolean
     canDiscard: boolean
     canEditBoard: boolean
+    canDrawFromDiscard: boolean
     drawPileCount: number
     hand: CardData[]
+    isBoardSelected: boolean
     selectedHandCardId: string | null
     selection: BoardSelection | null
     wordBoard: WordBoardState | null
@@ -42,8 +44,16 @@ export function getShortcutAction(keyInfo: ShortcutKey, options: ShortcutOptions
     const { key, shiftKey = false, altKey = false, ctrlKey = false, metaKey = false } = keyInfo
     const hasPrimaryModifier = ctrlKey || metaKey
 
-    if (!hasPrimaryModifier && !altKey && shiftKey && key.toLowerCase() === 'd') {
-        return options.canDraw && options.drawPileCount > 0 ? { type: 'draw' } : { type: 'none' }
+    if (!hasPrimaryModifier && shiftKey && key.toLowerCase() === 'd') {
+        if (altKey) {
+            return options.canDraw && options.canDrawFromDiscard ? { type: 'draw', source: 'discard' } : { type: 'none' }
+        }
+
+        if (options.canDraw) {
+            return options.drawPileCount > 0 ? { type: 'draw', source: 'draw' } : { type: 'none' }
+        }
+
+        return getDiscardAction(options)
     }
 
     if (!options.canEditBoard || !options.wordBoard) {
@@ -78,15 +88,25 @@ export function getShortcutAction(keyInfo: ShortcutKey, options: ShortcutOptions
         return { type: 'select-board', selection: null }
     }
 
-    const selection = normalizeSelection(options.wordBoard, options.selection)
-    if (!selection) return { type: 'none' }
-
     if (!hasPrimaryModifier && !altKey && !shiftKey && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+        const handAction = moveHandSelection(options.hand, options.selectedHandCardId, key === 'ArrowLeft' ? -1 : 1)
+        if (handAction.type !== 'none') return handAction
+
+        const selection = normalizeSelection(options.wordBoard, options.selection)
+        if (!selection) return { type: 'none' }
+
         return moveSelectionWithinRow(options.wordBoard, selection, key === 'ArrowLeft' ? -1 : 1)
     }
 
+    if (!hasPrimaryModifier && !altKey && !shiftKey && key === 'ArrowUp' && hasHandSelection(options.hand, options.selectedHandCardId)) {
+        return selectLastBoardRow(options.wordBoard)
+    }
+
+    const selection = normalizeSelection(options.wordBoard, options.selection)
+    if (!selection) return { type: 'none' }
+
     if (!hasPrimaryModifier && !altKey && !shiftKey && (key === 'ArrowUp' || key === 'ArrowDown')) {
-        return moveSelectionAcrossRows(options.wordBoard, selection, key === 'ArrowUp' ? -1 : 1)
+        return moveSelectionAcrossRows(options.wordBoard, selection, key === 'ArrowUp' ? -1 : 1, options.hand)
     }
 
     if (!hasPrimaryModifier && !altKey && shiftKey && (key === 'ArrowLeft' || key === 'ArrowRight')) {
@@ -99,10 +119,12 @@ export function getShortcutAction(keyInfo: ShortcutKey, options: ShortcutOptions
         }
 
         const slot = getSlot(options.wordBoard, selection)
-        return slot?.card ? { type: 'unplace', rowIndex: selection.rowIndex, slotIndex: selection.slotIndex } : { type: 'none' }
+        return slot?.card
+            ? { type: 'unplace', rowIndex: selection.rowIndex, slotIndex: selection.slotIndex }
+            : moveSelectionWithinRow(options.wordBoard, selection, -1)
     }
 
-    if (!hasPrimaryModifier && !altKey && !shiftKey && LETTER_PATTERN.test(key)) {
+    if (!hasPrimaryModifier && !altKey && !shiftKey && LETTER_PATTERN.test(key) && options.isBoardSelected) {
         return placeTypedLetter(options.wordBoard, options.hand, selection, key)
     }
 
@@ -150,12 +172,46 @@ function moveSelectionWithinRow(wordBoard: WordBoardState, selection: BoardSelec
     return { type: 'select-board', selection: { rowIndex: selection.rowIndex, slotIndex: nextSlotIndex } }
 }
 
-function moveSelectionAcrossRows(wordBoard: WordBoardState, selection: BoardSelection, direction: -1 | 1): ShortcutAction {
+function moveSelectionAcrossRows(
+    wordBoard: WordBoardState,
+    selection: BoardSelection,
+    direction: -1 | 1,
+    hand: CardData[],
+): ShortcutAction {
+    if (direction === 1 && selection.rowIndex === wordBoard.rows.length - 1) {
+        return hand[0]
+            ? { type: 'select-hand', cardId: hand[0].id }
+            : { type: 'select-board', selection }
+    }
+
     const nextRowIndex = clamp(selection.rowIndex + direction, 0, wordBoard.rows.length - 1)
     const nextRow = wordBoard.rows[nextRowIndex]
     const nextSlotIndex = clamp(selection.slotIndex, 0, nextRow.slots.length - 1)
 
     return { type: 'select-board', selection: { rowIndex: nextRowIndex, slotIndex: nextSlotIndex } }
+}
+
+function moveHandSelection(hand: CardData[], selectedHandCardId: string | null, direction: -1 | 1): ShortcutAction {
+    if (!selectedHandCardId) return { type: 'none' }
+
+    const selectedIndex = hand.findIndex((card) => card.id === selectedHandCardId)
+    if (selectedIndex === -1) return { type: 'none' }
+
+    const nextIndex = clamp(selectedIndex + direction, 0, hand.length - 1)
+    return { type: 'select-hand', cardId: hand[nextIndex]?.id ?? null }
+}
+
+function hasHandSelection(hand: CardData[], selectedHandCardId: string | null): boolean {
+    return selectedHandCardId !== null && hand.some((card) => card.id === selectedHandCardId)
+}
+
+function selectLastBoardRow(wordBoard: WordBoardState): ShortcutAction {
+    const rowIndex = wordBoard.rows.length - 1
+    const row = wordBoard.rows[rowIndex]
+
+    return row
+        ? { type: 'select-board', selection: { rowIndex, slotIndex: getFirstEmptySlotIndex(row.slots) } }
+        : { type: 'none' }
 }
 
 function moveCardWithinRow(wordBoard: WordBoardState, selection: BoardSelection, direction: -1 | 1): ShortcutAction {

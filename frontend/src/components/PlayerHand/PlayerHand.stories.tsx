@@ -42,7 +42,6 @@ const meta = {
         onCardClick: fn(),
         onDragStart: fn(),
         onDragEnd: fn(),
-        onDiscard: fn(),
     },
 } satisfies Meta<typeof PlayerHand>
 
@@ -68,11 +67,10 @@ export const EmptyDropTarget: Story = {
     },
 }
 
-/** A card in the hand is selected, revealing the Discard button. */
+/** A card in the hand is selected for keyboard navigation. */
 export const CardSelected: Story = {
     args: {
         selectedCardId: 'card-e',
-        onDiscard: fn(),
     },
 }
 
@@ -84,13 +82,12 @@ export const WithDrawnCard: Story = {
     },
 }
 
-/** Drawn card is selected — Discard button targets it. */
+/** Drawn card is selected for keyboard navigation. */
 export const DrawnCardSelected: Story = {
     args: {
         drawnCard: DRAWN_CARD,
         isDraggable: true,
         selectedCardId: DRAWN_CARD.id,
-        onDiscard: fn(),
     },
 }
 

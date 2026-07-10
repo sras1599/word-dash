@@ -65,21 +65,22 @@ The top-level layout component for the game screen. Assembles all gameplay sub-c
 | `WordBoard.onClearWord(row)`             | `game:clear_word { rowIndex }`                      |
 | `GameBoard.onClearBoard()`               | `game:clear_board {}`                               |
 | `CardPile.onDiscard(cardId)`             | `game:discard_card { cardId }`                      |
-| `PlayerHand.onDiscard(cardId)`           | `game:discard_card { cardId }`                      |
 
 Keyboard shortcuts are enabled by default on the game board and reuse the same callbacks:
 
 | Shortcut                                | Behaviour                                                         |
 |-----------------------------------------|-------------------------------------------------------------------|
-| `Shift+D`                               | Draw from the draw pile during the local player's draw phase.     |
+| `Shift+D`                               | Draw from the draw pile during draw phase, or discard the selected card during arrange phase. |
+| `Shift+Alt+D`                           | Draw from the discard pile during the local player's draw phase.  |
 | `1`-`9`                                 | Select a word row and focus its first empty slot, or slot 1.       |
 | `ArrowLeft` / `ArrowRight`              | Move the selected slot within the current row.                    |
 | `ArrowUp` / `ArrowDown`                 | Move to the previous/next row, clamping to that row's length.     |
 | `Shift+ArrowLeft` / `Shift+ArrowRight`  | Move or swap the selected card within the same row only.          |
-| `A`-`Z`                                 | Place the first matching hand card into the selected slot.        |
-| `Backspace`                             | Return the selected slot's card to hand.                          |
+| `A`-`Z`                                 | Place the first matching hand card into the selected slot only when the board is selected. |
+| `Backspace`                             | Return the selected slot's card to hand, or move to the previous slot if empty. |
 | `Shift+Backspace`                       | Clear the selected word row.                                      |
-| `Shift+Delete`                          | Clear the whole word board without confirmation.                  |
+| `Shift+Delete`                          | Discard the selected card during arrange phase.                   |
+| `Shift+Alt+Delete`                      | Clear the whole word board without confirmation.                  |
 | `Escape`                                | Clear the selected slot.                                          |
 
 Shortcuts are ignored while typing in form fields. `Enter` and `Space` are intentionally unused.
@@ -94,5 +95,5 @@ Shortcuts are ignored while typing in form fields. `Enter` and `Space` are inten
 - The component is purely a layout/orchestration layer — no game logic lives here beyond deriving these flags and routing callbacks to WebSocket events.
 - During the "draw" and "arrange" phases, the local player's `PlayerHand` and `WordBoard`/`WordSlot` can be edited. Draw piles are only clickable during the local player's draw phase, and the discard pile accepts discarded cards during arrange.
 - Dropping a board card onto an occupied board slot swaps the two board cards, including across rows. Dropping a hand card onto an occupied board slot moves the displaced board card to the end of the hand.
-- Typed-letter shortcuts are case-insensitive. If the selected slot already contains that letter, no action is sent.
+- Typed-letter shortcuts are case-insensitive and only apply while the board is selected. If the hand is selected or the selected slot already contains that letter, no action is sent.
 - Keyboard card movement never wraps across word boundaries.

@@ -59,7 +59,7 @@ The game page has distinct visual states driven by `GameState.turn.phase` and `G
 - Player's hand cards are draggable.
 - Word board slots are active drop targets.
 - The drawn card is visually distinguished (e.g. subtle teal outline) so the player knows which card is the "extra" one they must eventually discard.
-- A **Discard** action is available: player can drag any card to the discard pile, or select one and click a "Discard" button to swap.
+- A **Discard** action is available: player can drag any card to the discard pile, or select one and press `Shift+D`.
 - When the player successfully discards one card, the arrange phase ends and the turn passes.
 
 ### It is another player's turn
@@ -84,7 +84,7 @@ The game page has distinct visual states driven by `GameState.turn.phase` and `G
 | Drag card from WordSlot → occupied WordSlot | Board cards swap slots optimistically, then `game:board_updated` reconciles board and hand state. |
 | Drag card from WordSlot → hand              | Card returns to hand optimistically, then `game:board_updated` reconciles board and hand state.    |
 | Drag card from hand → discard pile          | Card is discarded optimistically, local turn advances, then `game:turn_ended` reconciles state.    |
-| Discard button (with card selected)         | Same as drag to discard pile.                                                                      |
+| `Shift+D` with card selected                | Same as drag to discard pile during arrange phase.                                                 |
 | Turn timer reaches zero (server-side)       | Server auto-discards drawn card, broadcasts `game:turn_ended`. `TurnIndicator` and hand update.   |
 | Any player arranges complete valid words    | Server broadcasts `game:player_won`. Win overlay appears over the game board. No route change.     |
 
