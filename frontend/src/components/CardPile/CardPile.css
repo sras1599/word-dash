@@ -95,6 +95,12 @@
     cursor: pointer;
 }
 
+.card-pile--interactive .card-pile__stack,
+.card-pile--interactive .card-pile__ghost,
+.card-pile--interactive .card-pile__stack>.card {
+    cursor: pointer;
+}
+
 .card-pile--interactive:hover .card-pile__stack>.card {
     transform: translateY(-2px);
     transition: transform 0.15s ease;
