@@ -12,6 +12,7 @@
     --card-back-bg: #111111;
     --card-radius: calc(var(--card-width) * 0.09);
     --card-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.14);
+    --card-selection-color: var(--card-teal);
 
     position: relative;
     width: var(--card-width);
@@ -23,7 +24,8 @@
     transition:
         transform 0.15s ease,
         box-shadow 0.15s ease,
-        border-color 0.15s ease;
+        border-color 0.15s ease,
+        background-color 0.15s ease;
     cursor: default;
     outline: none;
     box-sizing: border-box;
@@ -76,7 +78,11 @@
    State: selected
 ───────────────────────────────────────────── */
 .card--selected {
-    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--card-selection-color) 76%, var(--card-face-bg));
+    box-shadow:
+        0 4px 4px rgba(0, 0, 0, 0.25),
+        0 0 13px color-mix(in srgb, var(--card-selection-color) 38%, transparent);
+    transform: translateY(-5px);
 }
 
 /* ─────────────────────────────────────────────
@@ -100,18 +106,14 @@
 }
 
 /* ─────────────────────────────────────────────
-   Interactive focus ring (keyboard nav)
-───────────────────────────────────────────── */
-.card[role='button']:focus-visible {
-    outline: 2px solid var(--card-teal);
-    outline-offset: 2px;
-}
-
-/* ─────────────────────────────────────────────
    Vowel card
 ───────────────────────────────────────────── */
 .card--vowel .card__letter {
     color: var(--card-red);
+}
+
+.card--vowel {
+    --card-selection-color: var(--card-red);
 }
 
 /* ─────────────────────────────────────────────

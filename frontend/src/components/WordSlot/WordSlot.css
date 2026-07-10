@@ -47,10 +47,16 @@
     background-color: rgba(45, 184, 156, 0.05);
 }
 
-.word-slot--selected {
+.word-slot--selected.word-slot--empty {
     border-color: var(--slot-drag-color) !important;
     box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.28);
     background-color: rgba(245, 166, 35, 0.05);
+}
+
+.word-slot--selected.word-slot--filled {
+    border-color: transparent;
+    box-shadow: none;
+    background-color: transparent;
 }
 
 /* ─────────────────────────────────────────────
