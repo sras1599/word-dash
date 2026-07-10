@@ -42,7 +42,8 @@ Use this skill to turn a UI idea into several concrete, reviewable prototype var
    - Do not let prototype text or controls overflow their containers.
 
 6. Present the result:
-   - Start Storybook when practical, or provide the exact command from the frontend package.
+   - Do not start, open, or restart the Storybook server. The skill's work is done once the prototype stories have been created.
+   - Provide the exact Storybook title/path for the created prototypes so the user can find them in their already-running Storybook instance.
    - Summarize each variant by name and visual intent.
    - Make clear that the prototype code is temporary and should be removed or graduated after a decision.
 
