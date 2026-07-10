@@ -70,6 +70,7 @@ Keyboard shortcuts are enabled by default on the game board and reuse the same c
 
 | Shortcut                                | Behaviour                                                         |
 |-----------------------------------------|-------------------------------------------------------------------|
+| `Shift+?`                               | Open the keyboard shortcuts modal.                                |
 | `Shift+D`                               | Draw from the draw pile during draw phase, or discard the selected card during arrange phase. |
 | `Shift+Alt+D`                           | Draw from the discard pile during the local player's draw phase.  |
 | `1`-`9`                                 | Select a word row and focus its first empty slot, or slot 1.       |
@@ -79,7 +80,6 @@ Keyboard shortcuts are enabled by default on the game board and reuse the same c
 | `A`-`Z`                                 | Place the first matching hand card into the selected slot only when the board is selected. |
 | `Backspace`                             | Return the selected slot's card to hand, or move to the previous slot if empty. |
 | `Shift+Backspace`                       | Clear the selected word row.                                      |
-| `Shift+Delete`                          | Discard the selected card during arrange phase.                   |
 | `Shift+Alt+Delete`                      | Clear the whole word board without confirmation.                  |
 | `Escape`                                | Clear the selected slot.                                          |
 

@@ -236,22 +236,7 @@ describe('GameBoard shortcuts', () => {
             makeOptions({ selection: { rowIndex: 0, slotIndex: 1 } }),
         )).toEqual({ type: 'clear-board' })
         expect(action('Delete')).toEqual({ type: 'none' })
-        expect(action({ key: 'Delete', shiftKey: true }, { rowIndex: 0, slotIndex: 0 })).toEqual({
-            type: 'discard',
-            cardId: 'board-c',
-            source: 'board',
-        })
-        expect(action({ key: 'Delete', shiftKey: true }, { rowIndex: 0, slotIndex: 0 }, {
-            selectedHandCardId: 'hand-b',
-        })).toEqual({
-            type: 'discard',
-            cardId: 'hand-b',
-            source: 'hand',
-        })
-        expect(action({ key: 'Delete', shiftKey: true }, { rowIndex: 0, slotIndex: 0 }, {
-            canDiscard: false,
-            selectedHandCardId: 'hand-b',
-        })).toEqual({ type: 'none' })
+        expect(action({ key: 'Delete', shiftKey: true }, { rowIndex: 0, slotIndex: 0 })).toEqual({ type: 'none' })
         expect(action({ key: 'D', shiftKey: true }, { rowIndex: 0, slotIndex: 0 }, {
             canDraw: false,
         })).toEqual({

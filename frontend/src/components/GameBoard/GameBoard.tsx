@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
     closestCenter,
     DragOverlay,
@@ -22,6 +22,7 @@ import { cx } from '../../lib/cx'
 import { Icon } from '../Icon/Icon'
 import { getGameBoardDropAction } from './dnd'
 import { getShortcutAction, shouldIgnoreShortcutTarget, type BoardSelection } from './shortcuts'
+import { KeyboardShortcutsModal } from './KeyboardShortcutsModal'
 
 export interface GameBoardLocalPlayer {
     id: string
@@ -124,7 +125,9 @@ export function GameBoard({
     onDiscard,
 }: GameBoardProps) {
     const boardDragSourceRef = useRef<BoardDragSource | null>(null)
+    const shortcutsTitleId = useId()
     const [activeDragCard, setActiveDragCard] = useState<CardData | null>(null)
+    const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
     const [selectedBoardSlot, setSelectedBoardSlot] = useState<BoardSelection | null>(null)
     const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(null)
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor))
@@ -138,6 +141,20 @@ export function GameBoard({
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.isComposing || shouldIgnoreShortcutTarget(event.target)) return
+
+            if (!event.ctrlKey && !event.metaKey && !event.altKey && event.shiftKey && event.key === '?') {
+                event.preventDefault()
+                setIsShortcutsOpen(true)
+                return
+            }
+
+            if (isShortcutsOpen) {
+                if (event.key === 'Escape') {
+                    event.preventDefault()
+                    setIsShortcutsOpen(false)
+                }
+                return
+            }
 
             const action = getShortcutAction(
                 {
@@ -212,6 +229,7 @@ export function GameBoard({
         discardTopCard,
         drawPileCount,
         isDrawPhase,
+        isShortcutsOpen,
         localPlayer,
         onClearBoard,
         onClearWord,
@@ -473,18 +491,20 @@ export function GameBoard({
                                 <p className="game-board__board-subtitle">{boardSubtitle}</p>
                             </div>
 
-                            {canClearBoard && onClearBoard && (
-                                <button
-                                    className="game-board__clear-board-btn"
-                                    type="button"
-                                    onClick={onClearBoard}
-                                    aria-label="Clear word board"
-                                    title="Clear board"
-                                >
-                                    <Icon name="clear" className="game-board__clear-icon" />
-                                    <span>Clear Board</span>
-                                </button>
-                            )}
+                            <div className="game-board__board-actions">
+                                {canClearBoard && onClearBoard && (
+                                    <button
+                                        className="game-board__clear-board-btn"
+                                        type="button"
+                                        onClick={onClearBoard}
+                                        aria-label="Clear word board"
+                                        title="Clear board"
+                                    >
+                                        <Icon name="clear" className="game-board__clear-icon" />
+                                        <span>Clear Board</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         <WordBoard
@@ -539,6 +559,20 @@ export function GameBoard({
                         </div>
                     </footer>
                 )}
+
+                <button
+                    className="game-board__shortcuts-btn"
+                    type="button"
+                    onClick={() => setIsShortcutsOpen(true)}
+                    aria-label="Open keyboard shortcuts"
+                    title="Keyboard shortcuts"
+                >
+                    <Icon name="help" className="game-board__shortcuts-btn-icon" />
+                    <span className="game-board__shortcut-keys" aria-hidden="true">
+                        <kbd>Shift</kbd>
+                        <kbd>?</kbd>
+                    </span>
+                </button>
             </div>
             <DragOverlay>
                 {activeDragCard ? (
@@ -547,6 +581,9 @@ export function GameBoard({
                     </div>
                 ) : null}
             </DragOverlay>
+            {isShortcutsOpen && (
+                <KeyboardShortcutsModal titleId={shortcutsTitleId} onClose={() => setIsShortcutsOpen(false)} />
+            )}
         </DndContext>
     )
 }

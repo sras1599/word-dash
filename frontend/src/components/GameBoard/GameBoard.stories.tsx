@@ -153,6 +153,13 @@ export const KeyboardShortcuts: Story = {
         },
     },
     play: async ({ args, canvasElement, userEvent }) => {
+        const documentBody = canvasElement.ownerDocument.body
+
+        await userEvent.keyboard('{Shift>}?{/Shift}')
+        await waitFor(() => expect(documentBody.querySelector('[role="dialog"]')).not.toBeNull())
+        await userEvent.keyboard('{Escape}')
+        await waitFor(() => expect(documentBody.querySelector('[role="dialog"]')).toBeNull())
+
         await userEvent.keyboard('{Shift>}{Alt>}D{/Alt}{/Shift}')
         await expect(args.onDraw).toHaveBeenCalledWith('discard')
 
@@ -217,7 +224,7 @@ export const KeyboardShortcuts: Story = {
         await userEvent.keyboard('{Shift>}{Backspace}{/Shift}')
         await expect(args.onClearWord).toHaveBeenCalledWith(0)
 
-        await userEvent.keyboard('{Shift>}{Delete}{/Shift}')
+        await userEvent.keyboard('{Shift>}{Alt>}{Delete}{/Alt}{/Shift}')
         await expect(args.onClearBoard).toHaveBeenCalled()
     },
 }

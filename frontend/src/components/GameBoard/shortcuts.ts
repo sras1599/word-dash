@@ -72,10 +72,6 @@ export function getShortcutAction(keyInfo: ShortcutKey, options: ShortcutOptions
         return boardHasCards(options.wordBoard) ? { type: 'clear-board' } : { type: 'none' }
     }
 
-    if (!hasPrimaryModifier && shiftKey && !altKey && key === 'Delete') {
-        return getDiscardAction(options)
-    }
-
     if (!hasPrimaryModifier && !altKey && !shiftKey && /^[1-9]$/.test(key)) {
         const rowIndex = Number(key) - 1
         const row = options.wordBoard.rows[rowIndex]
