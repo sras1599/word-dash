@@ -2,6 +2,7 @@ import type { Preview } from '@storybook/react-vite'
 import { createElement } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { initialize, mswLoader } from 'msw-storybook-addon'
+import '../src/index.css'
 
 initialize({ onUnhandledRequest: 'bypass' })
 
