@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prototype UI"
+  short_description: "Explore UI variants in Storybook"
+  default_prompt: "Use $prototype-ui to prototype several Storybook UI variants from this prompt."
