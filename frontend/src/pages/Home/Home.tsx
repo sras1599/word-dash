@@ -54,12 +54,7 @@ export function Home() {
                     </div>
 
                     <p className="page-home__hero-tagline">
-                        Experience wordplay at the speed of thought.{' '}
-                        <span className="page-home__hero-accent page-home__hero-accent--primary">Kinetic</span>{' '}
-                        rounds,{' '}
-                        <span className="page-home__hero-accent page-home__hero-accent--secondary">dynamic</span>{' '}
-                        boards, and endless{' '}
-                        <span className="page-home__hero-accent page-home__hero-accent--tertiary">fun</span>.
+                        Test your speed and vocabulary at the same time by building words as quickly as possible!
                     </p>
 
                     <div className="page-home__cta" role="group" aria-label="Game actions">

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { expect } from 'storybook/test'
 import { Home } from './Home'
 
 const meta = {
@@ -25,7 +26,13 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 /** Default landing state — no panel open. */
-export const Default: Story = {}
+export const Default: Story = {
+    play: async ({ canvas }) => {
+        await expect(canvas.getByText(
+            'Test your speed and vocabulary at the same time by building words as quickly as possible!',
+        )).toBeInTheDocument()
+    },
+}
 
 /** "Create Game" panel expanded. */
 export const CreatePanelOpen: Story = {

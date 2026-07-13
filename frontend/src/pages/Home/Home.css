@@ -217,22 +217,6 @@
     font-weight: 500;
 }
 
-.page-home__hero-accent {
-    font-weight: 700;
-}
-
-.page-home__hero-accent--primary {
-    color: var(--primary);
-}
-
-.page-home__hero-accent--secondary {
-    color: var(--secondary);
-}
-
-.page-home__hero-accent--tertiary {
-    color: var(--tertiary);
-}
-
 .page-home__cta {
     display: flex;
     align-items: center;
