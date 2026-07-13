@@ -1,0 +1,387 @@
+# Word Dash Deployment Guide
+
+This is the canonical deployment guide for Word Dash. The supported deployment
+uses Kubernetes, Traefik, Cloudflare Tunnel, versioned images from GHCR, and the
+repository's `deploy/deploy.sh` script. Flux can optionally automate later
+version promotions.
+
+The checked-in configuration deploys the application at:
+
+```text
+https://word-dash.rasmalai.dev
+```
+
+Run all repository commands below from the repository root.
+
+## Deployment Overview
+
+The deployment contains:
+
+- A Go backend serving REST on `8080` and WebSockets on `8081`.
+- A React/Vite frontend served by Nginx on `80`.
+- Redis for shared room state.
+- Traefik `IngressRoute` resources for public routing.
+- A Cloudflare Tunnel deployment for reaching Traefik without exposing the
+  server directly.
+
+The public routes are:
+
+```text
+/api       -> backend REST server
+/realtime  -> backend WebSocket server
+/           -> frontend
+```
+
+Cloudflare Tunnel is required by the current deployment script. The script
+always applies `deploy/cloudflare` and waits for `cloudflared` to become ready.
+
+## Prerequisites
+
+The deployment host needs:
+
+- A Linux host with a Kubernetes cluster, such as k3s.
+- `kubectl` configured for that cluster.
+- Traefik running in the cluster with the `IngressRoute` and `Middleware` CRDs.
+- A Cloudflare Tunnel configured for `word-dash.rasmalai.dev`.
+- The tunnel credentials JSON downloaded to a secure local path.
+- Public GHCR images, or Kubernetes pull credentials for private images.
+- A published Word Dash release such as `v0.1.0`.
+
+The deployment script checks cluster connectivity, validates both Kustomize
+trees, verifies Traefik and its CRDs, manages the Cloudflare credentials Secret,
+applies all resources, and waits for every workload rollout.
+
+## 1. Prepare Kubernetes and Traefik
+
+For a small single-node server, install k3s with its bundled Traefik:
+
+```bash
+curl -sfL https://get.k3s.io | sh -
+```
+
+Configure `kubectl` for the cluster, then verify the node and Traefik:
+
+```bash
+kubectl get nodes
+kubectl get deployments --all-namespaces \
+  --selector app.kubernetes.io/name=traefik
+kubectl get crd ingressroutes.traefik.io middlewares.traefik.io
+```
+
+If Traefik was disabled in k3s, install it with its CRDs before continuing. For
+example, using Helm:
+
+```bash
+helm repo add traefik https://traefik.github.io/charts
+helm repo update
+helm install traefik traefik/traefik \
+  --namespace kube-system \
+  --wait
+```
+
+## 2. Configure Cloudflare Tunnel
+
+Create a Cloudflare Tunnel for `word-dash.rasmalai.dev`, configure its public
+hostname, and download its credentials JSON. The checked-in tunnel configuration
+forwards that hostname to:
+
+```text
+http://traefik.kube-system.svc.cluster.local:80
+```
+
+Keep the credentials JSON outside the repository. The initial deployment turns
+it into `secret/cloudflared-credentials` in the `cloudflare` namespace.
+
+The Secret is stored in the k3s datastore and survives host, k3s, Flux, and pod
+restarts. It must be recreated only after cluster or namespace deletion, loss of
+the datastore, migration to a different cluster, or credential rotation. Keep a
+recovery copy in a password manager or another secure location.
+
+## 3. Publish a Release
+
+The release workflow is defined in `.github/workflows/release.yml`. On pushes to
+`main`, it runs backend tests and frontend lint/build, then creates or updates a
+Release Please pull request from Conventional Commits:
+
+- `fix:` produces a patch release.
+- `feat:` produces a minor release.
+- A `BREAKING CHANGE:` footer or `!` produces a major release.
+
+Merging the release pull request creates a stable `vX.Y.Z` GitHub Release. The
+workflow publishes matching immutable images to:
+
+```text
+ghcr.io/sras1599/word-dash/backend:vX.Y.Z
+ghcr.io/sras1599/word-dash/frontend:vX.Y.Z
+```
+
+It publishes the frontend first and the backend last. Flux treats the backend
+tag as the marker that the complete release is available. Do not bootstrap Flux
+or perform the initial deployment until the first release images exist.
+
+GitHub Actions must have permission to create pull requests and publish
+packages. Branch protection must allow the Release Please pull request to merge
+after its required checks pass.
+
+### Private GHCR Images
+
+The simplest configuration is to make both packages public. For private
+packages, create a read-only registry Secret in the `word-dash` namespace and
+add it under `imagePullSecrets` in both application Deployments:
+
+```bash
+kubectl create namespace word-dash --dry-run=client --output=yaml | \
+  kubectl apply -f -
+kubectl create secret docker-registry ghcr-pull-secret \
+  --namespace word-dash \
+  --docker-server=ghcr.io \
+  --docker-username=YOUR_GITHUB_USER \
+  --docker-password=YOUR_READ_PACKAGES_TOKEN
+```
+
+Flux image scanning also needs a read-only registry Secret in `flux-system` and
+a matching `secretRef` on `ImageRepository/word-dash-backend`.
+
+## 4. Configure a Fork or Different Domain
+
+The current manifests and release workflow are specific to `sras1599` and
+`word-dash.rasmalai.dev`. For a fork, update the registry owner in:
+
+- `.github/workflows/release.yml`
+- `deploy/k8s/backend.yaml`
+- `deploy/k8s/frontend.yaml`
+- `deploy/flux/image-automation.yaml`
+
+For another hostname, update:
+
+- The frontend build URLs in `.github/workflows/release.yml`.
+- `CORS_ORIGIN` in `deploy/k8s/backend.yaml`.
+- The routes in `deploy/k8s/ingressroute.yaml`.
+- The hostname in `deploy/cloudflare/configmap.yaml`.
+- The public hostname configured for the Cloudflare Tunnel.
+
+The frontend build values must use the route prefixes but not their endpoint
+suffixes:
+
+```env
+VITE_BASE_PATH=/
+VITE_API_URL=https://word-dash.rasmalai.dev/api
+VITE_WS_URL=wss://word-dash.rasmalai.dev/realtime
+```
+
+Do not append `/rooms` to `VITE_API_URL` or `/ws` to `VITE_WS_URL`; the
+frontend adds those paths.
+
+## 5. Initial Deployment
+
+After the release images exist, deploy an explicit version and provide the
+Cloudflare credentials file:
+
+```bash
+deploy/deploy.sh \
+  --cloudflare-credentials /path/to/TUNNEL_UUID.json \
+  --version v0.1.0
+```
+
+Replace `v0.1.0` with the published version. The script creates or updates the
+Cloudflare Secret, applies the application and tunnel manifests, waits for
+Redis, backend, frontend, and cloudflared, and prints the deployed resources.
+
+Use a longer rollout timeout when needed:
+
+```bash
+deploy/deploy.sh \
+  --cloudflare-credentials /path/to/TUNNEL_UUID.json \
+  --version v0.1.0 \
+  --timeout 10m
+```
+
+## 6. Subsequent Deployments and Rollbacks
+
+After the Secret exists, omit the credentials argument. To deploy the version
+pinned in `deploy/k8s`, run:
+
+```bash
+deploy/deploy.sh
+```
+
+To deploy or roll back to an explicit stable release without editing Git, run:
+
+```bash
+deploy/deploy.sh --version v1.2.3
+```
+
+The explicit version must match `vX.Y.Z`. It changes the rendered manifests sent
+to the cluster; it does not edit the checked-in image tags.
+
+All script options have environment-variable equivalents:
+
+```bash
+CLOUDFLARE_CREDENTIALS_FILE=/path/to/TUNNEL_UUID.json \
+APP_VERSION=v1.2.3 \
+ROLLOUT_TIMEOUT=10m \
+deploy/deploy.sh
+```
+
+Run `deploy/deploy.sh --help` for the authoritative command interface.
+
+If Flux is active, it can restore the Git-pinned image after a manual explicit
+deployment. For a durable GitOps rollback, suspend image automation and revert
+the Flux promotion commit that updated both image tags:
+
+```bash
+flux suspend image update word-dash
+```
+
+Resume automation after deciding which release should again be selected:
+
+```bash
+flux resume image update word-dash
+```
+
+## 7. Optional Automatic Deployment With Flux
+
+The initial scripted deployment is sufficient to run the application. Flux is
+optional and automates reconciliation and promotion of later stable releases.
+
+Bootstrap Flux once with Git write access and its image controllers:
+
+```bash
+flux bootstrap github \
+  --owner=sras1599 \
+  --repository=word-dash \
+  --branch=main \
+  --path=deploy/flux \
+  --components-extra=image-reflector-controller,image-automation-controller \
+  --personal
+```
+
+The generated Flux Kustomization must retain the existing `workloads.yaml` and
+`image-automation.yaml` resources in `deploy/flux/kustomization.yaml`.
+
+Flux then:
+
+1. Reconciles the application and Cloudflare manifests from `main`.
+2. Scans the backend package for stable `vX.Y.Z` tags only.
+3. Updates both backend and frontend image tags from one policy.
+4. Commits the promotion to `main` as `chore(deploy):`.
+5. Rolls out the new version through Kubernetes reconciliation.
+
+The existing `cloudflared-credentials` Secret remains manually managed. Flux
+does not delete it because it is not part of the Flux inventory. On a rebuilt
+cluster, recreate it with the initial deployment command before enabling Flux
+reconciliation.
+
+Check Flux with:
+
+```bash
+flux get sources git
+flux get images all
+flux get image update word-dash
+flux get kustomizations
+```
+
+## 8. Verify the Deployment
+
+The script already waits for all Deployments. For additional inspection:
+
+```bash
+kubectl get deployments,pods,services --namespace word-dash
+kubectl get ingressroute --namespace word-dash
+kubectl get deployments,pods --namespace cloudflare
+kubectl logs --namespace word-dash deployment/backend
+kubectl logs --namespace cloudflare deployment/cloudflared
+```
+
+Check the public routes:
+
+```bash
+curl -i https://word-dash.rasmalai.dev/api/healthz
+curl -i https://word-dash.rasmalai.dev/realtime/healthz
+curl -I https://word-dash.rasmalai.dev/
+```
+
+Finally, create a room in one browser session, join it from another, and verify
+that lobby and game updates reach both clients.
+
+## 9. Troubleshooting
+
+### Script cannot connect to Kubernetes
+
+Confirm the current context and cluster access:
+
+```bash
+kubectl config current-context
+kubectl cluster-info
+kubectl get nodes
+```
+
+### Traefik prerequisite fails
+
+Verify the Deployment label, availability, and CRDs:
+
+```bash
+kubectl get deployments --all-namespaces \
+  --selector app.kubernetes.io/name=traefik
+kubectl get crd ingressroutes.traefik.io middlewares.traefik.io
+```
+
+### Cloudflare credentials are missing
+
+Inspect the Secret without printing its value:
+
+```bash
+kubectl get secret cloudflared-credentials --namespace cloudflare
+```
+
+If it is missing or the credentials were rotated, rerun:
+
+```bash
+deploy/deploy.sh \
+  --cloudflare-credentials /path/to/TUNNEL_UUID.json \
+  --version v1.2.3
+```
+
+### Pods do not become ready
+
+```bash
+kubectl describe pods \
+  --namespace word-dash \
+  --selector app.kubernetes.io/part-of=word-dash
+kubectl logs --namespace word-dash deployment/backend
+kubectl logs --namespace word-dash deployment/frontend
+kubectl logs --namespace cloudflare deployment/cloudflared
+```
+
+For image pull failures, confirm that the requested release exists in GHCR and
+that private-package pull Secrets are configured. For API or WebSocket failures,
+confirm the frontend build URLs, backend `CORS_ORIGIN`, Traefik routes, and
+Cloudflare hostname all use the same public domain.
+
+### Flux does not promote a release
+
+Confirm that both images exist with the same final `vX.Y.Z` tag, then inspect:
+
+```bash
+flux get images all
+flux get image update word-dash
+flux logs --level=error
+```
+
+Prerelease, SHA, and moving tags intentionally do not match the image policy.
+
+## 10. Cleanup
+
+Cleanup is intentionally a direct Kubernetes operation. If Flux is installed,
+suspend or remove its Kustomizations first so it does not recreate resources.
+
+```bash
+flux suspend kustomization word-dash
+flux suspend kustomization word-dash-cloudflare
+kubectl delete -k deploy/k8s
+kubectl delete -k deploy/cloudflare
+```
+
+Deleting `deploy/cloudflare` removes the `cloudflare` namespace and therefore
+deletes `cloudflared-credentials`. Retain the original credentials JSON if the
+cluster may be deployed again.

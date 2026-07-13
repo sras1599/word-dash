@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: word-dash
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: word-dash
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backend
+        app.kubernetes.io/part-of: word-dash
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/sras1599/word-dash/backend:v0.0.0 # {"$imagepolicy": "flux-system:word-dash:tag"}
+          imagePullPolicy: Always
+          ports:
+            - name: rest
+              containerPort: 8080
+            - name: websocket
+              containerPort: 8081
+          env:
+            - name: PORT
+              value: "8080"
+            - name: WS_PORT
+              value: "8081"
+            - name: REDIS_URL
+              value: redis://redis.word-dash.svc.cluster.local:6379
+            - name: CORS_ORIGIN
+              value: https://word-dash.rasmalai.dev
+            - name: TURN_DURATION_MS
+              value: "90000"
+            - name: DEFAULT_WORD_LENGTHS
+              value: 3,4,5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: rest
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: rest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: word-dash
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: word-dash
+spec:
+  selector:
+    app.kubernetes.io/name: backend
+  ports:
+    - name: rest
+      port: 8080
+      targetPort: rest
+    - name: websocket
+      port: 8081
+      targetPort: websocket

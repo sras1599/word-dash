@@ -1,0 +1,55 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: word-dash-backend
+  namespace: flux-system
+spec:
+  # The release workflow publishes the frontend image first and the backend
+  # image last. A backend tag therefore acts as the completion marker that the
+  # matching frontend tag already exists. Both deployment setters use the
+  # policy below, so Flux promotes the two images together from this one scan.
+  image: ghcr.io/sras1599/word-dash/backend
+  interval: 1m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: word-dash
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: word-dash-backend
+  filterTags:
+    pattern: '^v(?P<version>[0-9]+\.[0-9]+\.[0-9]+)$'
+    extract: '$version'
+  policy:
+    semver:
+      range: '>=0.0.0'
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageUpdateAutomation
+metadata:
+  name: word-dash
+  namespace: flux-system
+spec:
+  interval: 1m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: flux@word-dash.local
+        name: Word Dash Flux
+      messageTemplate: |-
+        chore(deploy): promote Word Dash images
+
+        {{range .Changed.Changes}}{{print .OldValue}} -> {{println .NewValue}}{{end}}
+    push:
+      branch: main
+  update:
+    path: ./deploy/k8s
+    strategy: Setters
