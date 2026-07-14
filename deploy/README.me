@@ -230,21 +230,29 @@ deployment. For a durable GitOps rollback, suspend image automation and revert
 the Flux promotion commit that updated both image tags:
 
 ```bash
-flux suspend image update word-dash
+deploy/flux.sh suspend-updates
 ```
 
 Resume automation after deciding which release should again be selected:
 
 ```bash
-flux resume image update word-dash
+deploy/flux.sh resume-updates
 ```
 
 ## 7. Optional Automatic Deployment With Flux
 
 The initial scripted deployment is sufficient to run the application. Flux is
 optional and automates reconciliation and promotion of later stable releases.
+See the focused [Flux setup guide](flux/README.md) for prerequisites,
+verification, and troubleshooting.
 
 Bootstrap Flux once with Git write access and its image controllers:
+
+```bash
+deploy/flux.sh bootstrap
+```
+
+The helper confirms the current Kubernetes context, then runs:
 
 ```bash
 flux bootstrap github \
@@ -253,8 +261,13 @@ flux bootstrap github \
   --branch=main \
   --path=deploy/flux \
   --components-extra=image-reflector-controller,image-automation-controller \
+  --read-write-key \
   --personal
 ```
+
+Set `GITHUB_TOKEN` before bootstrapping to avoid Flux prompting for a GitHub
+token. The writable deploy key allows image automation to push promotion
+commits to `main`.
 
 The generated Flux Kustomization must retain the existing `workloads.yaml` and
 `image-automation.yaml` resources in `deploy/flux/kustomization.yaml`.
@@ -275,10 +288,8 @@ reconciliation.
 Check Flux with:
 
 ```bash
-flux get sources git
-flux get images all
-flux get image update word-dash
-flux get kustomizations
+deploy/flux.sh check
+deploy/flux.sh status
 ```
 
 ## 8. Verify the Deployment
@@ -363,9 +374,8 @@ Cloudflare hostname all use the same public domain.
 Confirm that both images exist with the same final `vX.Y.Z` tag, then inspect:
 
 ```bash
-flux get images all
-flux get image update word-dash
-flux logs --level=error
+deploy/flux.sh status
+deploy/flux.sh logs
 ```
 
 Prerelease, SHA, and moving tags intentionally do not match the image policy.
@@ -376,8 +386,7 @@ Cleanup is intentionally a direct Kubernetes operation. If Flux is installed,
 suspend or remove its Kustomizations first so it does not recreate resources.
 
 ```bash
-flux suspend kustomization word-dash
-flux suspend kustomization word-dash-cloudflare
+deploy/flux.sh suspend-workloads
 kubectl delete -k deploy/k8s
 kubectl delete -k deploy/cloudflare
 ```

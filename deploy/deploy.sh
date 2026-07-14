@@ -74,9 +74,18 @@ if [[ -n "$APP_VERSION" && ! "$APP_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; the
 fi
 
 command -v kubectl >/dev/null 2>&1 || die "kubectl is required"
-kubectl cluster-info >/dev/null || die "kubectl cannot connect to the current cluster"
-kubectl kustomize "$SCRIPT_DIR/k8s" >/dev/null || die "the Word Dash manifests are invalid"
+K8S_MANIFESTS="$(kubectl kustomize "$SCRIPT_DIR/k8s")" || \
+  die "the Word Dash manifests are invalid"
+
+if [[ -z "$APP_VERSION" ]] && \
+  grep -Eq \
+    'ghcr\.io/sras1599/word-dash/(backend|frontend):v0\.0\.0([[:space:]]|$)' \
+    <<<"$K8S_MANIFESTS"; then
+  die "the Word Dash manifests still use the v0.0.0 placeholder; pass --version vX.Y.Z or pull the Flux commit that pins a published release"
+fi
+
 kubectl kustomize "$SCRIPT_DIR/cloudflare" >/dev/null || die "the Cloudflare manifests are invalid"
+kubectl cluster-info >/dev/null || die "kubectl cannot connect to the current cluster"
 
 if ! kubectl get customresourcedefinition \
   ingressroutes.traefik.io middlewares.traefik.io >/dev/null 2>&1; then
@@ -124,7 +133,7 @@ fi
 
 log "Applying application manifests${APP_VERSION:+ at $APP_VERSION}"
 if [[ -n "$APP_VERSION" ]]; then
-  kubectl kustomize "$SCRIPT_DIR/k8s" | \
+  printf '%s\n' "$K8S_MANIFESTS" | \
     sed -E \
       -e "s#(ghcr.io/sras1599/word-dash/backend:)v[0-9]+\.[0-9]+\.[0-9]+#\\1$APP_VERSION#" \
       -e "s#(ghcr.io/sras1599/word-dash/frontend:)v[0-9]+\.[0-9]+\.[0-9]+#\\1$APP_VERSION#" | \
