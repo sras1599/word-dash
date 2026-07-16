@@ -45,6 +45,8 @@ func TestEncodeDecodePreservesGameBoardDiscardAndWinner(t *testing.T) {
 		Turn: room.Turn{
 			CurrentPlayerID: "player-1",
 			Phase:           room.TurnPhaseIdle,
+			EndsAtUnixMs:    123_456,
+			Sequence:        9,
 		},
 		Phase:          room.GamePhaseFinished,
 		WinnerID:       &winnerID,
@@ -87,5 +89,8 @@ func TestEncodeDecodePreservesGameBoardDiscardAndWinner(t *testing.T) {
 	}
 	if decoded.WinnerID == nil || *decoded.WinnerID != winnerID {
 		t.Fatalf("expected decoded winner %q, got %#v", winnerID, decoded.WinnerID)
+	}
+	if decoded.Turn.EndsAtUnixMs != 123_456 || decoded.Turn.Sequence != 9 {
+		t.Fatalf("decoded turn deadline/sequence = %d/%d, want 123456/9", decoded.Turn.EndsAtUnixMs, decoded.Turn.Sequence)
 	}
 }

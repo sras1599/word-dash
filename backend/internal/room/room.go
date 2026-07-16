@@ -56,7 +56,8 @@ const (
 type Turn struct {
 	CurrentPlayerID string
 	Phase           TurnPhase
-	TimeRemainingMs int
+	EndsAtUnixMs    int64
+	Sequence        uint64
 	DrawnCard       *Card
 }
 
@@ -115,9 +116,8 @@ type Store interface {
 	MarkPlayerReady(roomCode, playerID string) (GameState, error)
 	MarkPlayerUnready(roomCode, playerID string) (GameState, error)
 	RemovePlayer(roomCode, playerID string) (GameState, bool, error)
-	StartGame(roomCode, playerID string, drawPile []Card) (GameState, error)
-	NextTurn(roomCode string) (GameState, error)
-	TickTimer(roomCode string) (int, error)
+	StartGame(roomCode, playerID string, drawPile []Card, endsAtUnixMs int64) (GameState, error)
+	NextTurn(roomCode string, endsAtUnixMs int64) (GameState, error)
 	UpdateLobbySettings(roomCode, playerID string, variation Variation, turnDurationMs int) (GameState, error)
 	IsPlayerConnected(roomCode, playerID string) bool
 }

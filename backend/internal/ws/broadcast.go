@@ -19,6 +19,24 @@ func (h *Hub) broadcastToRoom(roomCode, event string, payload any) {
 	}
 }
 
+func (h *Hub) broadcastGameToRoom(state *room.GameState, event string, payload any) {
+	slog.Debug("ws: broadcasting event", "event", event, "roomCode", state.RoomCode)
+	meta := h.gameMeta(state)
+	for _, cl := range h.roomClients(state) {
+		cl.sendGame(event, payload, meta)
+	}
+}
+
+func (h *Hub) gameMeta(state *room.GameState) gameEventMeta {
+	meta := gameEventMeta{ServerNowMs: h.now().UnixMilli()}
+	if state.Phase == room.GamePhasePlaying {
+		meta.Turn = &turnMetaJSON{
+			Sequence: state.Turn.Sequence, EndsAtMs: state.Turn.EndsAtUnixMs, DurationMs: state.TurnDurationMs,
+		}
+	}
+	return meta
+}
+
 // roomClients snapshots connected clients for the players in state.
 func (h *Hub) roomClients(state *room.GameState) map[string]*client {
 	h.mu.RLock()
@@ -53,14 +71,16 @@ func appendClient(clients *[]*client, cl *client) {
 
 // broadcastBoardUpdated sends a board update with private hand data scoped per player.
 func (h *Hub) broadcastBoardUpdated(state *room.GameState, playerID string, update boardUpdate) {
+	meta := h.gameMeta(state)
 	for pid, cl := range h.roomClients(state) {
-		cl.send("game:board_updated", boardPayloadFor(pid, playerID, update))
+		cl.sendGame("game:board_updated", boardPayloadFor(pid, playerID, update), meta)
 	}
 }
 
 // syncGameStateToRoom sends personalized full game-state snapshots to a room.
 func (h *Hub) syncGameStateToRoom(state *room.GameState) {
+	meta := h.gameMeta(state)
 	for playerID, cl := range h.roomClients(state) {
-		cl.send("game:state", buildGameStatePayload(state, playerID))
+		cl.sendGame("game:state", buildGameStatePayload(state, playerID), meta)
 	}
 }

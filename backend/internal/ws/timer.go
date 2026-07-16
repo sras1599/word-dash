@@ -11,6 +11,10 @@ import (
 
 // startTurnTimer starts a room timer unless one is already active.
 func (h *Hub) startTurnTimer(roomCode string) {
+	state, err := h.store.Get(roomCode)
+	if err != nil || state.Phase != room.GamePhasePlaying {
+		return
+	}
 	stopCh, started := h.registerTurnTimer(roomCode)
 	if !started {
 		return
@@ -45,56 +49,30 @@ func (h *Hub) stopTurnTimer(roomCode string) {
 func (h *Hub) timerLoop(roomCode string, stopCh <-chan struct{}) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
-	previousRemaining := h.initialRemaining(roomCode)
+	h.reconcileRoomDeadline(roomCode)
 	for {
 		select {
 		case <-stopCh:
 			return
 		case <-ticker.C:
-			previousRemaining = h.handleTimerTick(roomCode, previousRemaining)
+			h.reconcileRoomDeadline(roomCode)
 		}
 	}
 }
 
-// initialRemaining reads the current timer value when the loop starts.
-func (h *Hub) initialRemaining(roomCode string) int {
-	if state, err := h.store.Get(roomCode); err == nil {
-		return state.Turn.TimeRemainingMs
-	}
-	return 0
-}
-
-// handleTimerTick advances timer state and returns the next previous value.
-func (h *Hub) handleTimerTick(roomCode string, previousRemaining int) int {
-	remaining, ok := h.tickAndLoad(roomCode)
-	if !ok {
-		return previousRemaining
-	}
-	state, ok := h.timerState(roomCode)
-	if !ok {
-		return previousRemaining
-	}
-	return h.processTimerState(roomCode, previousRemaining, remaining, state)
-}
-
-// tickAndLoad decrements the timer or stops it if the room vanished.
-func (h *Hub) tickAndLoad(roomCode string) (int, bool) {
-	remaining, err := h.store.TickTimer(roomCode)
-	if err != nil {
-		h.stopMissingTimer(roomCode, "tick")
-		return 0, false
-	}
-	return remaining, true
-}
-
-// timerState reloads state after a timer tick.
-func (h *Hub) timerState(roomCode string) (*room.GameState, bool) {
+// reconcileRoomDeadline evaluates persisted wall-clock time without mutating a counter.
+func (h *Hub) reconcileRoomDeadline(roomCode string) {
 	state, err := h.store.Get(roomCode)
 	if err != nil {
 		h.stopMissingTimer(roomCode, "state load")
-		return nil, false
+		return
 	}
-	return state, true
+	if state.Phase != room.GamePhasePlaying || state.Turn.EndsAtUnixMs == 0 {
+		return
+	}
+	if h.now().UnixMilli() >= state.Turn.EndsAtUnixMs {
+		h.handleTurnTimeout(roomCode)
+	}
 }
 
 // stopMissingTimer logs and stops a timer whose room no longer exists.
@@ -103,41 +81,14 @@ func (h *Hub) stopMissingTimer(roomCode, step string) {
 	h.stopTurnTimer(roomCode)
 }
 
-// processTimerState emits warnings or timeout behavior for a playing room.
-func (h *Hub) processTimerState(roomCode string, previousRemaining, remaining int, state *room.GameState) int {
-	if state.Phase != room.GamePhasePlaying {
-		return state.Turn.TimeRemainingMs
-	}
-	h.maybeBroadcastTimerWarning(roomCode, previousRemaining, remaining, state)
-	if remaining == 0 {
-		return h.afterTimerExpired(roomCode)
-	}
-	return remaining
-}
-
-// maybeBroadcastTimerWarning emits a sparse timer warning if a threshold was crossed.
-func (h *Hub) maybeBroadcastTimerWarning(roomCode string, previousRemaining, remaining int, state *room.GameState) {
-	if shouldBroadcastTimerWarning(previousRemaining, remaining) {
-		h.broadcastToRoom(roomCode, "game:timer_warning", timerWarningPayload{
-			RoomCode:        roomCode,
-			CurrentPlayerID: state.Turn.CurrentPlayerID,
-			TimeRemainingMs: remaining,
-		})
-	}
-}
-
-// afterTimerExpired handles timeout and returns the reset timer value.
-func (h *Hub) afterTimerExpired(roomCode string) int {
-	h.handleTurnTimeout(roomCode)
-	if state, err := h.store.Get(roomCode); err == nil {
-		return state.Turn.TimeRemainingMs
-	}
-	return 0
-}
-
 // handleTurnTimeout applies timeout behavior and reconciles clients after auto-skips.
 func (h *Hub) handleTurnTimeout(roomCode string) {
+	h.reconcileMu.Lock()
+	defer h.reconcileMu.Unlock()
 	skippedPlayerID, previousState := h.currentTurnPlayer(roomCode)
+	if previousState == nil || previousState.Phase != room.GamePhasePlaying || h.now().UnixMilli() < previousState.Turn.EndsAtUnixMs {
+		return
+	}
 	if previousState != nil && previousState.Turn.Phase == room.TurnPhaseArrange {
 		h.autoDiscardTimedOutTurn(roomCode, skippedPlayerID)
 		return
@@ -152,22 +103,26 @@ func (h *Hub) handleTurnTimeout(roomCode string) {
 		reason = "disconnected"
 	}
 
-	nextState, err := h.store.NextTurn(roomCode)
+	nextState, err := h.store.NextTurn(roomCode, h.nextTurnDeadlineMs(previousState))
 	if err != nil {
 		slog.Error("timer: failed to rotate turn", "roomCode", roomCode, "error", err)
 		return
 	}
 	h.logTurnTimeout(roomCode, skippedPlayerID, previousState, nextState)
-	h.broadcastTurnSkipped(roomCode, skippedPlayerID, reason, nextState)
+	h.broadcastTurnSkipped(skippedPlayerID, reason, nextState)
 	h.skipDisconnectedTurns(roomCode)
 	h.syncFinalGameState(roomCode)
+}
+
+func (h *Hub) nextTurnDeadlineMs(state *room.GameState) int64 {
+	return h.now().Add(time.Duration(state.TurnDurationMs) * time.Millisecond).UnixMilli()
 }
 
 // autoDiscardTimedOutTurn discards the drawn card for an expired arrange turn.
 func (h *Hub) autoDiscardTimedOutTurn(roomCode, playerID string) {
 	var result discardCardResult
 	state, err := h.store.UpdateGameState(roomCode, func(state *room.GameState) error {
-		discarded, nextPlayerID, err := game.AutoDiscardDrawnCard(state, playerID)
+		discarded, nextPlayerID, err := game.AutoDiscardDrawnCard(state, playerID, h.nextTurnDeadlineMs(state))
 		if err != nil {
 			return err
 		}
@@ -204,12 +159,11 @@ func (h *Hub) logTurnTimeout(roomCode, skippedPlayerID string, previousState *ro
 }
 
 // broadcastTurnSkipped announces a timeout or disconnected-player skip.
-func (h *Hub) broadcastTurnSkipped(roomCode, playerID, reason string, state room.GameState) {
-	h.broadcastToRoom(roomCode, "game:turn_skipped", turnSkippedPayload{
-		PlayerID:        playerID,
-		Reason:          reason,
-		NextPlayerID:    state.Turn.CurrentPlayerID,
-		TimeRemainingMs: state.Turn.TimeRemainingMs,
+func (h *Hub) broadcastTurnSkipped(playerID, reason string, state room.GameState) {
+	h.broadcastGameToRoom(&state, "game:turn_skipped", turnSkippedPayload{
+		PlayerID:     playerID,
+		Reason:       reason,
+		NextPlayerID: state.Turn.CurrentPlayerID,
 	})
 }
 
@@ -268,12 +222,12 @@ func isCurrentPlayerConnected(state *room.GameState) bool {
 // skipDisconnectedTurn rotates one disconnected player and broadcasts it.
 func (h *Hub) skipDisconnectedTurn(roomCode string, state *room.GameState) bool {
 	currentPlayerID := state.Turn.CurrentPlayerID
-	nextState, err := h.store.NextTurn(roomCode)
+	nextState, err := h.store.NextTurn(roomCode, h.nextTurnDeadlineMs(state))
 	if err != nil {
 		h.logSkipDisconnectedError(roomCode, state, err)
 		return false
 	}
-	h.broadcastTurnSkipped(roomCode, currentPlayerID, "disconnected", nextState)
+	h.broadcastTurnSkipped(currentPlayerID, "disconnected", nextState)
 	return true
 }
 

@@ -50,7 +50,6 @@ function createGameState({
         turn: {
             currentPlayerId: 'p1',
             phase: turnPhase,
-            timeRemainingMs: 90_000,
             drawnCard: null,
         },
         phase: 'playing',
@@ -69,7 +68,6 @@ describe('gameReducer', () => {
             card: { id: 'c3', letter: 'C' },
             drawPileCount: 9,
             discardPileTop: { id: 'd1', letter: 'D' },
-            timeRemainingMs: 80_000,
         })
 
         expect(state?.players[0].hand).toEqual([
@@ -99,20 +97,16 @@ describe('gameReducer', () => {
         expect(state?.players[0].hand).toEqual([])
     })
 
-    it('moves turn state on turn end and countdown tick', () => {
+    it('moves turn state on turn end', () => {
         const ended = gameReducer(createGameState(), {
             type: 'game/turnEnded',
             nextPlayerId: 'p2',
             discardPileTop: { id: 'c1', letter: 'A' },
-            timeRemainingMs: 60_000,
         })
 
         expect(ended?.turn.currentPlayerId).toBe('p2')
         expect(ended?.turn.phase).toBe('draw')
         expect(ended?.discardPileTop).toEqual({ id: 'c1', letter: 'A' })
-
-        const ticked = gameReducer(ended, { type: 'local/timerTick' })
-        expect(ticked?.turn.timeRemainingMs).toBe(59_000)
     })
 
     it('optimistically places a hand card into an empty slot', () => {
@@ -371,7 +365,6 @@ describe('gameReducer', () => {
         expect(discarded?.turn.currentPlayerId).toBe('p2')
         expect(discarded?.turn.phase).toBe('draw')
         expect(discarded?.turn.drawnCard).toBeNull()
-        expect(discarded?.turn.timeRemainingMs).toBe(90_000)
     })
 
     it('optimistically discards from board and marks completion incomplete', () => {
@@ -431,7 +424,6 @@ describe('gameReducer', () => {
             card: discardedTop,
             drawPileCount: 10,
             discardPileTop: null,
-            timeRemainingMs: 89_000,
         })
 
         expect(reconciled?.players[0].hand).toEqual([
@@ -439,6 +431,5 @@ describe('gameReducer', () => {
             discardedTop,
         ])
         expect(reconciled?.players[0].handCount).toBe(2)
-        expect(reconciled?.turn.timeRemainingMs).toBe(89_000)
     })
 })

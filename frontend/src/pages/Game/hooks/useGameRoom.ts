@@ -1,13 +1,16 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMachine } from '@xstate/react'
 import type { Card, WordBoardState } from '../../../lib/gameTypes'
-import { createWsClient, type WsClient } from '../../../lib/ws'
+import { reconcileTurnTimerAnchor, remainingFromAnchor, type TurnTimerAnchor } from '../../../lib/turnTimer'
+import { createWsClient, type GameEventMeta, type WsClient } from '../../../lib/ws'
 import { gameMachine } from '../state/gameMachine'
-import { canDiscardCard, canDrawCard, canPlaceCard, LOCAL_COUNTDOWN_STEP_MS } from '../state/gameReducer'
+import { canDiscardCard, canDrawCard, canPlaceCard } from '../state/gameReducer'
 
 export function useGameRoom(roomCode: string | undefined, localPlayerId: string) {
     const [snapshot, send] = useMachine(gameMachine)
     const wsRef = useRef<WsClient | null>(null)
+    const [timerAnchor, setTimerAnchor] = useState<TurnTimerAnchor | null>(null)
+    const [repaintAtMs, setRepaintAtMs] = useState(() => performance.now())
     const gameState = snapshot.context.gameState
 
     useEffect(() => {
@@ -21,26 +24,31 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
         const ws = createWsClient(roomCode, localPlayerId)
         wsRef.current = ws
 
-        ws.on('game:state', (payload) => {
+        const reconcileTimer = (meta?: GameEventMeta) => {
+            if (!meta) return
+            if (!meta.turn) {
+                setTimerAnchor(null)
+                setRepaintAtMs(performance.now())
+                return
+            }
+            const receivedAtMs = performance.now()
+            setTimerAnchor((current) => reconcileTurnTimerAnchor(current, meta, receivedAtMs))
+            setRepaintAtMs(receivedAtMs)
+        }
+
+        ws.on('game:state', (payload, meta) => {
+            reconcileTimer(meta)
             send({ type: 'GAME_STATE', state: payload as never })
         })
 
-        ws.on('game:turn_started', (payload) => {
-            const { currentPlayerId, timeRemainingMs } = payload as {
-                currentPlayerId: string
-                timeRemainingMs: number
-            }
-            send({ type: 'TURN_STARTED', currentPlayerId, timeRemainingMs })
-        })
-
-        ws.on('game:card_drawn', (payload) => {
-            const { playerId, card, drawPileCount, discardPileTop, timeRemainingMs } = payload as {
+        ws.on('game:card_drawn', (payload, meta) => {
+            reconcileTimer(meta)
+            const { playerId, card, drawPileCount, discardPileTop } = payload as {
                 playerId: string
                 source: 'draw' | 'discard'
                 card: Card | null
                 drawPileCount: number
                 discardPileTop: Card | null
-                timeRemainingMs?: number
             }
             send({
                 type: 'CARD_DRAWN',
@@ -49,11 +57,11 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
                 card,
                 drawPileCount,
                 discardPileTop,
-                timeRemainingMs,
             })
         })
 
-        ws.on('game:board_updated', (payload) => {
+        ws.on('game:board_updated', (payload, meta) => {
+            reconcileTimer(meta)
             const { playerId, wordBoard, handCount, hand } = payload as {
                 playerId: string
                 wordBoard: WordBoardState
@@ -63,37 +71,30 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
             send({ type: 'BOARD_UPDATED', localPlayerId, playerId, wordBoard, handCount, hand })
         })
 
-        ws.on('game:timer_warning', (payload) => {
-            const { currentPlayerId, timeRemainingMs } = payload as {
-                currentPlayerId?: string
-                timeRemainingMs: number
-            }
-            send({ type: 'TIMER_WARNING', currentPlayerId, timeRemainingMs })
-        })
-
-        ws.on('game:turn_ended', (payload) => {
-            const { nextPlayerId, discardPileTop, timeRemainingMs } = payload as {
+        ws.on('game:turn_ended', (payload, meta) => {
+            reconcileTimer(meta)
+            const { nextPlayerId, discardPileTop } = payload as {
                 playerId: string
                 reason: 'discarded' | 'timeout'
                 discardedCard: Card
                 discardPileTop: Card
                 nextPlayerId: string
-                timeRemainingMs?: number
             }
-            send({ type: 'TURN_ENDED', nextPlayerId, discardPileTop, timeRemainingMs })
+            send({ type: 'TURN_ENDED', nextPlayerId, discardPileTop })
         })
 
-        ws.on('game:turn_skipped', (payload) => {
-            const { playerId, nextPlayerId, timeRemainingMs } = payload as {
+        ws.on('game:turn_skipped', (payload, meta) => {
+            reconcileTimer(meta)
+            const { playerId, nextPlayerId } = payload as {
                 playerId: string
                 reason: string
                 nextPlayerId?: string
-                timeRemainingMs?: number
             }
-            send({ type: 'TURN_SKIPPED', playerId, nextPlayerId, timeRemainingMs })
+            send({ type: 'TURN_SKIPPED', playerId, nextPlayerId })
         })
 
-        ws.on('game:player_won', (payload) => {
+        ws.on('game:player_won', (payload, meta) => {
+            reconcileTimer(meta)
             const { winnerId } = payload as {
                 winnerId: string
                 winnerName: string
@@ -102,12 +103,14 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
             send({ type: 'PLAYER_WON', winnerId })
         })
 
-        ws.on('game:player_disconnected', (payload) => {
+        ws.on('game:player_disconnected', (payload, meta) => {
+            reconcileTimer(meta)
             const { playerId } = payload as { playerId: string }
             send({ type: 'PLAYER_CONNECTION_CHANGED', playerId, isConnected: false })
         })
 
-        ws.on('game:player_reconnected', (payload) => {
+        ws.on('game:player_reconnected', (payload, meta) => {
+            reconcileTimer(meta)
             const { playerId } = payload as { playerId: string }
             send({ type: 'PLAYER_CONNECTION_CHANGED', playerId, isConnected: true })
         })
@@ -121,14 +124,18 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
     }, [localPlayerId, roomCode, send])
 
     useEffect(() => {
-        const timerId = window.setInterval(() => {
-            send({ type: 'LOCAL_TIMER_TICK' })
-        }, LOCAL_COUNTDOWN_STEP_MS)
+        const repaint = () => setRepaintAtMs(performance.now())
+        const timerId = window.setInterval(repaint, 1000)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') repaint()
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
 
         return () => {
             window.clearInterval(timerId)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [send])
+    }, [])
 
     function draw(source: 'draw' | 'discard') {
         if (!canDrawCard(gameState, localPlayerId)) return
@@ -190,6 +197,8 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
 
     return {
         gameState,
+        timeRemainingMs: remainingFromAnchor(timerAnchor, repaintAtMs),
+        turnDurationMs: timerAnchor?.durationMs ?? 0,
         draw,
         place,
         unplace,

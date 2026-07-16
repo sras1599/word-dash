@@ -7,6 +7,45 @@ export type TurnDurationFields = {
     seconds: string
 }
 
+export type TurnTimerAnchor = {
+    sequence: number
+    serverNowMs: number
+    remainingAtReceiptMs: number
+    durationMs: number
+    receivedAtMs: number
+}
+
+export type TurnDeadlineMeta = {
+    serverNowMs: number
+    turn: { sequence: number; endsAtMs: number; durationMs: number } | null
+}
+
+export function reconcileTurnTimerAnchor(
+    current: TurnTimerAnchor | null,
+    meta: TurnDeadlineMeta,
+    receivedAtMs: number,
+): TurnTimerAnchor | null {
+    if (!meta.turn) return null
+    if (current && meta.turn.sequence < current.sequence) return current
+    if (current && meta.turn.sequence === current.sequence && meta.serverNowMs < current.serverNowMs) return current
+    return {
+        sequence: meta.turn.sequence,
+        serverNowMs: meta.serverNowMs,
+        remainingAtReceiptMs: Math.max(0, meta.turn.endsAtMs - meta.serverNowMs),
+        durationMs: meta.turn.durationMs,
+        receivedAtMs,
+    }
+}
+
+export function remainingFromAnchor(anchor: TurnTimerAnchor | null, nowMs: number): number {
+    if (!anchor) return 0
+    return Math.max(0, anchor.remainingAtReceiptMs - Math.max(0, nowMs - anchor.receivedAtMs))
+}
+
+export function isTurnTimerUrgent(remainingMs: number, durationMs: number): boolean {
+    return durationMs > 0 && remainingMs <= durationMs * 0.2
+}
+
 export function clampTurnDurationSeconds(totalSeconds: number): number {
     return Math.min(MAX_TURN_SECONDS, Math.max(MIN_TURN_SECONDS, totalSeconds))
 }

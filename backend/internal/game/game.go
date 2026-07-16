@@ -16,6 +16,7 @@ var (
 	ErrEmptyDeck    = errors.New("EMPTY_DECK")
 	ErrInvalidCard  = errors.New("INVALID_CARD")
 	ErrInvalidSlot  = errors.New("INVALID_SLOT")
+	ErrTurnExpired  = errors.New("TURN_EXPIRED")
 )
 
 type cardLocation int
@@ -312,13 +313,13 @@ func ClearBoard(state *room.GameState, playerID string) error {
 
 // DiscardCard removes a card from the active player's hand or board, pushes it
 // to the discard pile, and advances the turn to the next player.
-func DiscardCard(state *room.GameState, playerID, cardID string) (*room.Card, string, error) {
-	return discardCard(state, playerID, cardID)
+func DiscardCard(state *room.GameState, playerID, cardID string, nextEndsAtUnixMs int64) (*room.Card, string, error) {
+	return discardCard(state, playerID, cardID, nextEndsAtUnixMs)
 }
 
 // AutoDiscardDrawnCard discards the active player's drawn card on timeout and
 // advances the turn to the next player.
-func AutoDiscardDrawnCard(state *room.GameState, playerID string) (*room.Card, string, error) {
+func AutoDiscardDrawnCard(state *room.GameState, playerID string, nextEndsAtUnixMs int64) (*room.Card, string, error) {
 	if state.Phase != room.GamePhasePlaying {
 		return nil, "", fmt.Errorf("game not in playing phase")
 	}
@@ -332,10 +333,10 @@ func AutoDiscardDrawnCard(state *room.GameState, playerID string) (*room.Card, s
 		return nil, "", ErrInvalidCard
 	}
 
-	return discardCard(state, playerID, state.Turn.DrawnCard.ID)
+	return discardCard(state, playerID, state.Turn.DrawnCard.ID, nextEndsAtUnixMs)
 }
 
-func discardCard(state *room.GameState, playerID, cardID string) (*room.Card, string, error) {
+func discardCard(state *room.GameState, playerID, cardID string, nextEndsAtUnixMs int64) (*room.Card, string, error) {
 	if state.Phase != room.GamePhasePlaying {
 		return nil, "", fmt.Errorf("game not in playing phase")
 	}
@@ -383,7 +384,8 @@ func discardCard(state *room.GameState, playerID, cardID string) (*room.Card, st
 	nextPlayerID := state.Players[nextIdx].ID
 	state.Turn.CurrentPlayerID = nextPlayerID
 	state.Turn.Phase = room.TurnPhaseDraw
-	state.Turn.TimeRemainingMs = state.TurnDurationMs
+	state.Turn.EndsAtUnixMs = nextEndsAtUnixMs
+	state.Turn.Sequence++
 	state.Turn.DrawnCard = nil
 	playerName := ""
 	if p, err := state.GetPlayer(playerID); err == nil {
@@ -477,7 +479,7 @@ func DeclareWinnerIfComplete(state *room.GameState, playerID string) (room.Playe
 		state.Phase = room.GamePhaseFinished
 		state.WinnerID = &winnerID
 		state.Turn.Phase = room.TurnPhaseIdle
-		state.Turn.TimeRemainingMs = 0
+		state.Turn.EndsAtUnixMs = 0
 		state.Turn.DrawnCard = nil
 
 		return state.Players[i], true, nil

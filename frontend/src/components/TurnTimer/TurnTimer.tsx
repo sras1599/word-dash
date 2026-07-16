@@ -1,7 +1,5 @@
 import './TurnTimer.css'
 
-const URGENCY_THRESHOLD_MS = 15_000
-
 function formatTime(ms: number): string {
     const totalSeconds = Math.max(0, Math.floor(ms / 1000))
     const minutes = Math.floor(totalSeconds / 60)
@@ -28,7 +26,7 @@ export function TurnTimer({
     }
 
     const isExpired = timeRemainingMs <= 0
-    const isUrgent = !isExpired && timeRemainingMs <= URGENCY_THRESHOLD_MS
+    const isUrgent = !isExpired && timeRemainingMs <= totalDurationMs * 0.2
     const progressPct = Math.max(0, Math.min(1, timeRemainingMs / totalDurationMs)) * 100
 
     const timerClass = [

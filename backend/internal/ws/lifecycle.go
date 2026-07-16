@@ -52,12 +52,13 @@ func (h *Hub) disconnectLobbyPlayer(roomCode, playerID string, state *room.GameS
 
 // disconnectGamePlayer marks an in-game player disconnected without removing them.
 func (h *Hub) disconnectGamePlayer(roomCode, playerID string, state *room.GameState) {
-	if _, err := h.store.MarkPlayerDisconnected(roomCode, playerID); err != nil {
+	nextState, err := h.store.MarkPlayerDisconnected(roomCode, playerID)
+	if err != nil {
 		logDisconnectError("failed to mark player disconnected", roomCode, playerID, playerName(state, playerID), err)
 		return
 	}
 
-	h.broadcastToRoom(roomCode, "game:player_disconnected", playerEventPayload{PlayerID: playerID})
+	h.broadcastGameToRoom(&nextState, "game:player_disconnected", playerEventPayload{PlayerID: playerID})
 }
 
 // broadcastLobbyDisconnect announces a lobby departure to remaining clients.

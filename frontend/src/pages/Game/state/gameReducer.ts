@@ -1,11 +1,8 @@
 import { produce } from 'immer'
 import type { Card, GameState, TurnPhase, WordBoardState, GamePlayer } from '../../../lib/gameTypes'
 
-export const LOCAL_COUNTDOWN_STEP_MS = 1000
-
 export type GameAction =
     | { type: 'game/state'; state: GameState }
-    | { type: 'game/turnStarted'; currentPlayerId: string; timeRemainingMs: number }
     | {
         type: 'game/cardDrawn'
         localPlayerId: string
@@ -13,7 +10,6 @@ export type GameAction =
         card: Card | null
         drawPileCount: number
         discardPileTop: Card | null
-        timeRemainingMs?: number
     }
     | {
         type: 'game/boardUpdated'
@@ -23,12 +19,10 @@ export type GameAction =
         handCount: number
         hand?: Card[]
     }
-    | { type: 'game/timerWarning'; currentPlayerId?: string; timeRemainingMs: number }
-    | { type: 'game/turnEnded'; nextPlayerId: string; discardPileTop: Card; timeRemainingMs?: number }
-    | { type: 'game/turnSkipped'; playerId: string; nextPlayerId?: string; timeRemainingMs?: number }
+    | { type: 'game/turnEnded'; nextPlayerId: string; discardPileTop: Card }
+    | { type: 'game/turnSkipped'; playerId: string; nextPlayerId?: string }
     | { type: 'game/playerWon'; winnerId: string }
     | { type: 'game/playerConnectionChanged'; playerId: string; isConnected: boolean }
-    | { type: 'local/timerTick' }
     | { type: 'local/cardPlacedOptimistically'; localPlayerId: string; cardId: string; rowIndex: number; slotIndex: number }
     | { type: 'local/cardUnplacedOptimistically'; localPlayerId: string; rowIndex: number; slotIndex: number }
     | { type: 'local/wordClearedOptimistically'; localPlayerId: string; rowIndex: number }
@@ -158,12 +152,6 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
 
     return produce(state, (draft) => {
         switch (action.type) {
-            case 'game/turnStarted':
-                draft.turn.currentPlayerId = action.currentPlayerId
-                draft.turn.phase = 'draw'
-                draft.turn.timeRemainingMs = action.timeRemainingMs
-                draft.turn.drawnCard = null
-                break
             case 'game/cardDrawn': {
                 const player = draft.players.find((p) => p.id === action.playerId)
                 if (player) {
@@ -182,10 +170,6 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 draft.drawPileCount = action.drawPileCount
                 draft.discardPileTop = action.discardPileTop
                 draft.turn.phase = 'arrange' as TurnPhase
-                draft.turn.timeRemainingMs =
-                    typeof action.timeRemainingMs === 'number'
-                        ? Math.max(0, action.timeRemainingMs)
-                        : draft.turn.timeRemainingMs
                 draft.turn.drawnCard = action.playerId === action.localPlayerId ? action.card : draft.turn.drawnCard
                 break
             }
@@ -200,16 +184,10 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 }
                 break
             }
-            case 'game/timerWarning':
-                draft.turn.currentPlayerId = action.currentPlayerId ?? draft.turn.currentPlayerId
-                draft.turn.timeRemainingMs = Math.max(0, action.timeRemainingMs)
-                break
             case 'game/turnEnded':
                 draft.discardPileTop = action.discardPileTop
                 draft.turn.currentPlayerId = action.nextPlayerId
                 draft.turn.phase = 'draw' as TurnPhase
-                draft.turn.timeRemainingMs =
-                    typeof action.timeRemainingMs === 'number' ? action.timeRemainingMs : draft.turn.timeRemainingMs
                 draft.turn.drawnCard = null
                 break
             case 'game/turnSkipped': {
@@ -217,8 +195,6 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 const nextIdx = idx === -1 ? 0 : (idx + 1) % draft.players.length
                 draft.turn.currentPlayerId = action.nextPlayerId ?? draft.players[nextIdx].id
                 draft.turn.phase = 'draw' as TurnPhase
-                draft.turn.timeRemainingMs =
-                    typeof action.timeRemainingMs === 'number' ? action.timeRemainingMs : draft.turn.timeRemainingMs
                 draft.turn.drawnCard = null
                 break
             }
@@ -231,12 +207,6 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 if (player) player.isConnected = action.isConnected
                 break
             }
-            case 'local/timerTick':
-                if (draft.phase !== 'playing') break
-                if (draft.turn.phase === 'idle') break
-                if (draft.turn.timeRemainingMs <= 0) break
-                draft.turn.timeRemainingMs = Math.max(0, draft.turn.timeRemainingMs - LOCAL_COUNTDOWN_STEP_MS)
-                break
             case 'local/cardPlacedOptimistically': {
                 if (!canPlaceCard(draft)) break
                 const player = draft.players.find((p) => p.id === action.localPlayerId)

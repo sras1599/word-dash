@@ -4,6 +4,7 @@ package ws
 import (
 	"encoding/json"
 	"log/slog"
+	"time"
 
 	"github.com/sras1599/wordit/backend/internal/deck"
 	"github.com/sras1599/wordit/backend/internal/room"
@@ -119,13 +120,22 @@ func (h *Hub) handleLobbyStartGame(c *client, roomCode, playerID string) {
 
 // startGame transitions the room into play and starts its turn timer.
 func (h *Hub) startGame(c *client, roomCode, playerID string, drawPile []room.Card) (room.GameState, bool) {
-	state, err := h.store.StartGame(roomCode, playerID, drawPile)
+	endsAt := h.now().Add(time.Duration(h.turnDuration(roomCode)) * time.Millisecond).UnixMilli()
+	state, err := h.store.StartGame(roomCode, playerID, drawPile, endsAt)
 	if err != nil {
 		sendErr(c, roomErrorCode(err), err.Error())
 		return state, false
 	}
 	h.startTurnTimer(roomCode)
 	return state, true
+}
+
+func (h *Hub) turnDuration(roomCode string) int {
+	state, err := h.store.Get(roomCode)
+	if err != nil {
+		return 0
+	}
+	return state.TurnDurationMs
 }
 
 // announceGameStarting logs and broadcasts the lobby-to-game transition.

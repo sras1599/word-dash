@@ -102,9 +102,9 @@ func TestPlaceCardSwapsBoardCardsAcrossRows(t *testing.T) {
 	}
 }
 
-func TestDrawCardPreservesRemainingTurnTime(t *testing.T) {
+func TestDrawCardPreservesTurnDeadline(t *testing.T) {
 	state := newDrawCardTestState()
-	state.Turn.TimeRemainingMs = 5_000
+	state.Turn.EndsAtUnixMs = 5_000
 
 	drawn, err := DrawCard(state, "player-1", "draw")
 	if err != nil {
@@ -117,8 +117,8 @@ func TestDrawCardPreservesRemainingTurnTime(t *testing.T) {
 	if state.Turn.Phase != room.TurnPhaseArrange {
 		t.Fatalf("turn phase = %q, want arrange", state.Turn.Phase)
 	}
-	if state.Turn.TimeRemainingMs != 5_000 {
-		t.Fatalf("time remaining = %d, want 5000", state.Turn.TimeRemainingMs)
+	if state.Turn.EndsAtUnixMs != 5_000 {
+		t.Fatalf("deadline = %d, want 5000", state.Turn.EndsAtUnixMs)
 	}
 	if state.Turn.DrawnCard == nil || state.Turn.DrawnCard.ID != "card-drawn" {
 		t.Fatalf("turn drawn card = %#v, want card-drawn", state.Turn.DrawnCard)
@@ -370,7 +370,7 @@ func TestClearActionsValidateState(t *testing.T) {
 func TestAutoDiscardDrawnCardRemovesDrawnCardFromHand(t *testing.T) {
 	state := newAutoDiscardTestState()
 
-	discarded, nextPlayerID, err := AutoDiscardDrawnCard(state, "player-1")
+	discarded, nextPlayerID, err := AutoDiscardDrawnCard(state, "player-1", 120_000)
 	if err != nil {
 		t.Fatalf("auto-discard drawn card: %v", err)
 	}
@@ -399,8 +399,8 @@ func TestAutoDiscardDrawnCardRemovesDrawnCardFromHand(t *testing.T) {
 	if state.Turn.Phase != room.TurnPhaseDraw {
 		t.Fatalf("turn phase = %q, want draw", state.Turn.Phase)
 	}
-	if state.Turn.TimeRemainingMs != state.TurnDurationMs {
-		t.Fatalf("time remaining = %d, want %d", state.Turn.TimeRemainingMs, state.TurnDurationMs)
+	if state.Turn.EndsAtUnixMs != 120_000 {
+		t.Fatalf("deadline = %d, want 120000", state.Turn.EndsAtUnixMs)
 	}
 	if state.Turn.DrawnCard != nil {
 		t.Fatalf("drawn card = %#v, want nil", state.Turn.DrawnCard)
@@ -415,7 +415,7 @@ func TestAutoDiscardDrawnCardRemovesDrawnCardFromBoard(t *testing.T) {
 	state.Players[0].WordBoard.Rows[0].IsComplete = true
 	state.Players[0].WordBoard.AllComplete = true
 
-	discarded, _, err := AutoDiscardDrawnCard(state, "player-1")
+	discarded, _, err := AutoDiscardDrawnCard(state, "player-1", 120_000)
 	if err != nil {
 		t.Fatalf("auto-discard drawn card: %v", err)
 	}
@@ -476,7 +476,7 @@ func TestAutoDiscardDrawnCardValidatesState(t *testing.T) {
 			state := newAutoDiscardTestState()
 			tt.mutate(state)
 
-			_, _, err := AutoDiscardDrawnCard(state, "player-1")
+			_, _, err := AutoDiscardDrawnCard(state, "player-1", 120_000)
 			if tt.want != nil && !errors.Is(err, tt.want) {
 				t.Fatalf("error = %v, want %v", err, tt.want)
 			}
@@ -566,7 +566,8 @@ func newAutoDiscardTestState() *room.GameState {
 		Turn: room.Turn{
 			CurrentPlayerID: "player-1",
 			Phase:           room.TurnPhaseArrange,
-			TimeRemainingMs: 0,
+			EndsAtUnixMs:    1,
+			Sequence:        1,
 			DrawnCard:       &drawnCard,
 		},
 		Players: []room.Player{
@@ -595,7 +596,8 @@ func newDrawCardTestState() *room.GameState {
 		Turn: room.Turn{
 			CurrentPlayerID: "player-1",
 			Phase:           room.TurnPhaseDraw,
-			TimeRemainingMs: 60_000,
+			EndsAtUnixMs:    60_000,
+			Sequence:        1,
 		},
 		Players: []room.Player{
 			{

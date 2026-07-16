@@ -4,13 +4,12 @@ import { PageShell, type FloatingLetter } from '../../components/PageShell/PageS
 import type { GamePlayer, GameState } from '../../lib/gameTypes'
 import { session } from '../../lib/session'
 import { useDocumentTitle } from '../../lib/useDocumentTitle'
+import { isTurnTimerUrgent } from '../../lib/turnTimer'
 import { GameOverDialog } from './components/GameOverDialog'
 import { GameStateScreen } from './components/GameStateScreen'
 import { GameTopBar } from './components/GameTopBar'
 import { useGameRoom } from './hooks/useGameRoom'
 import './Game.css'
-
-const URGENCY_THRESHOLD_MS = 15_000
 
 const FLOATING_LETTERS: FloatingLetter[] = [
     { key: 'a', letter: 'A', className: 'page-game__floating-letter--a' },
@@ -75,7 +74,7 @@ export function Game() {
     const { roomCode } = useParams<{ roomCode: string }>()
     const navigate = useNavigate()
     const localPlayerId = session.getPlayerId() ?? ''
-    const { gameState, draw, place, unplace, clearWord, clearBoard, discard, restartLobby, close } = useGameRoom(roomCode, localPlayerId)
+    const { gameState, timeRemainingMs, turnDurationMs, draw, place, unplace, clearWord, clearBoard, discard, restartLobby, close } = useGameRoom(roomCode, localPlayerId)
     useDocumentTitle(getGameTitle(roomCode, gameState, localPlayerId))
 
     function handlePlayAgain() {
@@ -132,7 +131,7 @@ export function Game() {
     const timerIsUrgent =
         gameState.phase === 'playing' &&
         gameState.turn.phase !== 'idle' &&
-        gameState.turn.timeRemainingMs <= URGENCY_THRESHOLD_MS
+        isTurnTimerUrgent(timeRemainingMs, turnDurationMs)
     const drawnCardId = gameState.turn.drawnCard?.id ?? null
     const localHand = localPlayerData?.hand ?? []
     const handCount = localPlayerData?.handCount ?? localHand.length
@@ -146,7 +145,7 @@ export function Game() {
             floatingLetters={FLOATING_LETTERS}
         >
             <GameTopBar
-                timeRemainingMs={gameState.turn.timeRemainingMs}
+                timeRemainingMs={timeRemainingMs}
                 timerIsUrgent={timerIsUrgent}
                 onHome={handleHome}
             />
@@ -158,7 +157,7 @@ export function Game() {
                     winnerId={gameState.winnerId}
                     localPlayer={localPlayerData ? { ...localPlayerData, hand: localHand } : null}
                     opponents={opponents}
-                    turn={gameState.turn}
+                    turn={{ ...gameState.turn, timeRemainingMs }}
                     variation={gameState.variation}
                     discardTopCard={gameState.discardPileTop}
                     drawPileCount={gameState.drawPileCount}

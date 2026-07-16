@@ -1,6 +1,11 @@
 import { WS_BASE_URL } from './config';
 
-type MessageHandler = (payload: unknown) => void;
+export type GameEventMeta = {
+    serverNowMs: number
+    turn: { sequence: number; endsAtMs: number; durationMs: number } | null
+}
+
+type MessageHandler = (payload: unknown, meta?: GameEventMeta) => void;
 
 const MAX_RETRIES = 5;
 
@@ -31,8 +36,8 @@ export class WsClient {
         };
 
         ws.onmessage = (event: MessageEvent<string>) => {
-            const msg = JSON.parse(event.data) as { event: string; payload: unknown };
-            this.handlers.get(msg.event)?.forEach((h) => h(msg.payload));
+            const msg = JSON.parse(event.data) as { event: string; payload: unknown; meta?: GameEventMeta };
+            this.handlers.get(msg.event)?.forEach((h) => h(msg.payload, msg.meta));
         };
 
         ws.onclose = (closeEvent) => {

@@ -11,8 +11,6 @@ import (
 	"github.com/sras1599/wordit/backend/internal/room"
 )
 
-var timerWarningThresholdsMs = []int{10_000, 5_000, 1_000}
-
 type errorCodeMapping struct {
 	err  error
 	code string
@@ -25,6 +23,7 @@ var gameErrorCodes = []errorCodeMapping{
 	{game.ErrEmptyDeck, "EMPTY_DECK"},
 	{game.ErrInvalidCard, "INVALID_CARD"},
 	{game.ErrInvalidSlot, "INVALID_SLOT"},
+	{game.ErrTurnExpired, "TURN_EXPIRED"},
 }
 
 var roomErrorCodes = []errorCodeMapping{
@@ -68,6 +67,20 @@ func (h *Hub) getRoomState(c *client, roomCode string) (*room.GameState, bool) {
 	return state, true
 }
 
+// updateBeforeDeadline rejects late gameplay actions and immediately reconciles expiry.
+func (h *Hub) updateBeforeDeadline(roomCode string, mutateFn func(*room.GameState) error) (room.GameState, error) {
+	state, err := h.store.UpdateGameState(roomCode, func(state *room.GameState) error {
+		if state.Phase == room.GamePhasePlaying && state.Turn.EndsAtUnixMs > 0 && h.now().UnixMilli() >= state.Turn.EndsAtUnixMs {
+			return game.ErrTurnExpired
+		}
+		return mutateFn(state)
+	})
+	if errors.Is(err, game.ErrTurnExpired) {
+		h.handleTurnTimeout(roomCode)
+	}
+	return state, err
+}
+
 // gameErrorCode maps game-package sentinel errors to WS error codes.
 func gameErrorCode(err error) string {
 	return mappedErrorCode(err, gameErrorCodes, "INTERNAL_ERROR")
@@ -86,24 +99,6 @@ func mappedErrorCode(err error, mappings []errorCodeMapping, fallback string) st
 		}
 	}
 	return fallback
-}
-
-// shouldBroadcastTimerWarning reports whether a timer crossed a warning threshold.
-func shouldBroadcastTimerWarning(previousRemaining, currentRemaining int) bool {
-	if currentRemaining <= 0 {
-		return false
-	}
-	for _, thresholdMs := range timerWarningThresholdsMs {
-		if crossedTimerThreshold(previousRemaining, currentRemaining, thresholdMs) {
-			return true
-		}
-	}
-	return false
-}
-
-// crossedTimerThreshold checks one threshold transition.
-func crossedTimerThreshold(previousRemaining, currentRemaining, thresholdMs int) bool {
-	return previousRemaining > thresholdMs && currentRemaining <= thresholdMs
 }
 
 // buildGameStatePayload builds a personalized full game-state snapshot.
@@ -154,7 +149,6 @@ func buildTurnJSON(state *room.GameState, forPlayerID string) turnJSON {
 	return turnJSON{
 		CurrentPlayerID: state.Turn.CurrentPlayerID,
 		Phase:           string(state.Turn.Phase),
-		TimeRemainingMs: state.Turn.TimeRemainingMs,
 		DrawnCard:       visibleTurnDrawnCard(state, forPlayerID),
 	}
 }
@@ -285,12 +279,11 @@ func boardPayloadFor(pid, playerID string, update boardUpdate) boardUpdatedPaylo
 // cardDrawnPayloadFor builds a draw payload with per-recipient card visibility.
 func cardDrawnPayloadFor(state *room.GameState, pid, playerID, source string, drawnCard *room.Card) cardDrawnPayload {
 	return cardDrawnPayload{
-		PlayerID:        playerID,
-		Source:          source,
-		Card:            visibleDrawnCard(pid, playerID, source, drawnCard),
-		DrawPileCount:   state.DrawPileCount,
-		DiscardPileTop:  buildOptionalCardJSON(state.DiscardPileTop),
-		TimeRemainingMs: state.Turn.TimeRemainingMs,
+		PlayerID:       playerID,
+		Source:         source,
+		Card:           visibleDrawnCard(pid, playerID, source, drawnCard),
+		DrawPileCount:  state.DrawPileCount,
+		DiscardPileTop: buildOptionalCardJSON(state.DiscardPileTop),
 	}
 }
 

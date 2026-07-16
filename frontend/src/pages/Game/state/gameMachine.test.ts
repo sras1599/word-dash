@@ -23,7 +23,6 @@ function createGameState(phase: GameState['phase'] = 'playing', turnPhase: GameS
         turn: {
             currentPlayerId: 'p1',
             phase: turnPhase,
-            timeRemainingMs: 90_000,
             drawnCard: null,
         },
         phase,

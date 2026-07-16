@@ -11,8 +11,20 @@ type incomingMessage struct {
 
 // outgoingMessage is the wire format for all server→client messages.
 type outgoingMessage struct {
-	Event   string `json:"event"`
-	Payload any    `json:"payload"`
+	Event   string         `json:"event"`
+	Payload any            `json:"payload"`
+	Meta    *gameEventMeta `json:"meta,omitempty"`
+}
+
+type gameEventMeta struct {
+	ServerNowMs int64         `json:"serverNowMs"`
+	Turn        *turnMetaJSON `json:"turn"`
+}
+
+type turnMetaJSON struct {
+	Sequence   uint64 `json:"sequence"`
+	EndsAtMs   int64  `json:"endsAtMs"`
+	DurationMs int    `json:"durationMs"`
 }
 
 // --- Shared ---
@@ -101,7 +113,6 @@ type gamePlayerJSON struct {
 type turnJSON struct {
 	CurrentPlayerID string    `json:"currentPlayerId"`
 	Phase           string    `json:"phase"`
-	TimeRemainingMs int       `json:"timeRemainingMs"`
 	DrawnCard       *cardJSON `json:"drawnCard"`
 }
 
@@ -121,17 +132,10 @@ type playerEventPayload struct {
 	PlayerID string `json:"playerId"`
 }
 
-type timerWarningPayload struct {
-	RoomCode        string `json:"roomCode"`
-	CurrentPlayerID string `json:"currentPlayerId"`
-	TimeRemainingMs int    `json:"timeRemainingMs"`
-}
-
 type turnSkippedPayload struct {
-	PlayerID        string `json:"playerId"`
-	Reason          string `json:"reason"`
-	NextPlayerID    string `json:"nextPlayerId"`
-	TimeRemainingMs int    `json:"timeRemainingMs"`
+	PlayerID     string `json:"playerId"`
+	Reason       string `json:"reason"`
+	NextPlayerID string `json:"nextPlayerId"`
 }
 
 type boardUpdatedPayload struct {
@@ -142,12 +146,11 @@ type boardUpdatedPayload struct {
 }
 
 type turnEndedPayload struct {
-	PlayerID        string   `json:"playerId"`
-	Reason          string   `json:"reason"`
-	DiscardedCard   cardJSON `json:"discardedCard"`
-	DiscardPileTop  cardJSON `json:"discardPileTop"`
-	NextPlayerID    string   `json:"nextPlayerId"`
-	TimeRemainingMs int      `json:"timeRemainingMs"`
+	PlayerID       string   `json:"playerId"`
+	Reason         string   `json:"reason"`
+	DiscardedCard  cardJSON `json:"discardedCard"`
+	DiscardPileTop cardJSON `json:"discardPileTop"`
+	NextPlayerID   string   `json:"nextPlayerId"`
 }
 
 type playerWonPayload struct {
@@ -163,12 +166,11 @@ type drawCardRequest struct {
 }
 
 type cardDrawnPayload struct {
-	PlayerID        string    `json:"playerId"`
-	Source          string    `json:"source"`
-	Card            *cardJSON `json:"card"`
-	DrawPileCount   int       `json:"drawPileCount"`
-	DiscardPileTop  *cardJSON `json:"discardPileTop"`
-	TimeRemainingMs int       `json:"timeRemainingMs"`
+	PlayerID       string    `json:"playerId"`
+	Source         string    `json:"source"`
+	Card           *cardJSON `json:"card"`
+	DrawPileCount  int       `json:"drawPileCount"`
+	DiscardPileTop *cardJSON `json:"discardPileTop"`
 }
 
 type placeCardRequest struct {

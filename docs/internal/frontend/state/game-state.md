@@ -47,7 +47,6 @@ type TurnPhase =
 type Turn = {
   currentPlayerId: string;      // whose turn it is
   phase: TurnPhase;             // current phase of that player's turn
-  timeRemainingMs: number;      // milliseconds left on the turn timer (starts at 60000)
   drawnCard: Card | null;       // the extra card drawn during this turn; null if not yet drawn
 };
 

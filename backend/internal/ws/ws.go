@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sras1599/wordit/backend/internal/dictionary"
@@ -24,7 +25,15 @@ type client struct {
 
 // send writes a single event envelope to the client connection.
 func (c *client) send(event string, payload any) {
-	data, err := json.Marshal(outgoingMessage{Event: event, Payload: payload})
+	c.sendEnvelope(outgoingMessage{Event: event, Payload: payload})
+}
+
+func (c *client) sendGame(event string, payload any, meta gameEventMeta) {
+	c.sendEnvelope(outgoingMessage{Event: event, Payload: payload, Meta: &meta})
+}
+
+func (c *client) sendEnvelope(message outgoingMessage) {
+	data, err := json.Marshal(message)
 	if err != nil {
 		return
 	}
@@ -36,7 +45,9 @@ func (c *client) send(event string, payload any) {
 type Hub struct {
 	store        room.Store
 	dict         dictionary.DictionaryChecker
+	now          func() time.Time
 	mu           sync.RWMutex
+	reconcileMu  sync.Mutex
 	conns        map[string]*client
 	activeTimers map[string]chan struct{}
 }
@@ -50,6 +61,7 @@ func NewHub(store room.Store, dict dictionary.DictionaryChecker) *Hub {
 	return &Hub{
 		store:        store,
 		dict:         dict,
+		now:          time.Now,
 		conns:        make(map[string]*client),
 		activeTimers: make(map[string]chan struct{}),
 	}

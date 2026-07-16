@@ -323,7 +323,7 @@ func (s *Store) RemovePlayer(roomCode, playerID string) (room.GameState, bool, e
 // StartGame transitions the room from waiting to playing. playerID must be the
 // host (Players[0].ID). drawPile is a pre-shuffled deck; cards are dealt from
 // the front. Returns the updated game state after initialization.
-func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card) (room.GameState, error) {
+func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card, endsAtUnixMs int64) (room.GameState, error) {
 	return s.mutate(roomCode, func(state *room.GameState) (room.GameState, bool, error) {
 		if len(state.Players) == 0 || state.Players[0].ID != playerID {
 			return room.GameState{}, false, room.ErrNotHost
@@ -368,7 +368,8 @@ func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card) (room
 		state.Turn = room.Turn{
 			CurrentPlayerID: state.Players[0].ID,
 			Phase:           room.TurnPhaseDraw,
-			TimeRemainingMs: state.TurnDurationMs,
+			EndsAtUnixMs:    endsAtUnixMs,
+			Sequence:        1,
 		}
 		state.Phase = room.GamePhasePlaying
 
@@ -376,10 +377,8 @@ func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card) (room
 	})
 }
 
-// NextTurn rotates the turn to the next player in the Players slice (wrapping
-// around), resets the phase to draw, and resets TimeRemainingMs to the room's
-// configured TurnDurationMs.
-func (s *Store) NextTurn(roomCode string) (room.GameState, error) {
+// NextTurn rotates the turn, resets the phase, and stores the supplied deadline.
+func (s *Store) NextTurn(roomCode string, endsAtUnixMs int64) (room.GameState, error) {
 	return s.mutate(roomCode, func(state *room.GameState) (room.GameState, bool, error) {
 		currentIndex := -1
 		for i, p := range state.Players {
@@ -396,36 +395,12 @@ func (s *Store) NextTurn(roomCode string) (room.GameState, error) {
 		state.Turn = room.Turn{
 			CurrentPlayerID: state.Players[nextIndex].ID,
 			Phase:           room.TurnPhaseDraw,
-			TimeRemainingMs: state.TurnDurationMs,
+			EndsAtUnixMs:    endsAtUnixMs,
+			Sequence:        state.Turn.Sequence + 1,
 		}
 
 		return *state, false, nil
 	})
-}
-
-// TickTimer decrements the active turn's TimeRemainingMs by one second and
-// returns the current value. Returns 0 without error when the game is not playing.
-func (s *Store) TickTimer(roomCode string) (int, error) {
-	updated, err := s.mutate(roomCode, func(state *room.GameState) (room.GameState, bool, error) {
-		if state.Phase != room.GamePhasePlaying {
-			return *state, false, nil
-		}
-		if state.Turn.Phase == room.TurnPhaseIdle {
-			return *state, false, nil
-		}
-
-		if state.Turn.TimeRemainingMs > 1000 {
-			state.Turn.TimeRemainingMs -= 1000
-		} else {
-			state.Turn.TimeRemainingMs = 0
-		}
-
-		return *state, false, nil
-	})
-	if err != nil {
-		return 0, err
-	}
-	return updated.Turn.TimeRemainingMs, nil
 }
 
 // UpdateLobbySettings updates the variation and turn duration for a room that

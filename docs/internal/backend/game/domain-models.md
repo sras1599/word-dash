@@ -40,7 +40,8 @@ const (
 type Turn struct {
     CurrentPlayerID string
     Phase           TurnPhase
-    TimeRemainingMs int
+    EndsAtUnixMs    int64 // persisted server-authoritative deadline
+    Sequence        uint64 // increments whenever the active turn rotates
     DrawnCard       *Card // nil until card is drawn; excluded from hand
 }
 

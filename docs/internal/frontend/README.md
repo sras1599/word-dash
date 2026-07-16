@@ -45,7 +45,7 @@ Server (game state engine)
 - On joining a game room, the client opens a WebSocket connection identified by the `roomCode` and `playerId`.
 - The server is the single source of truth — clients never mutate game state locally; they only dispatch actions.
 - The client's real-time layer dispatches incoming server events into the React `GameContext` reducer.
-- All game events are namespaced (e.g. `game:turn_started`, `game:card_drawn`). See `realtime/events.md`.
+- All game events are namespaced (for example, `game:card_drawn` and `game:turn_ended`). See `realtime/events.md`.
 
 ---
 

@@ -90,7 +90,7 @@ func TestUpdateGameStatePersistsDiscard(t *testing.T) {
 	}
 
 	if _, err := store.UpdateGameState("ROOM1", func(state *room.GameState) error {
-		_, _, err := game.DiscardCard(state, "player-1", "card-a")
+		_, _, err := game.DiscardCard(state, "player-1", "card-a", 120_000)
 		return err
 	}); err != nil {
 		t.Fatalf("discard card: %v", err)
@@ -111,6 +111,9 @@ func TestUpdateGameStatePersistsDiscard(t *testing.T) {
 	}
 	if reloaded.Turn.Phase != room.TurnPhaseDraw {
 		t.Fatalf("expected turn phase draw after discard, got %q", reloaded.Turn.Phase)
+	}
+	if reloaded.Turn.EndsAtUnixMs != 120_000 || reloaded.Turn.Sequence != 2 {
+		t.Fatalf("turn deadline/sequence = %d/%d, want 120000/2", reloaded.Turn.EndsAtUnixMs, reloaded.Turn.Sequence)
 	}
 }
 
@@ -142,9 +145,12 @@ func TestStartGameBuildsWordBoardsFromFinalVariation(t *testing.T) {
 		t.Fatalf("put state: %v", err)
 	}
 
-	started, err := store.StartGame("ROOM1", "host", testDeck(40))
+	started, err := store.StartGame("ROOM1", "host", testDeck(40), 120_000)
 	if err != nil {
 		t.Fatalf("start game: %v", err)
+	}
+	if started.Turn.EndsAtUnixMs != 120_000 || started.Turn.Sequence != 1 {
+		t.Fatalf("first turn deadline/sequence = %d/%d, want 120000/1", started.Turn.EndsAtUnixMs, started.Turn.Sequence)
 	}
 
 	for _, player := range started.Players {
@@ -161,38 +167,6 @@ func TestStartGameBuildsWordBoardsFromFinalVariation(t *testing.T) {
 		if got := len(player.Hand); got != 11 {
 			t.Fatalf("player %s hand length = %d, want 11", player.ID, got)
 		}
-	}
-}
-
-func TestTickTimerDecrementsDrawAndArrangePhases(t *testing.T) {
-	tests := []struct {
-		name  string
-		phase room.TurnPhase
-		want  int
-	}{
-		{name: "draw", phase: room.TurnPhaseDraw, want: 59_000},
-		{name: "arrange", phase: room.TurnPhaseArrange, want: 59_000},
-		{name: "idle", phase: room.TurnPhaseIdle, want: 60_000},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			store := NewStore()
-			state := testPlayingState([]room.Card{{ID: "card-a", Letter: "A"}})
-			state.Turn.Phase = tt.phase
-			state.Turn.TimeRemainingMs = 60_000
-			if err := store.Put(state); err != nil {
-				t.Fatalf("put state: %v", err)
-			}
-
-			got, err := store.TickTimer("ROOM1")
-			if err != nil {
-				t.Fatalf("tick timer: %v", err)
-			}
-			if got != tt.want {
-				t.Fatalf("remaining = %d, want %d", got, tt.want)
-			}
-		})
 	}
 }
 
@@ -225,7 +199,8 @@ func testPlayingState(hand []room.Card) *room.GameState {
 		Turn: room.Turn{
 			CurrentPlayerID: "player-1",
 			Phase:           room.TurnPhaseArrange,
-			TimeRemainingMs: 60_000,
+			EndsAtUnixMs:    60_000,
+			Sequence:        1,
 		},
 		Phase:          room.GamePhasePlaying,
 		TurnDurationMs: 60_000,

@@ -17,7 +17,6 @@ export type TurnPhase = 'draw' | 'arrange' | 'idle'
 export type Turn = {
     currentPlayerId: string
     phase: TurnPhase
-    timeRemainingMs: number
     drawnCard: Card | null
 }
 

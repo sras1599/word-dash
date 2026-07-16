@@ -15,11 +15,15 @@ All messages in both directions are JSON objects with the shape:
 ```json
 {
   "event": "<event:name>",
-  "payload": { ... }
+  "payload": { ... },
+  "meta": {
+    "serverNowMs": 1710000000000,
+    "turn": { "sequence": 4, "endsAtMs": 1710000060000, "durationMs": 60000 }
+  }
 }
 ```
 
-`payload` may be `null` or omitted for events with no data.
+`payload` may be `null` or omitted for events with no data. Every successful server-to-client `game:*` event includes `meta`; lobby events and `game:error` may omit it. Finished games send `"turn": null`.
 
 ## Lobby Events
 
@@ -72,18 +76,20 @@ Draw and discard events must come from the current turn holder. Board-edit event
 | Event                      | Payload |
 |----------------------------|---------|
 | `game:state`               | Full `GameState` snapshot. Sent to all players on game start and to the reconnecting player on reconnect. |
-| `game:turn_started`        | `{ currentPlayerId, timeRemainingMs: 60000 }` |
-| `game:card_drawn`          | `{ playerId, source, card: Card \| null, drawPileCount, discardPileTop, timeRemainingMs }`. `card` is `null` for non-drawing players. |
+| `game:card_drawn`          | `{ playerId, source, card: Card \| null, drawPileCount, discardPileTop }`. `card` is `null` for non-drawing players. |
 | `game:board_updated`       | `{ playerId, wordBoard: WordBoard }`. Broadcast to all players after every `place`, `unplace`, `clear_word`, or `clear_board` action. |
-| `game:timer_warning`       | `{ currentPlayerId, timeRemainingMs }`. Emitted only when remaining time crosses warning thresholds (`10s`, `5s`, `1s`). |
-| `game:turn_ended`          | `{ playerId, reason: "discarded" \| "timeout", discardedCard: Card, discardPileTop: Card, nextPlayerId, timeRemainingMs }` |
-| `game:turn_skipped`        | `{ playerId, reason: "disconnected", nextPlayerId, timeRemainingMs }` |
+| `game:turn_ended`          | `{ playerId, reason: "discarded" \| "timeout", discardedCard: Card, discardPileTop: Card, nextPlayerId }` |
+| `game:turn_skipped`        | `{ playerId, reason: "disconnected" \| "timeout", nextPlayerId }` |
 | `game:player_won`          | `{ winnerId, winnerName, winningWordBoard: WordBoard }` |
 | `game:player_disconnected` | `{ playerId }` |
 | `game:player_reconnected`  | `{ playerId }` |
 | `game:error`               | `{ code, message }` - sent only to the offending player. |
 
-Clients should render a local one-second countdown between server events. The server remains authoritative for timeout enforcement.
+`game:state` establishes the active turn on initial connection and reconnection. Later turns begin as part of `game:turn_ended` or `game:turn_skipped`; `nextPlayerId` identifies the new active player.
+
+Clients derive remaining time from `endsAtMs - serverNowMs` at receipt and elapsed local monotonic time afterward. Intervals repaint only; they do not decrement game state. Metadata with an older turn sequence is ignored. Urgency begins after 80% of `durationMs` has elapsed (20% remains).
+
+After a backend restart, the first connection to a persisted playing room recreates its in-memory deadline watcher and reconciles the deadline before the connection snapshot is sent. Reconnection never resets or extends a deadline, and backend downtime counts against the turn.
 
 ## Error Codes
 
@@ -93,4 +99,5 @@ Clients should render a local one-second countdown between server events. The se
 | `INVALID_PHASE` | Event received during the wrong turn phase |
 | `INVALID_CARD`  | `cardId` does not exist in the player's hand or board |
 | `INVALID_SLOT`  | `rowIndex` or `slotIndex` is out of range |
+| `TURN_EXPIRED`  | The turn deadline passed before the gameplay mutation was accepted |
 | `ROOM_NOT_FOUND`| WS upgrade attempted with an unknown `roomCode` |

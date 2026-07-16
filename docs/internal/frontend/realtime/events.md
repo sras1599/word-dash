@@ -4,6 +4,17 @@ All game communication happens over a WebSocket connection. The client connects 
 
 Events are namespaced by prefix: `lobby:*` for pre-game, `game:*` for in-game.
 
+Server messages use `{ event, payload, meta? }`. Every successful `game:*` event includes:
+
+```ts
+type GameEventMeta = {
+  serverNowMs: number;
+  turn: { sequence: number; endsAtMs: number; durationMs: number } | null;
+};
+```
+
+Lobby events and `game:error` may omit `meta`; finished games use `turn: null`.
+
 ---
 
 ## Connection
@@ -203,14 +214,6 @@ GameState
 
 Only the receiving player gets their full hand in the snapshot. Other players are represented by `handCount` plus public state.
 
-#### `game:turn_started`
-```ts
-{
-  currentPlayerId: string;
-  timeRemainingMs: number;
-}
-```
-
 #### `game:card_drawn`
 When a player draws from the draw pile, only that player receives the actual card contents. When a player draws from the discard pile, every client can see the card because it was already public.
 ```ts
@@ -220,7 +223,6 @@ When a player draws from the draw pile, only that player receives the actual car
   card: Card | null;
   drawPileCount: number;
   discardPileTop: Card | null;
-  timeRemainingMs: number;
 }
 ```
 
@@ -237,16 +239,6 @@ Sent after a `place_card`, `unplace_card`, `clear_word`, or `clear_board` action
 
 Only the acting player receives the optional `hand` field.
 
-#### `game:timer_warning`
-Sent only when the remaining turn time crosses warning thresholds.
-```ts
-{
-  roomCode: string;
-  currentPlayerId: string;
-  timeRemainingMs: number;
-}
-```
-
 #### `game:turn_ended`
 Broadcast when the active player ends their turn by discarding or times out after drawing.
 ```ts
@@ -256,7 +248,6 @@ Broadcast when the active player ends their turn by discarding or times out afte
   discardedCard: Card;
   discardPileTop: Card;
   nextPlayerId: string;
-  timeRemainingMs: number;
 }
 ```
 
@@ -267,7 +258,6 @@ Broadcast when the server skips a turn start because the active player is still 
   playerId: string;
   reason: 'disconnected';
   nextPlayerId: string;
-  timeRemainingMs: number;
 }
 ```
 
@@ -311,4 +301,6 @@ Sent only to the client whose action was rejected.
 - The server is the single source of truth. Clients should wait for `game:board_updated`, `game:turn_ended`, or `game:state` before reconciling game state.
 - `lobby:state` and `game:state` are full snapshots. The other events are incremental updates.
 - Lobby disconnects remove the player immediately. In-game disconnects do not remove the player; they are marked disconnected and can be skipped later with `game:turn_skipped`.
-- The timer is authoritative on the server. Clients can run a local countdown for display and re-sync from server events such as `game:timer_warning`, `game:turn_ended`, and `game:turn_skipped`.
+- Every successful server-to-client `game:*` event includes `{ serverNowMs, turn }` envelope metadata. `turn` contains `{ sequence, endsAtMs, durationMs }`, or is `null` after the game finishes.
+- `game:state` establishes the active turn on connection. Later turns begin with the post-transition `game:turn_ended` or `game:turn_skipped` event and its `nextPlayerId`.
+- The frontend derives remaining time from deadline metadata and local elapsed time. Its one-second interval only repaints, visibility changes repaint immediately, older turn sequences are ignored, and urgency begins when 20% of the turn duration remains.

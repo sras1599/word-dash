@@ -145,7 +145,7 @@ func (s *Store) RemovePlayer(roomCode, playerID string) (state room.GameState, r
 // StartGame transitions the room from waiting to playing. playerID must be the
 // host (Players[0].ID). drawPile is a pre-shuffled deck; cards are dealt from
 // the front. Returns the updated game state after initialization.
-func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card) (room.GameState, error) {
+func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card, endsAtUnixMs int64) (room.GameState, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -196,17 +196,16 @@ func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card) (room
 	state.Turn = room.Turn{
 		CurrentPlayerID: state.Players[0].ID,
 		Phase:           room.TurnPhaseDraw,
-		TimeRemainingMs: state.TurnDurationMs,
+		EndsAtUnixMs:    endsAtUnixMs,
+		Sequence:        1,
 	}
 	state.Phase = room.GamePhasePlaying
 
 	return *state, nil
 }
 
-// NextTurn rotates the turn to the next player in the Players slice (wrapping
-// around), resets the phase to draw, and resets TimeRemainingMs to the room's
-// configured TurnDurationMs.
-func (s *Store) NextTurn(roomCode string) (room.GameState, error) {
+// NextTurn rotates the turn, resets the phase, and stores the supplied deadline.
+func (s *Store) NextTurn(roomCode string, endsAtUnixMs int64) (room.GameState, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -230,35 +229,11 @@ func (s *Store) NextTurn(roomCode string) (room.GameState, error) {
 	state.Turn = room.Turn{
 		CurrentPlayerID: state.Players[nextIndex].ID,
 		Phase:           room.TurnPhaseDraw,
-		TimeRemainingMs: state.TurnDurationMs,
+		EndsAtUnixMs:    endsAtUnixMs,
+		Sequence:        state.Turn.Sequence + 1,
 	}
 
 	return *state, nil
-}
-
-// TickTimer decrements the active turn's TimeRemainingMs by one second and
-// returns the current value. Returns 0 without error when the game is not playing.
-func (s *Store) TickTimer(roomCode string) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	state, ok := s.rooms[roomCode]
-	if !ok {
-		return 0, fmt.Errorf("room %s not found", roomCode)
-	}
-	if state.Phase != room.GamePhasePlaying {
-		return 0, nil
-	}
-	if state.Turn.Phase == room.TurnPhaseIdle {
-		return state.Turn.TimeRemainingMs, nil
-	}
-
-	if state.Turn.TimeRemainingMs > 1000 {
-		state.Turn.TimeRemainingMs -= 1000
-	} else {
-		state.Turn.TimeRemainingMs = 0
-	}
-	return state.Turn.TimeRemainingMs, nil
 }
 
 // UpdateLobbySettings updates the variation and turn duration for a room that
