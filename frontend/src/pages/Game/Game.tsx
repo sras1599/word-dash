@@ -1,10 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { GameBoard } from '../../components/GameBoard/GameBoard'
 import { PageShell, type FloatingLetter } from '../../components/PageShell/PageShell'
-import type { GamePlayer, GameState } from '../../lib/gameTypes'
+import type { GameState } from '../../lib/gameTypes'
 import { session } from '../../lib/session'
 import { useDocumentTitle } from '../../lib/useDocumentTitle'
 import { isTurnTimerUrgent } from '../../lib/turnTimer'
+import { GameHud } from './components/GameHud'
 import { GameOverDialog } from './components/GameOverDialog'
 import { GameStateScreen } from './components/GameStateScreen'
 import { GameTopBar } from './components/GameTopBar'
@@ -16,28 +17,6 @@ const FLOATING_LETTERS: FloatingLetter[] = [
     { key: 'w', letter: 'W', className: 'page-game__floating-letter--w' },
     { key: 's', letter: 'S', className: 'page-game__floating-letter--s' },
 ]
-
-function getBoardSubtitle(
-    gameState: GameState,
-    isLocalTurn: boolean,
-    currentTurnPlayer: GamePlayer | null,
-): string {
-    if (gameState.phase === 'finished') {
-        return 'Round complete.'
-    }
-
-    if (gameState.phase === 'waiting') {
-        return 'Preparing the board.'
-    }
-
-    if (isLocalTurn) {
-        return gameState.turn.phase === 'draw'
-            ? 'Draw a card, then build or discard.'
-            : 'Arrange your cards before the timer expires.'
-    }
-
-    return `Waiting for ${currentTurnPlayer?.name ?? 'the next player'}.`
-}
 
 function getGameTitle(
     roomCode: string | undefined,
@@ -135,8 +114,6 @@ export function Game() {
     const drawnCardId = gameState.turn.drawnCard?.id ?? null
     const localHand = localPlayerData?.hand ?? []
     const handCount = localPlayerData?.handCount ?? localHand.length
-    const currentTurnPlayer = gameState.players.find((player) => player.id === gameState.turn.currentPlayerId) ?? null
-
     return (
         <PageShell
             pageClassName="page-game"
@@ -144,10 +121,14 @@ export function Game() {
             floatingLetterClassName="page-game__floating-letter"
             floatingLetters={FLOATING_LETTERS}
         >
-            <GameTopBar
+            <GameTopBar onHome={handleHome} />
+
+            <GameHud
+                gameState={gameState}
+                localPlayerId={localPlayerId}
                 timeRemainingMs={timeRemainingMs}
+                turnDurationMs={turnDurationMs}
                 timerIsUrgent={timerIsUrgent}
-                onHome={handleHome}
             />
 
             <main className="wd-content-layer page-game__main">
@@ -157,11 +138,10 @@ export function Game() {
                     winnerId={gameState.winnerId}
                     localPlayer={localPlayerData ? { ...localPlayerData, hand: localHand } : null}
                     opponents={opponents}
-                    turn={{ ...gameState.turn, timeRemainingMs }}
+                    turn={gameState.turn}
                     variation={gameState.variation}
                     discardTopCard={gameState.discardPileTop}
                     drawPileCount={gameState.drawPileCount}
-                    boardSubtitle={getBoardSubtitle(gameState, isLocalTurn, currentTurnPlayer)}
                     handCount={handCount}
                     drawnCardId={drawnCardId}
                     willAutoDiscardCardId={isArrangePhase && timerIsUrgent ? drawnCardId : null}

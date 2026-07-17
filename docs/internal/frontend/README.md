@@ -92,7 +92,7 @@ frontend/
 │   ├── WordSlot.md
 │   ├── WordRow.md
 │   ├── WordBoard.md
-│   ├── TurnTimer.md
+│   ├── GameHud.md
 │   ├── TurnIndicator.md
 │   ├── OpponentStatus.md
 │   └── GameBoard.md

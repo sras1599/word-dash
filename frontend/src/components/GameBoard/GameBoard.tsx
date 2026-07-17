@@ -43,8 +43,6 @@ export interface GameBoardOpponentPlayer {
 export interface GameBoardTurn {
     currentPlayerId: string
     phase: TurnPhase
-    timeRemainingMs: number
-    totalDurationMs?: number
 }
 
 export interface GameBoardVariation {
@@ -81,8 +79,6 @@ export interface GameBoardProps {
     discardTopCard: CardData | null
     /** Total cards remaining in the draw pile. */
     drawPileCount: number
-    /** Subtitle shown above the local word board. */
-    boardSubtitle: string
     /** Local hand count from the server. */
     handCount: number
     /** ID of the drawn card when it is already present in localPlayer.hand. */
@@ -113,7 +109,6 @@ export function GameBoard({
     variation,
     discardTopCard,
     drawPileCount,
-    boardSubtitle,
     handCount,
     drawnCardId,
     willAutoDiscardCardId,
@@ -488,7 +483,6 @@ export function GameBoard({
                                 <h1 className="game-board__board-title" id="game-board-title">
                                     Build Your Words
                                 </h1>
-                                <p className="game-board__board-subtitle">{boardSubtitle}</p>
                             </div>
 
                             <div className="game-board__board-actions">

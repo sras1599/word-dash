@@ -68,26 +68,6 @@
     opacity: 0.45;
 }
 
-.game-simulation__timer {
-    position: relative;
-    z-index: 4;
-    display: grid;
-    grid-template-columns: auto minmax(10rem, 22rem);
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.65rem 1rem;
-    background: rgb(18 21 28 / 88%);
-}
-
-.game-simulation__timer-label {
-    color: rgb(255 255 255 / 68%);
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
 .game-simulation__board {
     position: relative;
     z-index: 1;
@@ -134,10 +114,5 @@
 @media (max-width: 48rem) {
     .game-simulation__control-group--end {
         margin-inline-start: 0;
-    }
-
-    .game-simulation__timer {
-        grid-template-columns: 1fr;
-        gap: 0.35rem;
     }
 }

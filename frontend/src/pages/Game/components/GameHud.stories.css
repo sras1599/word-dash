@@ -1,0 +1,19 @@
+.game-hud-story {
+    min-height: 160vh;
+    padding: 2rem;
+}
+
+.game-hud-story__board-placeholder {
+    width: min(100%, 48rem);
+    min-height: 70rem;
+    margin: 0 auto;
+    border: 1px dashed color-mix(in srgb, var(--outline-variant, #e7bdb7) 72%, transparent);
+    border-radius: var(--radius-lg, 2rem);
+    background:
+        repeating-linear-gradient(
+            180deg,
+            transparent 0 7rem,
+            color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 45%, transparent) 7rem 7.15rem
+        ),
+        color-mix(in srgb, var(--surface-container-lowest, #fff) 72%, transparent);
+}

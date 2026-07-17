@@ -14,14 +14,13 @@ The main gameplay screen for the Word. Set. Go. variant. All active game interac
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  WordIt!                              [TurnIndicator]       │
-│                                       [TurnTimer]           │
+│  GameTopBar: WordIt! (Home)                                 │
 ├────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Opponents band (top)                                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ OpponentStatus│  │ OpponentStatus│  │ OpponentStatus│      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│                                              ┌─────────────┐│
+│  Opponents band (top)                       │ Turn rail   ││
+│  ┌──────────────┐  ┌──────────────┐         │ Instruction ││
+│  │ OpponentStatus│  │ OpponentStatus│         │ Timer       ││
+│  └──────────────┘  └──────────────┘         └─────────────┘│
 │                                                             │
 ├────────────────────────────────────────────────────────────┤
 │                                                             │
@@ -63,10 +62,10 @@ The game page has distinct visual states driven by `GameState.turn.phase` and `G
 - When the player successfully discards one card, the arrange phase ends and the turn passes.
 
 ### It is another player's turn
-- The local player's hand cards are not draggable (locked state).
+- The local player can continue arranging their own hand and word board.
 - Draw pile and discard pile are inactive.
-- `TurnIndicator` shows whose turn it is.
-- `TurnTimer` is still shown (read-only, showing that player's remaining time).
+- `GameHud` names the active player and explains that local arrangement remains available.
+- `GameHud` continues to show that player's remaining time.
 
 ### Win condition met — Win Overlay
 - A full-screen overlay appears on top of the game board without a route change (see **Win Overlay** section below).

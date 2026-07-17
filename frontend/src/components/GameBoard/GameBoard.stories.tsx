@@ -106,15 +106,12 @@ const meta = {
         // No discard pile at the very start of the first round
         discardTopCard: null,
         drawPileCount: 42,
-        boardSubtitle: 'Draw a card, then build or discard.',
         handCount: 12,
         drawnCardId: null,
         willAutoDiscardCardId: null,
         turn: {
             currentPlayerId: 'local',
             phase: 'draw',
-            timeRemainingMs: 45_000,
-            totalDurationMs: 60_000,
         } satisfies GameBoardTurn,
         onDraw: fn(),
         onPlace: fn(),
@@ -174,12 +171,9 @@ export const KeyboardShortcuts: Story = {
             wordBoard: keyboardShortcutBoard(),
         },
         handCount: 2,
-        boardSubtitle: 'Arrange your cards before the timer expires.',
         turn: {
             currentPlayerId: 'local',
             phase: 'draw',
-            timeRemainingMs: 30_000,
-            totalDurationMs: 60_000,
         },
     },
     play: async ({ args, canvasElement, userEvent }) => {
@@ -264,12 +258,9 @@ export const LocalArrangePhase: Story = {
     args: {
         // By the arrange phase the draw pile has already been used, so a discard card exists
         discardTopCard: DISCARD_TOP,
-        boardSubtitle: 'Arrange your cards before the timer expires.',
         turn: {
             currentPlayerId: 'local',
             phase: 'arrange',
-            timeRemainingMs: 30_000,
-            totalDurationMs: 60_000,
         },
     },
     play: async ({ args, canvasElement, userEvent }) => {
@@ -296,12 +287,9 @@ export const EmptyHandArrangePhase: Story = {
             wordBoard: wordBoardWithPlacedCard(VARIATION_345, { id: 'placed-a', letter: 'A' }),
         },
         handCount: 0,
-        boardSubtitle: 'Arrange your cards before the timer expires.',
         turn: {
             currentPlayerId: 'local',
             phase: 'arrange',
-            timeRemainingMs: 30_000,
-            totalDurationMs: 60_000,
         },
     },
 }
@@ -309,12 +297,9 @@ export const EmptyHandArrangePhase: Story = {
 /** Opponent's turn — local player cannot interact with anything. */
 export const OpponentTurn: Story = {
     args: {
-        boardSubtitle: 'Waiting for Bob.',
         turn: {
             currentPlayerId: 'opp-1',
             phase: 'draw',
-            timeRemainingMs: 20_000,
-            totalDurationMs: 60_000,
         },
     },
 }
@@ -328,14 +313,11 @@ export const TimerUrgent: Story = {
             hand: [...makeLocalPlayer(VARIATION_345, 'local').hand, DRAWN_CARD],
         },
         handCount: 13,
-        boardSubtitle: 'Arrange your cards before the timer expires.',
         drawnCardId: DRAWN_CARD.id,
         willAutoDiscardCardId: DRAWN_CARD.id,
         turn: {
             currentPlayerId: 'local',
             phase: 'arrange',
-            timeRemainingMs: 8_000,
-            totalDurationMs: 60_000,
         },
     },
 }
@@ -350,14 +332,11 @@ export const TimerUrgentBoardCard: Story = {
             wordBoard: wordBoardWithPlacedCard(VARIATION_345, DRAWN_CARD),
         },
         handCount: 11,
-        boardSubtitle: 'Arrange your cards before the timer expires.',
         drawnCardId: DRAWN_CARD.id,
         willAutoDiscardCardId: DRAWN_CARD.id,
         turn: {
             currentPlayerId: 'local',
             phase: 'arrange',
-            timeRemainingMs: 8_000,
-            totalDurationMs: 60_000,
         },
     },
 }

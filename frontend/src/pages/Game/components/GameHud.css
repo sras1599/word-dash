@@ -1,0 +1,237 @@
+.game-hud {
+    --game-hud-progress-color: var(--secondary, #406925);
+    --game-hud-surface: color-mix(in srgb, var(--surface-container-lowest, #fff) 94%, transparent);
+
+    position: fixed;
+    z-index: 5;
+    top: 30%;
+    right: 0;
+    width: 10.5rem;
+    min-height: 18rem;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 80%, transparent);
+    border-right: 0;
+    border-radius: 1.5rem 0 0 1.5rem;
+    background: var(--game-hud-surface);
+    box-shadow: 0 18px 45px -20px color-mix(in srgb, var(--on-surface, #1b1b1b) 36%, transparent);
+    color: var(--on-surface, #1b1b1b);
+    font-family: var(--font-body, sans-serif);
+    backdrop-filter: blur(20px);
+}
+
+.game-hud--urgent {
+    --game-hud-progress-color: var(--primary, #bb000e);
+}
+
+.game-hud__content {
+    min-width: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.25rem 1.15rem;
+}
+
+.game-hud__copy {
+    min-width: 0;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.game-hud__owner {
+    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 72%, transparent);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+
+.game-hud__title {
+    display: -webkit-box;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    font-family: var(--font-headline, inherit);
+    font-size: 1.3rem;
+    line-height: 1.1;
+    -webkit-box-orient: vertical;
+    line-clamp: 3;
+    -webkit-line-clamp: 3;
+}
+
+.game-hud__detail {
+    color: var(--on-surface-variant, #5e3f3b);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.game-hud__compact-title {
+    display: none;
+}
+
+.game-hud__timer {
+    min-width: 5.4rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    color: var(--secondary, #406925);
+    font-family: var(--font-headline, inherit);
+    font-size: 1.12rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+}
+
+.game-hud--urgent .game-hud__timer {
+    color: var(--primary, #bb000e);
+}
+
+.game-hud__timer-icon {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+}
+
+.game-hud__progress {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 0.35rem;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 75%, transparent);
+}
+
+.game-hud__progress>span {
+    position: absolute;
+    inset: auto 0 0;
+    display: block;
+    height: calc(var(--game-hud-progress) * 100%);
+    background: var(--game-hud-progress-color);
+    transition: height 180ms ease-out;
+}
+
+.game-hud__toggle {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 0.7rem;
+    width: 2rem;
+    height: 2rem;
+    display: none;
+    place-items: center;
+    border: 0;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--surface-container-low, #f6f3f2);
+    color: inherit;
+    font: inherit;
+    font-size: 1.2rem;
+    font-weight: 800;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.game-hud__toggle:focus-visible {
+    outline: 3px solid var(--primary, #bb000e);
+    outline-offset: 3px;
+}
+
+@media (max-width: 48rem) {
+    .game-hud {
+        top: auto;
+        bottom: calc(15.75rem + env(safe-area-inset-bottom));
+        width: 11.5rem;
+        min-height: 4.75rem;
+        border-radius: 1.2rem 0 0 1.2rem;
+        transition: width 180ms ease-out, min-height 180ms ease-out;
+    }
+
+    .game-hud--expanded {
+        width: min(21rem, calc(100vw - 1rem));
+        min-height: 8rem;
+    }
+
+    .game-hud__toggle {
+        display: grid;
+    }
+
+    .game-hud__content {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.35rem 0.65rem;
+        padding: 0.65rem 0.85rem 0.75rem 3.35rem;
+    }
+
+    .game-hud__compact-title {
+        display: -webkit-box;
+        min-width: 0;
+        overflow: hidden;
+        color: var(--on-surface-variant, #5e3f3b);
+        font-family: var(--font-headline, inherit);
+        font-size: 0.75rem;
+        line-height: 1.15;
+        -webkit-box-orient: vertical;
+        line-clamp: 3;
+        -webkit-line-clamp: 2;
+    }
+
+    .game-hud__timer {
+        min-width: 4.7rem;
+        justify-content: flex-end;
+        font-size: 1rem;
+    }
+
+    .game-hud:not(.game-hud--expanded) .game-hud__copy {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        border: 0;
+        clip: rect(0, 0, 0, 0);
+    }
+
+    .game-hud--expanded .game-hud__compact-title {
+        display: none;
+    }
+
+    .game-hud--expanded .game-hud__copy {
+        grid-column: 1;
+        grid-row: 1;
+        gap: 0.18rem;
+    }
+
+    .game-hud--expanded .game-hud__owner {
+        font-size: 0.62rem;
+    }
+
+    .game-hud--expanded .game-hud__title {
+        font-size: 1rem;
+        line-clamp: 3;
+        -webkit-line-clamp: 2;
+    }
+
+    .game-hud--expanded .game-hud__detail {
+        white-space: normal;
+    }
+
+    .game-hud--expanded .game-hud__timer {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .game-hud,
+    .game-hud__progress>span {
+        transition-duration: 0.001ms;
+    }
+}

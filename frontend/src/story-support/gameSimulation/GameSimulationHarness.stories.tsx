@@ -38,6 +38,12 @@ export const TwoPlayerSimulation: Story = {
         }
 
         try {
+            const hud = canvas.getByRole('complementary', { name: 'Turn guidance' })
+            await expect(
+                canvas.getByRole('timer', { name: 'Time remaining 1:00' }),
+            ).toBeInTheDocument()
+            await expect(hud).not.toHaveClass('game-hud--urgent')
+
             await userEvent.click(canvas.getByRole('button', { name: /draw pile/i }))
             await expect(canvas.getByRole('button', { name: 'Arrange phase' }))
                 .toHaveAttribute('aria-pressed', 'true')
@@ -47,12 +53,20 @@ export const TwoPlayerSimulation: Story = {
             await expect(canvas.getByText('Drawing...')).toBeInTheDocument()
 
             await userEvent.click(canvas.getByRole('button', { name: 'Advance turn' }))
-            await expect(canvas.getByText('Draw a card')).toBeInTheDocument()
+            await expect(canvas.getAllByText('Draw a card').length).toBeGreaterThan(0)
 
             await userEvent.click(canvas.getByRole('button', { name: 'Waiting' }))
             await userEvent.click(canvas.getByRole('button', { name: 'Playing' }))
             await userEvent.click(canvas.getByRole('button', { name: 'Enter urgency' }))
+            await expect(
+                await canvas.findByRole('timer', { name: 'Time remaining 0:09' }),
+            ).toBeInTheDocument()
+            await expect(hud).toHaveClass('game-hud--urgent')
             await userEvent.click(canvas.getByRole('button', { name: 'Leave urgency' }))
+            await expect(
+                await canvas.findByRole('timer', { name: 'Time remaining 1:00' }),
+            ).toBeInTheDocument()
+            await expect(hud).not.toHaveClass('game-hud--urgent')
             await userEvent.click(canvas.getByRole('button', { name: 'Disconnect opponent' }))
             await expect(canvas.getByText('Disconnected')).toBeInTheDocument()
             await userEvent.click(canvas.getByRole('button', { name: 'Reconnect opponent' }))
@@ -70,6 +84,18 @@ export const TwoPlayerSimulation: Story = {
             await expect(canvas.getByText('No actions yet.')).toBeInTheDocument()
             await expect(canvas.getByRole('button', { name: /draw pile, 40 cards/i }))
                 .toBeInTheDocument()
+
+            await userEvent.click(canvas.getByRole('button', { name: /draw pile/i }))
+            await userEvent.click(canvas.getByRole('button', { name: 'Expire timer' }))
+            await expect(
+                await canvas.findByRole('timer', { name: 'Time remaining 0:00' }),
+            ).toBeInTheDocument()
+            await expect(
+                canvas.getByRole('complementary', { name: 'Turn guidance' }),
+            ).toHaveClass('game-hud--urgent')
+            await expect(
+                await canvas.findByText('expireTurn(): automatic discard'),
+            ).toBeInTheDocument()
         } finally {
             window.fetch = originalFetch
             window.WebSocket = OriginalWebSocket
@@ -89,5 +115,35 @@ export const FourPlayerSimulation: Story = {
         ).toHaveLength(4)
         await expect(canvas.getByRole('combobox', { name: 'Active player' }).children)
             .toHaveLength(4)
+    },
+}
+
+export const MobileHudLayout: Story = {
+    parameters: {
+        viewport: {
+            defaultViewport: 'mobile1',
+        },
+    },
+    args: {
+        playerCount: 2,
+        showEventLog: false,
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+        const hud = canvas.getByRole('complementary', { name: 'Turn guidance' })
+        const shortcuts = canvas.getByRole('button', { name: 'Open keyboard shortcuts' })
+        const hudRect = hud.getBoundingClientRect()
+        const shortcutsRect = shortcuts.getBoundingClientRect()
+        const overlaps = !(
+            hudRect.right <= shortcutsRect.left
+            || hudRect.left >= shortcutsRect.right
+            || hudRect.bottom <= shortcutsRect.top
+            || hudRect.top >= shortcutsRect.bottom
+        )
+
+        await expect(overlaps).toBe(false)
+        await expect(canvas.getByText('Draw', { selector: '.game-hud__compact-title' }))
+            .toBeVisible()
+        await expect(canvas.getByRole('timer')).toBeVisible()
     },
 }

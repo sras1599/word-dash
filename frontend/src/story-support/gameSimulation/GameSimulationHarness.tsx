@@ -1,8 +1,9 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { GameBoard } from '../../components/GameBoard/GameBoard'
-import { TurnTimer } from '../../components/TurnTimer/TurnTimer'
 import type { TurnPhase } from '../../lib/gameTypes'
 import { isTurnTimerUrgent } from '../../lib/turnTimer'
+import { GameHud } from '../../pages/Game/components/GameHud'
+import { GameTopBar } from '../../pages/Game/components/GameTopBar'
 import {
     advanceTurn,
     clearBoard,
@@ -36,22 +37,6 @@ export type GameSimulationHarnessProps = {
     longContent?: boolean
     showControls?: boolean
     showEventLog?: boolean
-}
-
-function getBoardSubtitle(state: GameSimulationState): string {
-    const { gameState } = state
-    if (gameState.phase === 'finished') return 'Round complete.'
-    if (gameState.phase === 'waiting') return 'Preparing the board.'
-
-    const currentPlayer = gameState.players.find(
-        ({ id }) => id === gameState.turn.currentPlayerId,
-    )
-    if (gameState.turn.currentPlayerId !== LOCAL_PLAYER_ID) {
-        return `Waiting for ${currentPlayer?.name ?? 'the next player'}.`
-    }
-    return gameState.turn.phase === 'draw'
-        ? 'Draw a card, then build or discard.'
-        : 'Arrange your cards before the timer expires.'
 }
 
 export function GameSimulationHarness({
@@ -140,12 +125,10 @@ export function GameSimulationHarness({
     const localPlayer = gameState.players.find(({ id }) => id === LOCAL_PLAYER_ID) ?? null
     const opponents = gameState.players.filter(({ id }) => id !== LOCAL_PLAYER_ID)
     const drawnCardId = gameState.turn.drawnCard?.id ?? null
-    const timerActive = gameState.phase === 'playing' && gameState.turn.phase !== 'idle'
     const timerUrgent = isTurnTimerUrgent(
         clockSnapshot.remainingMs,
         clockSnapshot.durationMs,
     )
-
     return (
         <div className="game-simulation page-game" data-testid="game-simulation">
             {showControls && (
@@ -250,16 +233,15 @@ export function GameSimulationHarness({
                 </aside>
             )}
 
-            <header className="game-simulation__timer">
-                <span className="game-simulation__timer-label">
-                    Controlled clock{clockSnapshot.isRunning ? ' · playing' : ' · paused'}
-                </span>
-                <TurnTimer
-                    timeRemainingMs={clockSnapshot.remainingMs}
-                    totalDurationMs={clockSnapshot.durationMs}
-                    isActive={timerActive}
-                />
-            </header>
+            <GameTopBar onHome={() => undefined} />
+
+            <GameHud
+                gameState={gameState}
+                localPlayerId={LOCAL_PLAYER_ID}
+                timeRemainingMs={clockSnapshot.remainingMs}
+                turnDurationMs={clockSnapshot.durationMs}
+                timerIsUrgent={timerUrgent}
+            />
 
             <main className="page-game__main game-simulation__board">
                 <GameBoard
@@ -271,15 +253,10 @@ export function GameSimulationHarness({
                         hand: localPlayer.hand ?? [],
                     } : null}
                     opponents={opponents}
-                    turn={{
-                        ...gameState.turn,
-                        timeRemainingMs: clockSnapshot.remainingMs,
-                        totalDurationMs: clockSnapshot.durationMs,
-                    }}
+                    turn={gameState.turn}
                     variation={gameState.variation}
                     discardTopCard={gameState.discardPileTop}
                     drawPileCount={gameState.drawPileCount}
-                    boardSubtitle={getBoardSubtitle(simulation)}
                     handCount={localPlayer?.handCount ?? 0}
                     drawnCardId={drawnCardId}
                     willAutoDiscardCardId={

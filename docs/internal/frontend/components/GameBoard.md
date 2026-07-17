@@ -4,7 +4,7 @@
 ## Purpose
 
 
-The top-level layout component for the game screen. Assembles all gameplay sub-components into a single viewport-filling layout. Manages the overall spatial arrangement and passes the relevant slice of `GameState` down to each child component.
+The gameplay-content layout component for the game screen. It assembles the player status, card piles, local word board, and hand. Page-level navigation is rendered by `GameTopBar`; persistent turn guidance and timing are rendered by `GameHud`.
 
 ---
 
@@ -12,9 +12,6 @@ The top-level layout component for the game screen. Assembles all gameplay sub-c
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│ Header: WordIt! logo      TurnIndicator      TurnTimer      │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
 │  Opponents band                                            │
 │  ┌─────────────────────────────────────────────────────┐  │
 │  │  OpponentStatus   OpponentStatus   OpponentStatus   │  │
