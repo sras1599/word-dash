@@ -24,8 +24,8 @@
 ───────────────────────────────────────────── */
 .card-pile__stack {
     position: relative;
-    /* Pass pile width down to the Card component via its own custom property */
     --card-width: var(--pile-width);
+    --card-z-index: 2;
     /* Padding accommodates the two ghost cards above the top card */
     padding-top: 8px;
 }
@@ -63,12 +63,6 @@
     background: #c8c8c0;
 }
 
-/* Top card sits above all ghost layers */
-.card-pile__stack>.card {
-    position: relative;
-    z-index: 2;
-}
-
 /* ─────────────────────────────────────────────
    Count badge (draw pile only)
 ───────────────────────────────────────────── */
@@ -95,15 +89,17 @@
     cursor: pointer;
 }
 
-.card-pile--interactive .card-pile__stack,
-.card-pile--interactive .card-pile__ghost,
-.card-pile--interactive .card-pile__stack>.card {
-    cursor: pointer;
+.card-pile--interactive .card-pile__stack {
+    --card-cursor: pointer;
 }
 
-.card-pile--interactive:hover .card-pile__stack>.card {
-    transform: translateY(-2px);
-    transition: transform 0.15s ease;
+.card-pile--interactive:hover .card-pile__stack {
+    --card-composition-transform: translateY(-2px);
+}
+
+.card-pile--interactive .card-pile__stack,
+.card-pile--interactive .card-pile__ghost {
+    cursor: pointer;
 }
 
 .card-pile--interactive:focus-visible {
@@ -116,16 +112,14 @@
    Modifier: drop-target (arrange phase)
    Discard pile is eligible to receive a card.
 ───────────────────────────────────────────── */
-.card-pile--drop-target .card-pile__stack>.card {
-    box-shadow: 0 0 0 2px var(--pile-teal);
-    transition: box-shadow 0.15s ease;
+.card-pile--drop-target .card-pile__stack {
+    --card-box-shadow: 0 0 0 2px var(--pile-teal);
 }
 
 /* ─────────────────────────────────────────────
    Modifier: drag-over (card hovering above pile)
    Green ring confirms valid drop target.
 ───────────────────────────────────────────── */
-.card-pile--drag-over .card-pile__stack>.card {
-    box-shadow: 0 0 0 3px var(--pile-teal), var(--pile-shadow);
-    transition: box-shadow 0.15s ease;
+.card-pile--drag-over .card-pile__stack {
+    --card-box-shadow: 0 0 0 3px var(--pile-teal), var(--pile-shadow);
 }

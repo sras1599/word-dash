@@ -2,21 +2,14 @@
    WordBoard – custom properties
 ───────────────────────────────────────────── */
 .word-board {
-    --board-gap: 12px;
-    --board-padding: 12px;
-    --board-radius: 12px;
-    --board-complete-color: #2db89c;
-    --board-complete-transition: box-shadow 0.3s ease, background-color 0.3s ease;
-    --label-color: #666;
-    --label-font-size: 0.8rem;
-    --label-min-width: 100px;
-
+    width: min(100%, var(--word-board-max-width, 42rem));
     display: flex;
     flex-direction: column;
-    gap: var(--board-gap);
-    padding: var(--board-padding);
-    border-radius: var(--board-radius);
-    transition: var(--board-complete-transition);
+    align-items: center;
+    gap: var(--word-board-gap, 1rem);
+    padding: var(--word-board-padding, 12px);
+    border-radius: var(--word-board-radius, 12px);
+    transition: var(--word-board-complete-transition, box-shadow 0.3s ease, background-color 0.3s ease);
 }
 
 /* ─────────────────────────────────────────────
@@ -24,21 +17,21 @@
 ───────────────────────────────────────────── */
 .word-board--complete {
     background-color: rgba(45, 184, 156, 0.08);
-    box-shadow: 0 0 0 2px var(--board-complete-color);
+    box-shadow: 0 0 0 2px var(--word-board-complete-color, #2db89c);
     animation: word-board-celebrate 0.5s ease forwards;
 }
 
 @keyframes word-board-celebrate {
     0% {
-        box-shadow: 0 0 0 2px var(--board-complete-color);
+        box-shadow: 0 0 0 2px var(--word-board-complete-color, #2db89c);
     }
 
     40% {
-        box-shadow: 0 0 16px 4px var(--board-complete-color);
+        box-shadow: 0 0 16px 4px var(--word-board-complete-color, #2db89c);
     }
 
     100% {
-        box-shadow: 0 0 0 2px var(--board-complete-color);
+        box-shadow: 0 0 0 2px var(--word-board-complete-color, #2db89c);
     }
 }
 
@@ -87,9 +80,10 @@
    Row label — "Word 1 (3)"
 ───────────────────────────────────────────── */
 .word-board__row-label {
-    min-width: var(--label-min-width);
-    font-size: var(--label-font-size);
-    color: var(--label-color);
+    display: var(--word-board-label-display, none);
+    min-width: var(--word-board-label-min-width, 100px);
+    font-size: var(--word-board-label-font-size, 0.8rem);
+    color: var(--word-board-label-color, #666);
     text-align: right;
     flex-shrink: 0;
     user-select: none;

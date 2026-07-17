@@ -1,4 +1,6 @@
 .game-board {
+    --word-slot-width: var(--page-game-card-width, 5rem);
+
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -109,8 +111,7 @@
 }
 
 .game-board__status-role,
-.game-board__board-subtitle,
-.game-board .player-hand__empty {
+.game-board__board-subtitle {
     color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 86%, transparent);
 }
 
@@ -270,71 +271,6 @@
     flex: 0 0 auto;
 }
 
-.game-board .word-board {
-    width: min(100%, 42rem);
-    align-items: center;
-    gap: 1rem;
-}
-
-.game-board .word-board__row-wrapper {
-    align-items: center;
-}
-
-.game-board .word-board__row-label {
-    display: none;
-}
-
-.game-board .word-row {
-    gap: 1rem;
-    padding: 0.2rem;
-    background: transparent;
-}
-
-.game-board .word-row--valid {
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 16%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 18%, transparent);
-}
-
-.game-board .word-row--invalid {
-    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 34%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary, #bb000e) 14%, transparent);
-}
-
-.game-board .word-row--selected {
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 12%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 18%, transparent);
-}
-
-.game-board .word-slot {
-    --slot-width: var(--page-game-card-width, 5rem);
-    width: var(--page-game-card-width, 5rem);
-}
-
-.game-board .word-slot--empty {
-    width: var(--page-game-card-width, 5rem);
-    aspect-ratio: 2 / 3;
-    border: 2px dashed color-mix(in srgb, var(--on-surface, #1b1b1b) 18%, transparent);
-    background: color-mix(in srgb, var(--surface-container-lowest, #ffffff) 45%, transparent);
-}
-
-.game-board .word-slot--filled {
-    border: 2px solid transparent;
-}
-
-.game-board .word-slot--drag-over {
-    border-color: var(--secondary, #406925);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary-container, #c0f19d) 34%, transparent);
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 14%, transparent);
-}
-
-.game-board .word-slot--selected {
-    border-color: var(--secondary, #406925);
-    box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--surface-container-lowest, #ffffff) 78%, transparent),
-        0 0 0 3px color-mix(in srgb, var(--secondary, #406925) 28%, transparent);
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 16%, transparent);
-}
-
 .game-board__piles {
     display: flex;
     align-items: flex-end;
@@ -409,18 +345,6 @@
     color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 76%, transparent);
     font-size: 0.72rem;
     font-weight: 700;
-}
-
-.game-board .player-hand {
-    background: transparent;
-    padding: 0;
-    box-shadow: none;
-}
-
-.game-board .player-hand--drag-over {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 28%, transparent);
-    border-radius: calc(var(--radius-lg, 2rem) - 0.35rem);
-    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 10%, transparent);
 }
 
 .game-board__drag-overlay {
@@ -653,31 +577,6 @@
     }
 }
 
-.game-board .player-hand__cards {
-    display: flex;
-    gap: 0.75rem;
-    overflow-x: auto;
-    margin-top: -1rem;
-    padding: 0.8rem;
-    scrollbar-width: none;
-}
-
-.game-board .player-hand__cards::-webkit-scrollbar {
-    display: none;
-}
-
-.game-board .player-hand__cards>.card {
-    flex: 0 0 auto;
-}
-
-.game-board .player-hand__cards>.card:hover {
-    transform: translateY(-0.35rem);
-}
-
-.game-board .player-hand__cards>.card:active {
-    transform: scale(0.95);
-}
-
 @media (max-width: 760px) {
     .game-board {
         gap: 2rem;
@@ -689,10 +588,6 @@
 
     .game-board__status-card--active {
         transform: none;
-    }
-
-    .game-board .word-row {
-        gap: 0.65rem;
     }
 
     .game-board__board-header {

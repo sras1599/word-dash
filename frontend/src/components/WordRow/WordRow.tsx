@@ -18,6 +18,8 @@ export interface WordRowProps {
     rowState: WordRowState
     /** The row's index within the player's word board. */
     rowIndex: number
+    /** Alternate read-only presentation used for compact result rows. */
+    presentation?: 'default' | 'compact-result'
     /** ID of the drawn card, even if it has been placed in this row. */
     drawnCardId?: string | null
     /** ID of the card that should flash before automatic discard. */
@@ -50,6 +52,7 @@ function deriveIsValid(rowState: WordRowState): boolean | null {
 export function WordRow({
     rowState,
     rowIndex,
+    presentation = 'default',
     drawnCardId = null,
     willAutoDiscardCardId = null,
     isSelected = false,
@@ -68,6 +71,7 @@ export function WordRow({
         isValid === true && 'word-row--valid',
         isValid === false && 'word-row--invalid',
         isSelected && 'word-row--selected',
+        presentation === 'compact-result' && 'word-row--compact-result',
     ]
         .filter(Boolean)
         .join(' ')

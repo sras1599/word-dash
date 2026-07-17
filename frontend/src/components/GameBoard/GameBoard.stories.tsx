@@ -5,6 +5,7 @@ import { GameBoard } from './GameBoard'
 import type { GameBoardLocalPlayer, GameBoardOpponentPlayer, GameBoardTurn, GameBoardVariation } from './GameBoard'
 import type { CardData } from '../Card/Card'
 import type { WordBoardState } from '../WordBoard/WordBoard'
+import '../../pages/Game/Game.css'
 
 // ─── Shared fixtures ────────────────────────────────────────────────────────
 
@@ -127,10 +128,39 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+const productionRender: Story['render'] = (args) => (
+    <div className="page-game">
+        <main className="page-game__main">
+            <GameBoard {...args} />
+        </main>
+    </div>
+)
+
 // ─── Stories ─────────────────────────────────────────────────────────────────
 
 /** Local player's draw phase — only the card piles are interactive. */
 export const LocalDrawPhase: Story = {}
+
+/** Frozen production import path used for cascade and screenshot parity checks. */
+export const ProductionDrawParity: Story = {
+    render: productionRender,
+    play: async ({ canvasElement }) => {
+        const label = canvasElement.querySelector<HTMLElement>('.word-board__row-label')
+        const row = canvasElement.querySelector<HTMLElement>('.word-row')
+        const slot = canvasElement.querySelector<HTMLElement>('.word-slot--empty')
+        const hand = canvasElement.querySelector<HTMLElement>('.player-hand__cards')
+
+        if (!label || !row || !slot || !hand) throw new Error('Expected production GameBoard elements')
+
+        await expect(getComputedStyle(label).display).toBe('none')
+        const rootFontSize = Number.parseFloat(getComputedStyle(canvasElement.ownerDocument.documentElement).fontSize)
+        await expect(Number.parseFloat(getComputedStyle(row).padding)).toBeCloseTo(rootFontSize * 0.2, 4)
+        await expect(getComputedStyle(slot).borderStyle).toBe('dashed')
+        await expect(getComputedStyle(slot).borderWidth).toBe('2px')
+        await expect(getComputedStyle(hand).overflowX).toBe('auto')
+        await expect(getComputedStyle(hand).scrollbarWidth).toBe('none')
+    },
+}
 
 export const KeyboardShortcuts: Story = {
     args: {
@@ -251,6 +281,11 @@ export const LocalArrangePhase: Story = {
     },
 }
 
+export const ProductionArrangeParity: Story = {
+    ...LocalArrangePhase,
+    render: productionRender,
+}
+
 /** Arrange phase after all cards have been placed; hand remains a drop target. */
 export const EmptyHandArrangePhase: Story = {
     args: {
@@ -325,6 +360,11 @@ export const TimerUrgentBoardCard: Story = {
             totalDurationMs: 60_000,
         },
     },
+}
+
+export const ProductionUrgentParity: Story = {
+    ...TimerUrgentBoardCard,
+    render: productionRender,
 }
 
 /** No opponents — single player or solo debug view. */

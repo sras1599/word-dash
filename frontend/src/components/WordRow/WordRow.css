@@ -2,39 +2,52 @@
    WordRow – custom properties
 ───────────────────────────────────────────── */
 .word-row {
-    --row-valid-color: #2db89c;
-    --row-invalid-color: #e8231a;
-    --row-gap: 8px;
-    --row-padding: 8px;
-    --row-radius: 10px;
-    --row-transition: background-color 0.2s ease, box-shadow 0.2s ease;
-
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: var(--row-gap);
-    padding: var(--row-padding);
-    border-radius: var(--row-radius);
-    transition: var(--row-transition);
+    gap: var(--word-row-gap, 1rem);
+    padding: var(--word-row-padding, 0.2rem);
+    border-radius: var(--word-row-radius, 10px);
+    background: transparent;
+    transition: var(--word-row-transition, background-color 0.2s ease, box-shadow 0.2s ease);
+}
+
+.word-row--selected {
+    background: transparent;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 18%, transparent);
 }
 
 /* ─────────────────────────────────────────────
    Valid word — all slots filled and recognised
 ───────────────────────────────────────────── */
 .word-row--valid {
-    background-color: rgba(45, 184, 156, 0.06);
-    box-shadow: 0 0 0 1px rgba(45, 184, 156, 0.55);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 26%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 24%, transparent);
 }
 
 /* ─────────────────────────────────────────────
    Invalid word — all slots filled but unrecognised
 ───────────────────────────────────────────── */
 .word-row--invalid {
-    background-color: rgba(232, 35, 26, 0.05);
-    box-shadow: 0 0 0 1px rgba(232, 35, 26, 0.45);
+    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 54%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary, #bb000e) 20%, transparent);
 }
 
-.word-row--selected {
-    background-color: rgba(45, 184, 156, 0.05);
-    box-shadow: 0 0 0 1px rgba(45, 184, 156, 0.22);
+.word-row--compact-result {
+    --word-slot-width: 100%;
+    --card-font-size: clamp(0.72rem, 1.65vw, 0.9rem);
+    --card-corner-font-size: clamp(0.45rem, 0.72em, 0.65rem);
+    --card-center-font-size: clamp(1.15rem, 2.2em, 2.25rem);
+
+    width: min(100%, var(--word-row-max-width, 100%));
+    display: grid;
+    grid-template-columns: repeat(var(--word-row-slot-count, 1), minmax(0, 1fr));
+    justify-content: center;
+    gap: var(--word-row-compact-gap, clamp(0.35rem, 1.4vw, 0.55rem));
+}
+
+@media (max-width: 760px) {
+    .word-row:not(.word-row--compact-result) {
+        --word-row-gap: 0.65rem;
+    }
 }

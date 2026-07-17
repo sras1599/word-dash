@@ -52,3 +52,24 @@ export const Empty: Story = {
     },
 }
 
+/** Filled slot and nested card both expose keyboard selection feedback. */
+export const Selected: Story = {
+    args: {
+        isSelected: true,
+    },
+}
+
+/** A newly drawn card keeps its own visual state inside the slot. */
+export const Drawn: Story = {
+    args: {
+        drawnCardId: SAMPLE_CARD.id,
+    },
+}
+
+/** Without interaction callbacks the nested card is read-only. */
+export const ReadOnly: Story = {
+    args: {
+        onPlace: undefined,
+        onCardSelected: undefined,
+    },
+}

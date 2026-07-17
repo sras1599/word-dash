@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { CSSProperties } from 'react'
 import { fn } from 'storybook/test'
 
 import { WordRow } from './WordRow'
@@ -58,6 +59,7 @@ const meta = {
     argTypes: {
         rowIndex: { control: 'number' },
         rowState: { control: 'object' },
+        presentation: { control: 'radio', options: ['default', 'compact-result'] },
     },
     args: {
         rowIndex: 0,
@@ -97,6 +99,34 @@ export const CompleteInvalid: Story = {
     args: {
         rowState: completeInvalidRow,
     },
+}
+
+/** Keyboard navigation highlights the selected row without replacing validation feedback. */
+export const Selected: Story = {
+    args: {
+        rowState: partialRow,
+        isSelected: true,
+        selectedSlotIndex: 1,
+    },
+}
+
+/** Read-only winning row uses the explicit compact result presentation. */
+export const CompactResult: Story = {
+    args: {
+        rowState: completeValidRow,
+        presentation: 'compact-result',
+    },
+    render: (args) => (
+        <div
+            style={{
+                '--word-row-slot-count': args.rowState.slots.length,
+                '--word-row-max-width': '22rem',
+                width: 'min(90vw, 28rem)',
+            } as CSSProperties}
+        >
+            <WordRow {...args} />
+        </div>
+    ),
 }
 
 /** A 3-letter row. */

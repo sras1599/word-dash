@@ -5,10 +5,17 @@
    always appears last (rightmost).
 ───────────────────────────────────────────── */
 .player-hand {
+    --card-flex: 0 0 auto;
+    --card-hover-transform: translateY(-0.35rem);
+    --card-active-transform: scale(0.95);
+
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: var(--player-hand-gap, 12px);
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .player-hand--drop-target {
@@ -22,8 +29,9 @@
 }
 
 .player-hand--drag-over {
-    box-shadow: inset 0 0 0 1px rgba(45, 184, 156, 0.5);
-    background: rgba(45, 184, 156, 0.06);
+    border-radius: calc(var(--radius-lg, 2rem) - 0.35rem);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--secondary, #406925) 28%, transparent);
+    background: color-mix(in srgb, var(--secondary-container, #c0f19d) 10%, transparent);
 }
 
 /* ─────────────────────────────────────────────
@@ -33,11 +41,20 @@
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    gap: 8px;
+    gap: var(--player-hand-card-gap, 0.75rem);
+    overflow-x: auto;
+    margin-top: -1rem;
+    padding: 0.8rem;
+    scrollbar-width: none;
+}
+
+.player-hand__cards::-webkit-scrollbar {
+    display: none;
 }
 
 .player-hand__empty {
     margin: 0;
+    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 86%, transparent);
 }
 
 /* ─────────────────────────────────────────────

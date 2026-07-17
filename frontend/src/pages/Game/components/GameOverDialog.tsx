@@ -18,8 +18,8 @@ function getWinningRowStyle(slotCount: number): CSSProperties {
     const maxWidthRem = safeSlotCount * cardWidthRem + (safeSlotCount - 1) * gapRem + rowPaddingRem
 
     return {
-        '--overlay-slot-count': safeSlotCount,
-        '--overlay-row-max-width': `${maxWidthRem}rem`,
+        '--word-row-slot-count': safeSlotCount,
+        '--word-row-max-width': `${maxWidthRem}rem`,
     } as CSSProperties
 }
 
@@ -36,7 +36,7 @@ export function GameOverDialog({ winner, isHost, onPlayAgain, onHome }: GameOver
                             key={index}
                             style={getWinningRowStyle(row.slots.length)}
                         >
-                            <WordRow rowState={row} rowIndex={index} />
+                            <WordRow rowState={row} rowIndex={index} presentation="compact-result" />
                         </div>
                     ))}
                 </section>

@@ -98,11 +98,6 @@
 .page-game__nav-end,
 .page-game__nav-links,
 .page-game__nav-actions,
-.page-game__status-main,
-.page-game__status-copy,
-.page-game__status-count,
-.page-game__hand-heading,
-.page-game__hand-header,
 .page-game__overlay-actions {
     display: flex;
     align-items: center;
@@ -162,8 +157,7 @@
 }
 
 .page-game__nav-timer-icon,
-.page-game__nav-icon,
-.page-game__status-count-icon {
+.page-game__nav-icon {
     width: 1.15rem;
     height: 1.15rem;
     flex: 0 0 auto;
@@ -171,9 +165,6 @@
 
 .page-game__nav-timer-text,
 .page-game__nav-link,
-.page-game__status-name,
-.page-game__board-title,
-.page-game__hand-title,
 .page-game__overlay-heading,
 .page-game__overlay-btn,
 .page-game__state-title {
@@ -224,348 +215,6 @@
     gap: 2.75rem;
 }
 
-.page-game__status-strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-    gap: 1rem;
-}
-
-.page-game__status-card {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1.2rem 1.25rem;
-    border: 1px solid color-mix(in srgb, var(--surface-container-highest) 36%, transparent);
-    border-radius: var(--radius-xl);
-    background: color-mix(in srgb, var(--surface-container-lowest) 78%, transparent);
-    box-shadow: 0 12px 30px -22px color-mix(in srgb, var(--on-surface) 24%, transparent);
-    backdrop-filter: blur(24px);
-}
-
-.page-game__status-card--local {
-    background: color-mix(in srgb, var(--primary-fixed) 32%, var(--surface-container-lowest));
-}
-
-.page-game__status-card--active {
-    border: 2px solid color-mix(in srgb, var(--primary) 18%, transparent);
-    box-shadow: 0 24px 44px -26px color-mix(in srgb, var(--primary) 34%, transparent);
-    transform: scale(1.02);
-}
-
-.page-game__status-card--disconnected {
-    opacity: 0.7;
-}
-
-.page-game__status-badge {
-    position: absolute;
-    top: -0.95rem;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 0.35rem 1rem;
-    border-radius: var(--radius-full);
-    background: var(--primary);
-    color: var(--on-primary);
-    font-family: var(--font-headline);
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    box-shadow: 0 12px 24px color-mix(in srgb, var(--primary) 28%, transparent);
-}
-
-.page-game__status-main {
-    gap: 0.9rem;
-    min-width: 0;
-}
-
-.page-game__status-avatar {
-    width: 3rem;
-    height: 3rem;
-    border-radius: var(--radius-full);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: color-mix(in srgb, var(--surface-container-highest) 84%, transparent);
-    color: var(--on-surface);
-    font-family: var(--font-headline);
-    font-size: 0.95rem;
-    font-weight: 800;
-}
-
-.page-game__status-avatar--local {
-    background: var(--primary-fixed);
-    color: var(--primary);
-}
-
-.page-game__status-copy {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.12rem;
-    min-width: 0;
-}
-
-.page-game__status-name {
-    font-size: 1.15rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-}
-
-.page-game__status-role,
-.page-game__board-subtitle,
-.page-game__state-copy,
-.page-game__loading-text,
-.page-game__hand-empty {
-    color: color-mix(in srgb, var(--on-surface-variant) 86%, transparent);
-}
-
-.page-game__status-role {
-    font-size: 0.92rem;
-    font-weight: 500;
-}
-
-.page-game__status-role--active {
-    color: var(--primary);
-    font-weight: 700;
-}
-
-.page-game__status-role--disconnected {
-    color: var(--on-surface-variant);
-}
-
-.page-game__status-count {
-    gap: 0.45rem;
-    padding: 0.55rem 0.9rem;
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--surface-container-highest) 84%, transparent);
-    color: var(--on-surface);
-    flex-shrink: 0;
-}
-
-.page-game__status-count--active {
-    background: var(--primary);
-    color: var(--on-primary);
-}
-
-.page-game__status-count-value {
-    font-family: var(--font-headline);
-    font-size: 1rem;
-    font-weight: 800;
-}
-
-.page-game__board-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.5rem;
-}
-
-.page-game__board-copy {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.35rem;
-    text-align: center;
-}
-
-.page-game__board-title,
-.page-game__pile-label,
-.page-game__overlay-eyebrow,
-.page-game__hand-count {
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-}
-
-.page-game__board-title {
-    font-size: 0.92rem;
-    font-weight: 800;
-    color: color-mix(in srgb, var(--on-surface-variant) 56%, transparent);
-}
-
-.page-game__board-subtitle {
-    max-width: 36rem;
-    font-size: 0.95rem;
-    font-weight: 500;
-}
-
-.page-game__board {
-    width: min(100%, 42rem);
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.page-game__board-row {
-    display: flex;
-    justify-content: center;
-}
-
-.page-game .word-row {
-    gap: 1rem;
-    padding: 0.2rem;
-    background: transparent;
-}
-
-.page-game .word-row--valid {
-    background: color-mix(in srgb, var(--secondary-container) 26%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary) 24%, transparent);
-}
-
-.page-game .word-row--invalid {
-    background: color-mix(in srgb, var(--primary-fixed) 54%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent);
-}
-
-.page-game .word-slot {
-    --slot-width: var(--page-game-card-width);
-    width: var(--page-game-card-width);
-}
-
-.page-game .word-slot--empty {
-    width: var(--page-game-card-width);
-    aspect-ratio: 2 / 3;
-    border: 2px dashed color-mix(in srgb, var(--on-surface) 18%, transparent);
-    background: color-mix(in srgb, var(--surface-container-lowest) 45%, transparent);
-}
-
-.page-game .word-slot--filled {
-    border: 2px solid transparent;
-}
-
-.page-game .word-slot--drag-over {
-    border-color: var(--secondary);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--secondary-container) 48%, transparent);
-    background: color-mix(in srgb, var(--secondary-container) 24%, transparent);
-}
-
-
-
-.page-game__piles {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 3.75rem;
-    flex-wrap: wrap;
-}
-
-.page-game__pile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.8rem;
-}
-
-.page-game__pile-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: color-mix(in srgb, var(--on-surface-variant) 56%, transparent);
-}
-
-
-
-.page-game__hand-footer {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 4;
-}
-
-.page-game__hand-shell {
-    border-top: 1px solid color-mix(in srgb, var(--surface-container-lowest) 55%, transparent);
-    border-top-left-radius: var(--radius-xl);
-    border-top-right-radius: var(--radius-xl);
-    background: color-mix(in srgb, var(--surface-container-low) 96%, transparent);
-    box-shadow: 0 -20px 50px -15px color-mix(in srgb, var(--on-surface) 10%, transparent);
-    backdrop-filter: blur(18px);
-}
-
-.page-game__hand-content {
-    width: min(100%, 96rem);
-    margin: 0 auto;
-    padding: 1.75rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom));
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-}
-
-.page-game__hand-header {
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.page-game__hand-heading {
-    gap: 0.75rem;
-}
-
-.page-game__hand-title {
-    font-size: 1.9rem;
-    font-weight: 800;
-    letter-spacing: -0.06em;
-}
-
-.page-game__hand-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.35rem 0.65rem;
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--surface-container-highest) 86%, transparent);
-    color: color-mix(in srgb, var(--on-surface-variant) 76%, transparent);
-    font-size: 0.72rem;
-    font-weight: 700;
-}
-
-.page-game__hand-sort {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.8rem 1.45rem;
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--surface-container-highest) 84%, transparent);
-    color: var(--on-surface);
-    font-family: var(--font-headline);
-    font-size: 0.92rem;
-    font-weight: 700;
-}
-
-.page-game__hand-track {
-    display: flex;
-    gap: 0.75rem;
-    overflow-x: auto;
-    margin-top: -1rem;
-    padding: 1.2rem 0 0.6rem;
-    scrollbar-width: none;
-}
-
-.page-game__hand-track::-webkit-scrollbar {
-    display: none;
-}
-
-.page-game__hand-track--drag-over {
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--secondary) 34%, transparent);
-    border-radius: calc(var(--radius-lg) - 0.35rem);
-    background: color-mix(in srgb, var(--secondary-container) 18%, transparent);
-}
-
-.page-game__hand-track>.card {
-    flex: 0 0 auto;
-}
-
-.page-game__hand-track>.card:hover {
-    transform: translateY(-1rem);
-}
-
-.page-game__hand-track>.card:active {
-    transform: scale(0.95);
-}
-
-.page-game__hand-empty {
-    margin: 0;
-    padding: 1rem 0;
-}
-
 .page-game__overlay {
     position: fixed;
     inset: 0;
@@ -598,6 +247,8 @@
     margin: 0;
     font-size: 0.78rem;
     font-weight: 800;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
     color: var(--primary);
 }
 
@@ -619,47 +270,9 @@
 }
 
 .page-game__overlay-word-row {
-    --overlay-slot-count: 1;
-    --overlay-row-gap: clamp(0.35rem, 1.4vw, 0.55rem);
-    --overlay-row-max-width: 100%;
-
     width: 100%;
     display: flex;
     justify-content: center;
-}
-
-.page-game .page-game__overlay-word-row .word-row {
-    width: min(100%, var(--overlay-row-max-width));
-    display: grid;
-    grid-template-columns: repeat(var(--overlay-slot-count), minmax(0, 1fr));
-    justify-content: center;
-    gap: var(--overlay-row-gap);
-    padding: 0.2rem;
-}
-
-.page-game .page-game__overlay-word-row .word-slot {
-    --slot-width: 100%;
-    width: 100%;
-    min-width: 0;
-}
-
-.page-game .page-game__overlay-word-row .word-slot--empty,
-.page-game .page-game__overlay-word-row .word-slot--filled {
-    width: 100%;
-}
-
-.page-game .page-game__overlay-word-row .card {
-    --card-width: 100%;
-    font-size: clamp(0.72rem, 1.65vw, 0.9rem);
-}
-
-.page-game .page-game__overlay-word-row .card__letter--top,
-.page-game .page-game__overlay-word-row .card__letter--bottom {
-    font-size: clamp(0.45rem, 0.72em, 0.65rem);
-}
-
-.page-game .page-game__overlay-word-row .card__letter--center {
-    font-size: clamp(1.15rem, 2.2em, 2.25rem);
 }
 
 .page-game__overlay-actions {
@@ -788,34 +401,6 @@
         padding: 1.25rem 1rem calc(14.75rem + env(safe-area-inset-bottom));
     }
 
-    .page-game__status-strip {
-        grid-template-columns: 1fr;
-    }
-
-    .page-game__status-card--active {
-        transform: none;
-    }
-
-    .page-game .word-row {
-        gap: 0.65rem;
-    }
-
-    .page-game__piles {
-        gap: 2.5rem;
-    }
-
-    .page-game__hand-content {
-        padding: 1.15rem 1rem calc(1rem + env(safe-area-inset-bottom));
-    }
-
-    .page-game__hand-title {
-        font-size: 1.45rem;
-    }
-
-    .page-game__hand-sort {
-        padding: 0.65rem 1rem;
-        font-size: 0.84rem;
-    }
 }
 
 @media (max-width: 560px) {
@@ -825,33 +410,6 @@
 
     .page-game__nav-timer-text {
         font-size: 0.98rem;
-    }
-
-    .page-game__status-card {
-        border-radius: calc(var(--radius-lg) - 0.35rem);
-    }
-
-    .page-game__status-avatar {
-        width: 2.6rem;
-        height: 2.6rem;
-        font-size: 0.82rem;
-    }
-
-    .page-game__status-name {
-        font-size: 1rem;
-    }
-
-    .page-game__board-subtitle {
-        font-size: 0.88rem;
-    }
-
-    .page-game__piles {
-        gap: 1.5rem;
-    }
-
-    .page-game__hand-header {
-        flex-direction: column;
-        align-items: flex-start;
     }
 
     .page-game__overlay-card,
