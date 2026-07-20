@@ -1,11 +1,13 @@
 import type { InputHTMLAttributes } from 'react'
-import { HomeFormField } from './HomeFormField'
+import { Button, FormField, getFormFieldDescription, Panel, TextInput } from '../../../components/ui'
+
+type HomeTextInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'>
 
 type CreateGamePanelProps = {
     nameError: string
     submitError: string
     isLoading: boolean
-    nameInputProps: InputHTMLAttributes<HTMLInputElement>
+    nameInputProps: HomeTextInputProps
     onSubmit: () => void
 }
 
@@ -17,15 +19,17 @@ export function CreateGamePanel({
     onSubmit,
 }: CreateGamePanelProps) {
     return (
-        <section className="page-home__panel" id="page-home-create-panel" aria-label="Create game form">
+        <Panel className="page-home__panel" id="page-home-create-panel" aria-label="Create game form">
             <form className="page-home__form" onSubmit={onSubmit} noValidate>
-                <HomeFormField
-                    id="create-name"
-                    label="Your name"
-                    error={nameError}
-                    inputProps={nameInputProps}
-                    autoComplete="nickname"
-                />
+                <FormField id="create-name" label="Your name" error={nameError}>
+                    <TextInput
+                        id="create-name"
+                        invalid={!!nameError}
+                        autoComplete="nickname"
+                        aria-describedby={getFormFieldDescription('create-name', false, !!nameError)}
+                        {...nameInputProps}
+                    />
+                </FormField>
 
                 {submitError && (
                     <p className="page-home__error" role="alert">
@@ -33,10 +37,10 @@ export function CreateGamePanel({
                     </p>
                 )}
 
-                <button className="wd-btn wd-btn--lift wd-btn--primary page-home__submit" type="submit" disabled={isLoading}>
+                <Button className="page-home__submit" type="submit" pending={isLoading}>
                     {isLoading ? 'Creating…' : 'Create →'}
-                </button>
+                </Button>
             </form>
-        </section>
+        </Panel>
     )
 }

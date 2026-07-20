@@ -1,12 +1,14 @@
 import type { InputHTMLAttributes } from 'react'
-import { HomeFormField } from './HomeFormField'
+import { Button, FormField, getFormFieldDescription, Panel, TextInput } from '../../../components/ui'
+
+type HomeTextInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'>
 
 type JoinGamePanelProps = {
     nameError: string
     roomCodeError: string
     isLoading: boolean
-    nameInputProps: InputHTMLAttributes<HTMLInputElement>
-    roomCodeInputProps: InputHTMLAttributes<HTMLInputElement>
+    nameInputProps: HomeTextInputProps
+    roomCodeInputProps: HomeTextInputProps
     onSubmit: () => void
 }
 
@@ -19,29 +21,33 @@ export function JoinGamePanel({
     onSubmit,
 }: JoinGamePanelProps) {
     return (
-        <section className="page-home__panel" id="page-home-join-panel" aria-label="Join game form">
+        <Panel className="page-home__panel" id="page-home-join-panel" aria-label="Join game form">
             <form className="page-home__form" onSubmit={onSubmit} noValidate>
-                <HomeFormField
-                    id="join-name"
-                    label="Your name"
-                    error={nameError}
-                    inputProps={nameInputProps}
-                    autoComplete="nickname"
-                />
+                <FormField id="join-name" label="Your name" error={nameError}>
+                    <TextInput
+                        id="join-name"
+                        invalid={!!nameError}
+                        autoComplete="nickname"
+                        aria-describedby={getFormFieldDescription('join-name', false, !!nameError)}
+                        {...nameInputProps}
+                    />
+                </FormField>
 
-                <HomeFormField
-                    id="join-room-code"
-                    label="Room code"
-                    error={roomCodeError}
-                    inputProps={roomCodeInputProps}
-                    autoComplete="off"
-                    autoCapitalize="characters"
-                />
+                <FormField id="join-room-code" label="Room code" error={roomCodeError}>
+                    <TextInput
+                        id="join-room-code"
+                        invalid={!!roomCodeError}
+                        autoComplete="off"
+                        autoCapitalize="characters"
+                        aria-describedby={getFormFieldDescription('join-room-code', false, !!roomCodeError)}
+                        {...roomCodeInputProps}
+                    />
+                </FormField>
 
-                <button className="wd-btn wd-btn--lift wd-btn--primary page-home__submit" type="submit" disabled={isLoading}>
+                <Button className="page-home__submit" type="submit" pending={isLoading}>
                     {isLoading ? 'Joining…' : 'Join →'}
-                </button>
+                </Button>
             </form>
-        </section>
+        </Panel>
     )
 }

@@ -1,5 +1,6 @@
 import { BrandLogo } from '../../components/BrandLogo/BrandLogo'
 import { PageShell, type FloatingLetter } from '../../components/PageShell/PageShell'
+import { Button } from '../../components/ui'
 import { cx } from '../../lib/cx'
 import { useDocumentTitle } from '../../lib/useDocumentTitle'
 import { CreateGamePanel } from './components/CreateGamePanel'
@@ -58,11 +59,10 @@ export function Home() {
                     </p>
 
                     <div className="page-home__cta" role="group" aria-label="Game actions">
-                        <button
+                        <Button
+                            variant="primary"
+                            size="lg"
                             className={cx(
-                                'wd-btn',
-                                'wd-btn--lift',
-                                'wd-btn--primary',
                                 'page-home__cta-btn',
                                 'page-home__cta-btn--primary',
                                 panel === 'create' && 'page-home__cta-btn--active',
@@ -73,12 +73,12 @@ export function Home() {
                             aria-controls="page-home-create-panel"
                         >
                             Create Game
-                        </button>
+                        </Button>
 
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="lg"
                             className={cx(
-                                'wd-btn',
-                                'wd-btn--lift',
                                 'page-home__cta-btn',
                                 'page-home__cta-btn--secondary',
                                 panel === 'join' && 'page-home__cta-btn--active',
@@ -89,7 +89,7 @@ export function Home() {
                             aria-controls="page-home-join-panel"
                         >
                             Join Game
-                        </button>
+                        </Button>
                     </div>
 
                     {panel === 'create' && (
