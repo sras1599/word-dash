@@ -572,7 +572,12 @@ export function GameBoard({
             <DragOverlay>
                 {activeDragCard ? (
                     <div className="game-board__drag-overlay">
-                        <Card card={{ ...activeDragCard, id: `${activeDragCard.id}:overlay` }} readOnly />
+                        <Card
+                            card={{ ...activeDragCard, id: `${activeDragCard.id}:overlay` }}
+                            isDrawn={activeDragCard.id === drawnCardId}
+                            willAutoDiscard={activeDragCard.id === willAutoDiscardCardId}
+                            readOnly
+                        />
                     </div>
                 ) : null}
             </DragOverlay>
