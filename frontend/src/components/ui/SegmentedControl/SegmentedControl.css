@@ -1,0 +1,59 @@
+.wd-segmented-control {
+    display: grid;
+    grid-template-columns: repeat(var(--wd-segment-count, 2), minmax(0, 1fr));
+    gap: var(--wd-space-2);
+}
+
+.wd-segmented-control__button {
+    display: inline-flex;
+    min-width: 0;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid color-mix(in srgb, var(--wd-border-subtle) 24%, transparent);
+    border-radius: var(--wd-radius-md);
+    background: color-mix(in srgb, var(--wd-surface-panel) 92%, transparent);
+    color: var(--wd-text-primary);
+    font-family: var(--wd-font-headline);
+    font-size: var(--wd-text-size-md);
+    font-weight: 800;
+    line-height: 1.15;
+    padding: 0.75rem 0.9rem;
+    text-align: center;
+    cursor: pointer;
+    transition:
+        background var(--wd-motion-standard),
+        border-color var(--wd-motion-standard),
+        box-shadow var(--wd-motion-standard),
+        color var(--wd-motion-standard),
+        opacity var(--wd-motion-standard),
+        transform var(--wd-motion-standard);
+}
+
+.wd-segmented-control__button:hover:not(:disabled):not(.wd-segmented-control__button--selected) {
+    border-color: color-mix(in srgb, var(--wd-color-primary) 50%, transparent);
+    background: var(--wd-surface-muted);
+}
+
+.wd-segmented-control__button:focus-visible {
+    outline: 3px solid var(--wd-border-focus);
+    outline-offset: 3px;
+}
+
+.wd-segmented-control__button:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+}
+
+.wd-segmented-control__button--selected {
+    border-color: var(--wd-color-primary);
+    background: var(--wd-color-primary);
+    color: var(--wd-text-on-primary);
+    box-shadow: 0 18px 28px color-mix(in srgb, var(--wd-color-primary) 20%, transparent);
+    transform: scale(1.02);
+}
+
+.wd-segmented-control__button-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}

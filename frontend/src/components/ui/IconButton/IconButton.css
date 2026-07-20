@@ -1,0 +1,91 @@
+.wd-icon-button {
+    --wd-icon-button-bg: transparent;
+    --wd-icon-button-color: var(--wd-text-primary);
+    --wd-icon-button-border: transparent;
+    --wd-icon-button-shadow: none;
+    --wd-icon-button-hover-bg: var(--wd-surface-muted);
+
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border: 2px solid var(--wd-icon-button-border);
+    border-radius: var(--wd-radius-full);
+    background: var(--wd-icon-button-bg);
+    box-shadow: var(--wd-icon-button-shadow);
+    color: var(--wd-icon-button-color);
+    cursor: pointer;
+    transition:
+        background var(--wd-motion-standard),
+        border-color var(--wd-motion-standard),
+        box-shadow var(--wd-motion-standard),
+        color var(--wd-motion-standard),
+        opacity var(--wd-motion-standard),
+        transform var(--wd-motion-standard);
+}
+
+.wd-icon-button:hover:not(:disabled) {
+    background: var(--wd-icon-button-hover-bg);
+    transform: translateY(-2px);
+}
+
+.wd-icon-button:active:not(:disabled) {
+    transform: scale(0.94);
+}
+
+.wd-icon-button:focus-visible {
+    outline: 3px solid var(--wd-border-focus);
+    outline-offset: 3px;
+}
+
+.wd-icon-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+    box-shadow: none;
+    transform: none;
+}
+
+.wd-icon-button--primary {
+    --wd-icon-button-bg: var(--wd-color-primary);
+    --wd-icon-button-color: var(--wd-text-on-primary);
+    --wd-icon-button-shadow: var(--wd-shadow-control-primary);
+    --wd-icon-button-hover-bg: var(--wd-color-primary-container);
+}
+
+.wd-icon-button--secondary {
+    --wd-icon-button-bg: var(--wd-color-secondary);
+    --wd-icon-button-color: var(--wd-text-on-primary);
+    --wd-icon-button-shadow: var(--wd-shadow-control-secondary);
+    --wd-icon-button-hover-bg: color-mix(in srgb, var(--wd-color-secondary) 88%, var(--wd-surface-panel));
+}
+
+.wd-icon-button--ghost {
+    --wd-icon-button-color: var(--wd-color-primary);
+    --wd-icon-button-hover-bg: color-mix(in srgb, var(--wd-color-primary) 8%, transparent);
+}
+
+.wd-icon-button--danger {
+    --wd-icon-button-bg: var(--wd-color-danger);
+    --wd-icon-button-color: var(--wd-text-on-primary);
+    --wd-icon-button-shadow: 0 18px 35px color-mix(in srgb, var(--wd-color-danger) 20%, transparent);
+    --wd-icon-button-hover-bg: color-mix(in srgb, var(--wd-color-danger) 88%, var(--wd-surface-panel));
+}
+
+.wd-icon-button--sm {
+    width: 2.25rem;
+    height: 2.25rem;
+}
+
+.wd-icon-button--md {
+    width: 2.75rem;
+    height: 2.75rem;
+}
+
+.wd-icon-button--lg {
+    width: 3.25rem;
+    height: 3.25rem;
+}
+
+.wd-icon-button svg {
+    width: 1.15rem;
+    height: 1.15rem;
+}

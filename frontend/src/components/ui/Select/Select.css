@@ -1,0 +1,30 @@
+.wd-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.8rem;
+    border: 1px solid color-mix(in srgb, var(--wd-border-strong) 35%, transparent);
+    border-radius: var(--wd-radius-md);
+    background: var(--wd-surface-panel);
+    color: var(--wd-text-primary);
+    font: inherit;
+    outline: none;
+    padding: 0.65rem 2.25rem 0.65rem 0.9rem;
+    transition:
+        border-color var(--wd-motion-standard),
+        box-shadow var(--wd-motion-standard),
+        opacity var(--wd-motion-standard);
+}
+
+.wd-select:focus {
+    border-color: var(--wd-border-focus);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--wd-color-primary) 12%, transparent);
+}
+
+.wd-select:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+}
+
+.wd-select--invalid {
+    border-color: var(--wd-border-danger);
+}

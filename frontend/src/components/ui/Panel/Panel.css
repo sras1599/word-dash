@@ -1,0 +1,25 @@
+.wd-panel {
+    display: block;
+    min-width: 0;
+    border: 1px solid color-mix(in srgb, var(--wd-border-subtle) 36%, transparent);
+    border-radius: var(--wd-radius-lg);
+    background: color-mix(in srgb, var(--wd-surface-panel) 90%, transparent);
+    box-shadow: var(--wd-shadow-panel-soft);
+    color: var(--wd-text-primary);
+}
+
+.wd-panel--compact {
+    padding: var(--wd-space-4);
+}
+
+.wd-panel--comfortable {
+    padding: var(--wd-space-6);
+}
+
+.wd-panel--flat {
+    box-shadow: none;
+}
+
+.wd-panel--elevated {
+    box-shadow: var(--wd-shadow-panel);
+}

@@ -1,0 +1,52 @@
+.wd-text-input {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid color-mix(in srgb, var(--wd-border-strong) 35%, transparent);
+    border-radius: var(--wd-radius-md);
+    background: color-mix(in srgb, var(--wd-surface-panel) 92%, transparent);
+    color: var(--wd-text-primary);
+    font-family: var(--wd-font-body);
+    line-height: 1.2;
+    outline: none;
+    transition:
+        background var(--wd-motion-standard),
+        border-color var(--wd-motion-standard),
+        box-shadow var(--wd-motion-standard),
+        opacity var(--wd-motion-standard);
+}
+
+.wd-text-input::placeholder {
+    color: color-mix(in srgb, var(--wd-text-muted) 62%, transparent);
+}
+
+.wd-text-input:focus {
+    border-color: var(--wd-border-focus);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--wd-color-primary) 12%, transparent);
+}
+
+.wd-text-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+}
+
+.wd-text-input--invalid {
+    border-color: var(--wd-border-danger);
+}
+
+.wd-text-input--sm {
+    min-height: 2.35rem;
+    padding: 0.55rem 0.75rem;
+    font-size: var(--wd-text-size-sm);
+}
+
+.wd-text-input--md {
+    min-height: 2.8rem;
+    padding: 0.78rem 1rem;
+    font-size: var(--wd-text-size-md);
+}
+
+.wd-text-input--lg {
+    min-height: 3.25rem;
+    padding: 0.95rem 1.1rem;
+    font-size: var(--wd-text-size-md);
+}

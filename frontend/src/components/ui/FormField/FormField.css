@@ -1,0 +1,39 @@
+.wd-form-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--wd-space-2);
+}
+
+.wd-form-field__label {
+    color: var(--wd-text-muted);
+    font-size: var(--wd-text-size-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.wd-form-field__required {
+    color: var(--wd-text-danger);
+}
+
+.wd-form-field__hint,
+.wd-form-field__error {
+    margin: 0;
+    font-size: var(--wd-text-size-sm);
+    line-height: 1.35;
+}
+
+.wd-form-field__hint {
+    color: color-mix(in srgb, var(--wd-text-muted) 78%, transparent);
+}
+
+.wd-form-field__error {
+    color: var(--wd-text-danger);
+    font-weight: 700;
+}
+
+.wd-form-field--disabled {
+    opacity: 0.68;
+}
