@@ -6,7 +6,7 @@ import { Card } from './Card'
 const SAMPLE_CARD = { id: 'card-d', letter: 'D' }
 
 const meta = {
-    title: 'WordIt/Components/Card',
+    title: 'WordDash/Game/Card',
     component: Card,
     parameters: {
         layout: 'centered',

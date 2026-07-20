@@ -45,7 +45,7 @@ const BASE_STATE: LobbyState = {
 // Storybook meta
 // ---------------------------------------------------------------------------
 const meta = {
-    title: 'WordIt/Pages/Lobby',
+    title: 'WordDash/Pages/Lobby',
     component: Lobby,
     parameters: {
         layout: 'fullscreen',

@@ -30,6 +30,18 @@ See `pages/` for individual page specs.
 
 ---
 
+## UI Foundation
+
+The app-local design foundation is documented in [`design-foundation.md`](./design-foundation.md). It defines the `--wd-*` token layer, foundation primitives, Storybook organization, and the boundary between reusable UI and game-specific components.
+
+Primitive usage guidance lives in [`components/FoundationPrimitives.md`](./components/FoundationPrimitives.md). Storybook is organized as:
+
+- `WordDash/Foundation/*` for app-wide primitives.
+- `WordDash/Game/*` for cards, board, HUD, and other domain components.
+- `WordDash/Pages/*` for route-level workflows.
+
+---
+
 ## Real-time Architecture
 
 The game is fully real-time. All game state lives on the server. The client receives state updates via WebSocket events and renders accordingly.

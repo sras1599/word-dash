@@ -13,7 +13,7 @@ import './GameHud.stories.css'
 const drawState = createScenarioState('draw').gameState
 
 const meta = {
-    title: 'WordIt/Components/GameHud',
+    title: 'WordDash/Game/GameHud',
     component: GameHud,
     parameters: {
         layout: 'fullscreen',

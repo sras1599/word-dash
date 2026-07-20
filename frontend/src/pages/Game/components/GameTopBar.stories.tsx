@@ -4,7 +4,7 @@ import { GameTopBar } from './GameTopBar'
 import '../Game.css'
 
 const meta = {
-    title: 'WordIt/Components/GameTopBar',
+    title: 'WordDash/Game/GameTopBar',
     component: GameTopBar,
     parameters: {
         layout: 'fullscreen',

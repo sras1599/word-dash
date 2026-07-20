@@ -83,7 +83,7 @@ function makeOpponent(
 // ─── Meta ────────────────────────────────────────────────────────────────────
 
 const meta = {
-    title: 'WordIt/Components/GameBoard',
+    title: 'WordDash/Game/GameBoard',
     component: GameBoard,
     parameters: {
         layout: 'fullscreen',

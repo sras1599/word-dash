@@ -29,7 +29,7 @@ function makePlayer(overrides?: {
 }
 
 const meta = {
-    title: 'WordIt/Components/OpponentStatus',
+    title: 'WordDash/Game/OpponentStatus',
     component: OpponentStatus,
     parameters: {
         layout: 'centered',

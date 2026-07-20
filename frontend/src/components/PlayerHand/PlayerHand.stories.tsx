@@ -14,7 +14,7 @@ const SAMPLE_HAND = [
 const DRAWN_CARD = { id: 'card-n', letter: 'N' }
 
 const meta = {
-    title: 'WordIt/Components/PlayerHand',
+    title: 'WordDash/Game/PlayerHand',
     component: PlayerHand,
     parameters: {
         layout: 'centered',

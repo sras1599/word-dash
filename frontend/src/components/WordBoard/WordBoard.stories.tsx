@@ -72,7 +72,7 @@ const completeBoard: WordBoardState = {
 }
 
 const meta = {
-    title: 'WordIt/Components/WordBoard',
+    title: 'WordDash/Game/WordBoard',
     component: WordBoard,
     parameters: {
         layout: 'centered',

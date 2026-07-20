@@ -6,7 +6,7 @@ const LOCAL_PLAYER = { id: 'player-1', name: 'You' }
 const OPPONENT = { id: 'player-2', name: 'Alice' }
 
 const meta = {
-    title: 'WordIt/Components/TurnIndicator',
+    title: 'WordDash/Game/TurnIndicator',
     component: TurnIndicator,
     parameters: {
         layout: 'centered',

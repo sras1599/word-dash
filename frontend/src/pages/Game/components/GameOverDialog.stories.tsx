@@ -36,7 +36,7 @@ function makeWinner(words: string[], name = 'Raspreet'): GamePlayer {
 }
 
 const meta = {
-    title: 'WordIt/Game/GameOverDialog',
+    title: 'WordDash/Game/GameOverDialog',
     component: GameOverDialog,
     parameters: {
         layout: 'fullscreen',

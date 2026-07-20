@@ -143,3 +143,31 @@ Use `--wd-*` token names for shared app decisions:
 - `--wd-z-*` for layering.
 
 Add a token when a value expresses a repeated semantic decision. Keep values local when they describe one component's physical model or a one-off layout fix.
+
+## Primitive Usage Rules
+
+- Use `Button` for explicit actions and submit buttons. Choose `primary` for the main action in a surface, `secondary` for positive alternate actions, `ghost` for low-emphasis actions, and `danger` for destructive actions.
+- Use `IconButton` only when the icon is sufficient in context and always provide a specific accessible label.
+- Use `FormField` with `TextInput`, `Select`, or future native controls so labels, hints, errors, `aria-describedby`, and invalid states stay associated.
+- Use `Panel` for framed tools, repeated items, dialogs, and settings groups. Avoid wrapping every page section in a panel.
+- Use `Dialog` for modal workflows that need a title, optional description, dismissal, and footer actions.
+- Use `SegmentedControl` for small choice sets where all options should be visible at once.
+
+## Storybook Organization
+
+Story titles use these groups:
+
+- `WordDash/Foundation/*` for primitives and token-level UI review.
+- `WordDash/Game/*` for domain components such as cards, rows, board, HUD, and game dialogs.
+- `WordDash/Pages/*` for route-level Home, Lobby, and Game workflows.
+
+Add or update a story when adding a primitive variant, visual state, responsive pressure point, or game state that changes what a user sees. Prefer narrow-container stories before adding custom responsive logic.
+
+## Maintenance Rules
+
+- Add a token when a value expresses a repeated semantic decision.
+- Add a primitive only after a pattern appears in at least two places or is clearly foundational.
+- Keep game-specific behavior in game components.
+- Add or update a Storybook story when adding a variant, state, or visual rule.
+- Prefer native HTML semantics before custom interaction logic.
+- Remove transitional aliases after the adoption phase completes.

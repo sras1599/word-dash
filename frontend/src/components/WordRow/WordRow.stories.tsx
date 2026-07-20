@@ -43,7 +43,7 @@ const completeInvalidRow: WordRowState = {
 }
 
 const meta = {
-    title: 'WordIt/Components/WordRow',
+    title: 'WordDash/Game/WordRow',
     component: WordRow,
     parameters: {
         layout: 'centered',

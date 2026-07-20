@@ -4,7 +4,7 @@ import { expect } from 'storybook/test'
 import { Home } from './Home'
 
 const meta = {
-    title: 'WordIt/Pages/Home',
+    title: 'WordDash/Pages/Home',
     component: Home,
     parameters: {
         layout: 'fullscreen',
