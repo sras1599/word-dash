@@ -1,36 +1,122 @@
 :root {
-  --background: #fcf9f8;
-  --primary: #bb000e;
-  --primary-container: #e51c1e;
-  --primary-fixed: #ffdad5;
-  --secondary: #406925;
-  --secondary-container: #c0f19d;
-  --secondary-fixed: #c0f19d;
-  --tertiary: #765700;
-  --tertiary-fixed: #ffdf9d;
-  --tertiary-fixed-dim: #fabd00;
-  --on-surface: #1b1b1b;
-  --on-surface-variant: #5e3f3b;
-  --on-primary: #ffffff;
-  --on-primary-container: #fffbff;
-  --on-primary-fixed-variant: #930008;
-  --surface-container: #f0eded;
-  --surface-container-low: #f6f3f2;
-  --surface-container-lowest: #ffffff;
-  --outline: #926e6a;
-  --outline-variant: #e7bdb7;
-  --error: #ba1a1a;
-  --radius: 1rem;
-  --radius-lg: 2rem;
-  --radius-xl: 3rem;
-  --radius-full: 9999px;
-  --font-headline: 'Plus Jakarta Sans', sans-serif;
-  --font-body: 'Be Vietnam Pro', sans-serif;
+  /* Color */
+  --wd-color-primary: #bb000e;
+  --wd-color-primary-strong: #930008;
+  --wd-color-primary-container: #e51c1e;
+  --wd-color-primary-soft: #ffdad5;
+  --wd-color-secondary: #406925;
+  --wd-color-secondary-container: #c0f19d;
+  --wd-color-tertiary: #765700;
+  --wd-color-tertiary-container: #ffdf9d;
+  --wd-color-tertiary-strong: #fabd00;
+  --wd-color-danger: #ba1a1a;
+  --wd-color-success: #406925;
 
-  font: 18px/145% var(--font-body);
+  /* Surface */
+  --wd-surface-page: #fcf9f8;
+  --wd-surface-panel: #ffffff;
+  --wd-surface-raised: #ffffff;
+  --wd-surface-muted: #f6f3f2;
+  --wd-surface-subtle: #f0eded;
+  --wd-surface-pressed: #e5e2e1;
+  --wd-surface-overlay: color-mix(in srgb, var(--wd-text-primary) 34%, transparent);
+
+  /* Text */
+  --wd-text-primary: #1b1b1b;
+  --wd-text-muted: #5e3f3b;
+  --wd-text-on-primary: #ffffff;
+  --wd-text-on-primary-container: #fffbff;
+  --wd-text-danger: var(--wd-color-danger);
+  --wd-text-success: var(--wd-color-success);
+
+  /* Border */
+  --wd-border-strong: #926e6a;
+  --wd-border-subtle: #e7bdb7;
+  --wd-border-focus: var(--wd-color-primary);
+  --wd-border-danger: var(--wd-color-danger);
+
+  /* Radius */
+  --wd-radius-sm: 0.5rem;
+  --wd-radius-md: 1rem;
+  --wd-radius-lg: 2rem;
+  --wd-radius-xl: 3rem;
+  --wd-radius-full: 9999px;
+
+  /* Space */
+  --wd-space-0: 0;
+  --wd-space-1: 0.25rem;
+  --wd-space-2: 0.5rem;
+  --wd-space-3: 0.75rem;
+  --wd-space-4: 1rem;
+  --wd-space-5: 1.25rem;
+  --wd-space-6: 1.5rem;
+  --wd-space-8: 2rem;
+  --wd-space-10: 2.5rem;
+  --wd-space-12: 3rem;
+
+  /* Shadow */
+  --wd-shadow-control-primary: 0 18px 35px color-mix(in srgb, var(--wd-color-primary) 24%, transparent);
+  --wd-shadow-control-secondary: 0 16px 30px color-mix(in srgb, var(--wd-color-secondary) 20%, transparent);
+  --wd-shadow-panel: 0 25px 50px -12px color-mix(in srgb, var(--wd-text-primary) 16%, transparent);
+  --wd-shadow-panel-soft: 0 12px 30px -22px color-mix(in srgb, var(--wd-text-primary) 24%, transparent);
+  --wd-shadow-topbar: 0 10px 40px -15px color-mix(in srgb, var(--wd-color-primary-container) 8%, transparent);
+
+  /* Font */
+  --wd-font-headline: 'Plus Jakarta Sans', sans-serif;
+  --wd-font-body: 'Be Vietnam Pro', sans-serif;
+
+  /* Text size */
+  --wd-text-size-xs: 0.72rem;
+  --wd-text-size-sm: 0.875rem;
+  --wd-text-size-md: 1rem;
+  --wd-text-size-lg: 1.2rem;
+  --wd-text-size-xl: 1.6rem;
+
+  /* Motion */
+  --wd-motion-fast: 150ms ease;
+  --wd-motion-standard: 200ms ease;
+  --wd-motion-emphasized: 180ms ease-out;
+
+  /* Layer */
+  --wd-z-background: 0;
+  --wd-z-content: 1;
+  --wd-z-chrome: 5;
+  --wd-z-overlay: 20;
+
+  /* Transitional aliases. Remove after production adoption is complete. */
+  --background: var(--wd-surface-page);
+  --primary: var(--wd-color-primary);
+  --primary-container: var(--wd-color-primary-container);
+  --primary-fixed: var(--wd-color-primary-soft);
+  --secondary: var(--wd-color-secondary);
+  --secondary-container: var(--wd-color-secondary-container);
+  --secondary-fixed: var(--wd-color-secondary-container);
+  --tertiary: var(--wd-color-tertiary);
+  --tertiary-fixed: var(--wd-color-tertiary-container);
+  --tertiary-fixed-dim: var(--wd-color-tertiary-strong);
+  --on-surface: var(--wd-text-primary);
+  --on-surface-variant: var(--wd-text-muted);
+  --on-primary: var(--wd-text-on-primary);
+  --on-primary-container: var(--wd-text-on-primary-container);
+  --on-primary-fixed-variant: var(--wd-color-primary-strong);
+  --surface-container: var(--wd-surface-subtle);
+  --surface-container-low: var(--wd-surface-muted);
+  --surface-container-lowest: var(--wd-surface-panel);
+  --surface-container-highest: var(--wd-surface-pressed);
+  --outline: var(--wd-border-strong);
+  --outline-variant: var(--wd-border-subtle);
+  --error: var(--wd-color-danger);
+  --radius: var(--wd-radius-md);
+  --radius-lg: var(--wd-radius-lg);
+  --radius-xl: var(--wd-radius-xl);
+  --radius-full: var(--wd-radius-full);
+  --font-headline: var(--wd-font-headline);
+  --font-body: var(--wd-font-body);
+
+  font: 18px/145% var(--wd-font-body);
   letter-spacing: 0.18px;
-  color: var(--on-surface);
-  background: var(--background);
+  color: var(--wd-text-primary);
+  background: var(--wd-surface-page);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -45,7 +131,7 @@
 
 html {
   box-sizing: border-box;
-  background: var(--background);
+  background: var(--wd-surface-page);
 }
 
 *,
@@ -57,9 +143,9 @@ html {
 body {
   margin: 0;
   min-height: 100svh;
-  background: var(--background);
-  color: var(--on-surface);
-  font-family: var(--font-body);
+  background: var(--wd-surface-page);
+  color: var(--wd-text-primary);
+  font-family: var(--wd-font-body);
 }
 
 #root {
@@ -90,12 +176,12 @@ h4,
 h5,
 h6 {
   color: var(--on-surface);
-  font-family: var(--font-headline);
+  font-family: var(--wd-font-headline);
 }
 
 ::selection {
-  background-color: color-mix(in srgb, var(--primary) 24%, transparent);
-  color: var(--on-surface);
+  background-color: color-mix(in srgb, var(--wd-color-primary) 24%, transparent);
+  color: var(--wd-text-primary);
 }
 
 .wd-sr-only {
@@ -117,13 +203,13 @@ h6 {
   flex-direction: column;
   min-height: 100svh;
   overflow-x: hidden;
-  color: var(--on-surface);
-  font-family: var(--font-body);
+  color: var(--wd-text-primary);
+  font-family: var(--wd-font-body);
 }
 
 .wd-content-layer {
   position: relative;
-  z-index: 1;
+  z-index: var(--wd-z-content);
   flex: 1;
 }
 
@@ -132,7 +218,7 @@ h6 {
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  z-index: 0;
+  z-index: var(--wd-z-background);
 }
 
 .wd-floating-letter {
@@ -153,20 +239,20 @@ h6 {
   justify-content: center;
   width: var(--fl-size);
   height: var(--fl-size);
-  background-color: color-mix(in srgb, var(--surface-container-lowest) 82%, transparent);
-  border-radius: var(--fl-radius, var(--radius-xl));
-  box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--on-surface) 25%, transparent);
+  background-color: color-mix(in srgb, var(--wd-surface-panel) 82%, transparent);
+  border-radius: var(--fl-radius, var(--wd-radius-xl));
+  box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--wd-text-primary) 25%, transparent);
   backdrop-filter: blur(24px);
 }
 
 .wd-btn {
-  font-family: var(--font-headline);
+  font-family: var(--wd-font-headline);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--wd-motion-standard);
 }
 
 .wd-btn:focus-visible {
-  outline: 3px solid var(--primary);
+  outline: 3px solid var(--wd-border-focus);
   outline-offset: 4px;
 }
 
@@ -193,20 +279,20 @@ h6 {
 }
 
 .wd-btn--primary {
-  background: var(--primary);
-  color: var(--on-primary);
-  box-shadow: 0 18px 35px color-mix(in srgb, var(--primary) 24%, transparent);
+  background: var(--wd-color-primary);
+  color: var(--wd-text-on-primary);
+  box-shadow: var(--wd-shadow-control-primary);
 }
 
 .wd-btn--secondary {
-  background: var(--secondary);
-  color: var(--on-primary);
-  box-shadow: 0 16px 30px color-mix(in srgb, var(--secondary) 20%, transparent);
+  background: var(--wd-color-secondary);
+  color: var(--wd-text-on-primary);
+  box-shadow: var(--wd-shadow-control-secondary);
 }
 
 .wd-btn--ghost {
   background: transparent;
-  color: var(--primary);
+  color: var(--wd-color-primary);
 }
 
 .wd-eyebrow {
