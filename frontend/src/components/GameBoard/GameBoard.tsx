@@ -17,12 +17,12 @@ import { CardPile, type CardPileProps } from '../CardPile/CardPile'
 import { PlayerHand } from '../PlayerHand/PlayerHand'
 import { WordBoard, type WordBoardState } from '../WordBoard/WordBoard'
 import { Card, type CardData } from '../Card/Card'
-import { cx } from '../../lib/cx'
 import type { TurnPhase } from '../../lib/gameTypes'
 import { Icon } from '../Icon/Icon'
 import { getGameBoardDropAction } from './dnd'
 import { getShortcutAction, shouldIgnoreShortcutTarget, type BoardSelection } from './shortcuts'
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal'
+import { PlayerStatusStrip, type PlayerStatusStripPlayer } from '../PlayerStatusStrip/PlayerStatusStrip'
 
 export interface GameBoardLocalPlayer {
     id: string
@@ -355,52 +355,26 @@ export function GameBoard({
         onDiscard: handleDiscard,
     }
 
-    const displayPlayers = localPlayer
-        ? opponents.length > 0
-            ? [localPlayer, ...opponents]
-            : [localPlayer]
-        : opponents
-
-    function getInitials(name: string): string {
-        const parts = name.trim().split(/\s+/).filter(Boolean)
-
-        if (parts.length === 0) {
-            return '?'
-        }
-
-        return parts
-            .slice(0, 2)
-            .map((part) => part[0]?.toUpperCase() ?? '')
-            .join('')
-    }
-
-    function getPlayerStatus(player: GameBoardLocalPlayer | GameBoardOpponentPlayer): string {
-        if (!player.isConnected) {
-            return 'Disconnected'
-        }
-
-        if (phase === 'finished') {
-            return player.id === winnerId ? 'Winner' : player.id === localPlayerId ? 'You' : 'Opponent'
-        }
-
-        if (phase === 'waiting') {
-            return 'Waiting'
-        }
-
-        if (player.id === turn.currentPlayerId) {
-            return turn.phase === 'draw'
-                ? player.id === localPlayerId
-                    ? 'Draw a card'
-                    : 'Drawing...'
-                : 'Playing...'
-        }
-
-        return player.id === localPlayerId ? 'You' : 'Opponent'
-    }
-
-    function getStatusCount(player: GameBoardLocalPlayer | GameBoardOpponentPlayer): number {
-        return player.id === localPlayerId ? handCount : 'handCount' in player ? player.handCount : player.hand.length
-    }
+    const statusPlayers: PlayerStatusStripPlayer[] = [
+        ...(localPlayer
+            ? [
+                {
+                    id: localPlayer.id,
+                    name: localPlayer.name,
+                    isLocal: localPlayer.id === localPlayerId,
+                    isConnected: localPlayer.isConnected,
+                    cardCount: handCount,
+                },
+            ]
+            : []),
+        ...opponents.map((opponent) => ({
+            id: opponent.id,
+            name: opponent.name,
+            isLocal: opponent.id === localPlayerId,
+            isConnected: opponent.isConnected,
+            cardCount: opponent.handCount,
+        })),
+    ]
 
     function hasPlacedBoardCards(wordBoard: WordBoardState): boolean {
         return wordBoard.rows.some((row) => row.slots.some((slot) => slot.card !== null))
@@ -418,63 +392,13 @@ export function GameBoard({
             onDragCancel={handleDndDragCancel}
         >
             <div className="game-board" aria-label={`Game board, ${totalBoardSlots} word slots`}>
-                <section className="game-board__status-strip" aria-label="Player status">
-                    {displayPlayers.map((player) => {
-                        const isLocal = player.id === localPlayerId
-                        const isCurrent = player.id === turn.currentPlayerId
-
-                        return (
-                            <article
-                                key={player.id}
-                                className={cx(
-                                    'game-board__status-card',
-                                    isLocal && 'game-board__status-card--local',
-                                    isCurrent && 'game-board__status-card--active',
-                                    !player.isConnected && 'game-board__status-card--disconnected',
-                                )}
-                            >
-                                {isLocal && isCurrent && <span className="game-board__status-badge">Your Turn</span>}
-
-                                <div className="game-board__status-main">
-                                    <div
-                                        className={cx(
-                                            'game-board__status-avatar',
-                                            isLocal && 'game-board__status-avatar--local',
-                                        )}
-                                        aria-hidden="true"
-                                    >
-                                        {getInitials(player.name)}
-                                    </div>
-
-                                    <div className="game-board__status-copy">
-                                        <p className="game-board__status-name">{isLocal ? 'You' : player.name}</p>
-                                        <p
-                                            className={cx(
-                                                'game-board__status-role',
-                                                isCurrent && 'game-board__status-role--active',
-                                                !player.isConnected && 'game-board__status-role--disconnected',
-                                            )}
-                                        >
-                                            {getPlayerStatus(player)}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    className={cx(
-                                        'game-board__status-count',
-                                        isCurrent && 'game-board__status-count--active',
-                                    )}
-                                >
-                                    <span className="game-board__status-count-icon" aria-hidden="true">
-                                        <Icon name="cards" />
-                                    </span>
-                                    <span className="game-board__status-count-value">{getStatusCount(player)}</span>
-                                </div>
-                            </article>
-                        )
-                    })}
-                </section>
+                <PlayerStatusStrip
+                    players={statusPlayers}
+                    phase={phase}
+                    currentPlayerId={turn.currentPlayerId}
+                    turnPhase={turn.phase}
+                    winnerId={winnerId}
+                />
 
                 {localPlayer && (
                     <section className="game-board__board-section" aria-labelledby="game-board-title">

@@ -7,9 +7,6 @@
     gap: 2.75rem;
 }
 
-.game-board__status-main,
-.game-board__status-copy,
-.game-board__status-count,
 .game-board__hand-heading,
 .game-board__hand-header,
 .game-board__board-actions,
@@ -19,141 +16,6 @@
 .game-board__shortcut-keys {
     display: flex;
     align-items: center;
-}
-
-.game-board__status-strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-    gap: 1rem;
-}
-
-.game-board__status-card {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1.2rem 1.25rem;
-    border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 36%, transparent);
-    border-radius: var(--radius-xl, 3rem);
-    background: color-mix(in srgb, var(--surface-container-lowest, #ffffff) 78%, transparent);
-    box-shadow: 0 12px 30px -22px color-mix(in srgb, var(--on-surface, #1b1b1b) 24%, transparent);
-    backdrop-filter: blur(24px);
-}
-
-.game-board__status-card--local {
-    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 32%, var(--surface-container-lowest, #ffffff));
-}
-
-.game-board__status-card--active {
-    border: 2px solid color-mix(in srgb, var(--primary, #bb000e) 18%, transparent);
-    box-shadow: 0 24px 44px -26px color-mix(in srgb, var(--primary, #bb000e) 34%, transparent);
-    transform: scale(1.02);
-}
-
-.game-board__status-card--disconnected {
-    opacity: 0.7;
-}
-
-.game-board__status-badge {
-    position: absolute;
-    top: -0.95rem;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 0.35rem 1rem;
-    border-radius: var(--radius-full, 9999px);
-    background: var(--primary, #bb000e);
-    color: var(--on-primary, #ffffff);
-    font-family: var(--font-headline, inherit);
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    box-shadow: 0 12px 24px color-mix(in srgb, var(--primary, #bb000e) 28%, transparent);
-}
-
-.game-board__status-main {
-    gap: 0.9rem;
-    min-width: 0;
-}
-
-.game-board__status-avatar {
-    width: 3rem;
-    height: 3rem;
-    border-radius: var(--radius-full, 9999px);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 84%, transparent);
-    color: var(--on-surface, #1b1b1b);
-    font-family: var(--font-headline, inherit);
-    font-size: 0.95rem;
-    font-weight: 800;
-}
-
-.game-board__status-avatar--local {
-    background: var(--primary-fixed, #ffdad5);
-    color: var(--primary, #bb000e);
-}
-
-.game-board__status-copy {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.12rem;
-    min-width: 0;
-}
-
-.game-board__status-name {
-    margin: 0;
-    font-family: var(--font-headline, inherit);
-    font-size: 1.15rem;
-    font-weight: 800;
-}
-
-.game-board__status-role {
-    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 86%, transparent);
-}
-
-.game-board__status-role {
-    margin: 0;
-    font-size: 0.92rem;
-    font-weight: 500;
-}
-
-.game-board__status-role--active {
-    color: var(--primary, #bb000e);
-    font-weight: 700;
-}
-
-.game-board__status-role--disconnected {
-    color: var(--on-surface-variant, #5e3f3b);
-}
-
-.game-board__status-count {
-    gap: 0.45rem;
-    padding: 0.55rem 0.9rem;
-    border-radius: var(--radius-full, 9999px);
-    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 84%, transparent);
-    color: var(--on-surface, #1b1b1b);
-    flex-shrink: 0;
-}
-
-.game-board__status-count--active {
-    background: var(--primary, #bb000e);
-    color: var(--on-primary, #ffffff);
-}
-
-.game-board__status-count-icon,
-.game-board__status-count-icon svg {
-    width: 1.15rem;
-    height: 1.15rem;
-    flex: 0 0 auto;
-}
-
-.game-board__status-count-value {
-    font-family: var(--font-headline, inherit);
-    font-size: 1rem;
-    font-weight: 800;
 }
 
 .game-board__board-section {
@@ -574,14 +436,6 @@
         gap: 2rem;
     }
 
-    .game-board__status-strip {
-        grid-template-columns: 1fr;
-    }
-
-    .game-board__status-card--active {
-        transform: none;
-    }
-
     .game-board__board-header {
         grid-template-columns: 1fr;
         justify-items: center;
@@ -634,20 +488,6 @@
 }
 
 @media (max-width: 560px) {
-    .game-board__status-card {
-        border-radius: calc(var(--radius-lg, 2rem) - 0.35rem);
-    }
-
-    .game-board__status-avatar {
-        width: 2.6rem;
-        height: 2.6rem;
-        font-size: 0.82rem;
-    }
-
-    .game-board__status-name {
-        font-size: 1rem;
-    }
-
     .game-board__piles {
         gap: 1.5rem;
     }
