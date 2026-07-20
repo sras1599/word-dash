@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/sras1599/word-dash/compare/v1.0.0...v1.1.0) (2026-07-20)
+
+
+### Features
+
+* **backend:** add board reconciliation metadata ([319267f](https://github.com/sras1599/word-dash/commit/319267ff8ae3be5be87ebbc449119bad75da47ac))
+* **frontend:** reconcile optimistic board actions ([4d9732b](https://github.com/sras1599/word-dash/commit/4d9732b497e3a88dc83f8e57b6d15e0143d7e4f6))
+
 ## 1.0.0 (2026-07-13)
 
 
