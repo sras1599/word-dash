@@ -53,7 +53,7 @@ export function Game() {
     const { roomCode } = useParams<{ roomCode: string }>()
     const navigate = useNavigate()
     const localPlayerId = session.getPlayerId() ?? ''
-    const { gameState, timeRemainingMs, turnDurationMs, draw, place, unplace, clearWord, clearBoard, discard, restartLobby, close } = useGameRoom(roomCode, localPlayerId)
+    const { gameState, rejectionFeedback, timeRemainingMs, turnDurationMs, draw, place, unplace, clearWord, clearBoard, discard, restartLobby, close } = useGameRoom(roomCode, localPlayerId)
     useDocumentTitle(getGameTitle(roomCode, gameState, localPlayerId))
 
     function handlePlayAgain() {
@@ -130,6 +130,12 @@ export function Game() {
                 turnDurationMs={turnDurationMs}
                 timerIsUrgent={timerIsUrgent}
             />
+
+            {rejectionFeedback && (
+                <div className="page-game__rejection" role="alert">
+                    {rejectionFeedback}
+                </div>
+            )}
 
             <main className="wd-content-layer page-game__main">
                 <GameBoard

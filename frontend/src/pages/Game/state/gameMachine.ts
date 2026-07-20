@@ -1,15 +1,18 @@
 import { assign, setup } from 'xstate'
 import type { Card, GameState, WordBoardState } from '../../../lib/gameTypes'
-import { gameReducer } from './gameReducer'
+import {
+    gameReconciliationReducer,
+    initialGameReconciliationState,
+    type GameAction,
+    type GameReconciliationState,
+} from './gameReducer'
 
-export type GameMachineContext = {
-    gameState: GameState | null
-}
+export type GameMachineContext = GameReconciliationState
 
 export type GameMachineEvent =
     | { type: 'INVALID_SESSION' }
     | { type: 'CONNECTING' }
-    | { type: 'GAME_STATE'; state: GameState }
+    | { type: 'GAME_STATE'; state: GameState; localPlayerId?: string }
     | {
           type: 'CARD_DRAWN'
           localPlayerId: string
@@ -25,100 +28,128 @@ export type GameMachineEvent =
           wordBoard: WordBoardState
           handCount: number
           hand?: Card[]
+          boardRevision: number
+          clientActionId?: string
       }
     | { type: 'TURN_ENDED'; nextPlayerId: string; discardPileTop: Card }
     | { type: 'TURN_SKIPPED'; playerId: string; nextPlayerId?: string }
     | { type: 'PLAYER_WON'; winnerId: string }
     | { type: 'PLAYER_CONNECTION_CHANGED'; playerId: string; isConnected: boolean }
-    | { type: 'LOCAL_CARD_PLACED_OPTIMISTICALLY'; localPlayerId: string; cardId: string; rowIndex: number; slotIndex: number }
-    | { type: 'LOCAL_CARD_UNPLACED_OPTIMISTICALLY'; localPlayerId: string; rowIndex: number; slotIndex: number }
-    | { type: 'LOCAL_WORD_CLEARED_OPTIMISTICALLY'; localPlayerId: string; rowIndex: number }
-    | { type: 'LOCAL_BOARD_CLEARED_OPTIMISTICALLY'; localPlayerId: string }
-    | { type: 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY'; localPlayerId: string; cardId: string }
+    | { type: 'LOCAL_CARD_PLACED_OPTIMISTICALLY'; localPlayerId: string; clientActionId: string; cardId: string; rowIndex: number; slotIndex: number }
+    | { type: 'LOCAL_CARD_UNPLACED_OPTIMISTICALLY'; localPlayerId: string; clientActionId: string; rowIndex: number; slotIndex: number }
+    | { type: 'LOCAL_WORD_CLEARED_OPTIMISTICALLY'; localPlayerId: string; clientActionId: string; rowIndex: number }
+    | { type: 'LOCAL_BOARD_CLEARED_OPTIMISTICALLY'; localPlayerId: string; clientActionId: string }
+    | { type: 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY'; localPlayerId: string; clientActionId: string; cardId: string }
     | { type: 'LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY'; localPlayerId: string }
+    | { type: 'ACTION_REJECTED'; clientActionId?: string; message: string }
 
-function reduceGameEvent(context: GameMachineContext, event: GameMachineEvent): GameState | null {
+function reduceGameEvent(context: GameMachineContext, event: GameMachineEvent): GameMachineContext {
+    let action: GameAction | null = null
     switch (event.type) {
         case 'GAME_STATE':
-            return gameReducer(context.gameState, { type: 'game/state', state: event.state })
+            action = { type: 'game/state', state: event.state, localPlayerId: event.localPlayerId }
+            break
         case 'CARD_DRAWN':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'game/cardDrawn',
                 localPlayerId: event.localPlayerId,
                 playerId: event.playerId,
                 card: event.card,
                 drawPileCount: event.drawPileCount,
                 discardPileTop: event.discardPileTop,
-            })
+            }
+            break
         case 'BOARD_UPDATED':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'game/boardUpdated',
                 localPlayerId: event.localPlayerId,
                 playerId: event.playerId,
                 wordBoard: event.wordBoard,
                 handCount: event.handCount,
                 hand: event.hand,
-            })
+                boardRevision: event.boardRevision,
+                clientActionId: event.clientActionId,
+            }
+            break
         case 'TURN_ENDED':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'game/turnEnded',
                 nextPlayerId: event.nextPlayerId,
                 discardPileTop: event.discardPileTop,
-            })
+            }
+            break
         case 'TURN_SKIPPED':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'game/turnSkipped',
                 playerId: event.playerId,
                 nextPlayerId: event.nextPlayerId,
-            })
+            }
+            break
         case 'PLAYER_WON':
-            return gameReducer(context.gameState, { type: 'game/playerWon', winnerId: event.winnerId })
+            action = { type: 'game/playerWon', winnerId: event.winnerId }
+            break
         case 'PLAYER_CONNECTION_CHANGED':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'game/playerConnectionChanged',
                 playerId: event.playerId,
                 isConnected: event.isConnected,
-            })
+            }
+            break
         case 'LOCAL_CARD_PLACED_OPTIMISTICALLY':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'local/cardPlacedOptimistically',
                 localPlayerId: event.localPlayerId,
                 cardId: event.cardId,
                 rowIndex: event.rowIndex,
                 slotIndex: event.slotIndex,
-            })
+                clientActionId: event.clientActionId,
+            }
+            break
         case 'LOCAL_CARD_UNPLACED_OPTIMISTICALLY':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'local/cardUnplacedOptimistically',
                 localPlayerId: event.localPlayerId,
                 rowIndex: event.rowIndex,
                 slotIndex: event.slotIndex,
-            })
+                clientActionId: event.clientActionId,
+            }
+            break
         case 'LOCAL_WORD_CLEARED_OPTIMISTICALLY':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'local/wordClearedOptimistically',
                 localPlayerId: event.localPlayerId,
                 rowIndex: event.rowIndex,
-            })
+                clientActionId: event.clientActionId,
+            }
+            break
         case 'LOCAL_BOARD_CLEARED_OPTIMISTICALLY':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'local/boardClearedOptimistically',
                 localPlayerId: event.localPlayerId,
-            })
+                clientActionId: event.clientActionId,
+            }
+            break
         case 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'local/cardDiscardedOptimistically',
                 localPlayerId: event.localPlayerId,
                 cardId: event.cardId,
-            })
+                clientActionId: event.clientActionId,
+            }
+            break
         case 'LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY':
-            return gameReducer(context.gameState, {
+            action = {
                 type: 'local/discardPileDrawnOptimistically',
                 localPlayerId: event.localPlayerId,
-            })
+            }
+            break
+        case 'ACTION_REJECTED':
+            action = { type: 'game/actionRejected', clientActionId: event.clientActionId, message: event.message }
+            break
         default:
-            return context.gameState
+            return context
     }
+    return action ? gameReconciliationReducer(context, action) : context
 }
 
 function isFinished({ event }: { event: GameMachineEvent }) {
@@ -149,17 +180,13 @@ export const gameMachine = setup({
         isIdle,
     },
     actions: {
-        clearGame: assign({ gameState: null }),
-        reduceGame: assign({
-            gameState: ({ context, event }) => reduceGameEvent(context, event),
-        }),
+        clearGame: assign(() => initialGameReconciliationState),
+        reduceGame: assign(({ context, event }) => reduceGameEvent(context, event)),
     },
 }).createMachine({
     id: 'game',
     initial: 'connecting',
-    context: {
-        gameState: null,
-    },
+    context: initialGameReconciliationState,
     on: {
         INVALID_SESSION: { target: '.invalidSession', actions: 'clearGame' },
         CONNECTING: { target: '.connecting', actions: 'clearGame' },
@@ -213,6 +240,7 @@ export const gameMachine = setup({
                 LOCAL_BOARD_CLEARED_OPTIMISTICALLY: { actions: 'reduceGame' },
                 LOCAL_CARD_DISCARDED_OPTIMISTICALLY: { target: '.draw', actions: 'reduceGame' },
                 LOCAL_DISCARD_PILE_DRAWN_OPTIMISTICALLY: { target: '.arrange', actions: 'reduceGame' },
+                ACTION_REJECTED: { actions: 'reduceGame' },
             },
         },
         finished: {
@@ -222,6 +250,8 @@ export const gameMachine = setup({
                     { guard: 'isWaiting', target: 'waiting', actions: 'reduceGame' },
                     { target: 'playing.draw', actions: 'reduceGame' },
                 ],
+                BOARD_UPDATED: { actions: 'reduceGame' },
+                ACTION_REJECTED: { actions: 'reduceGame' },
                 PLAYER_CONNECTION_CHANGED: { actions: 'reduceGame' },
             },
         },

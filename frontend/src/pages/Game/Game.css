@@ -140,6 +140,22 @@
     gap: 2.75rem;
 }
 
+.page-game__rejection {
+    position: fixed;
+    z-index: 30;
+    top: 5.5rem;
+    left: 50%;
+    width: min(calc(100% - 2rem), 32rem);
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--on-primary);
+    box-shadow: var(--page-game-panel-shadow);
+    font-weight: 700;
+    text-align: center;
+    transform: translateX(-50%);
+}
+
 .page-game__overlay {
     position: fixed;
     inset: 0;

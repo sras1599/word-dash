@@ -6,11 +6,20 @@ import { createWsClient, type GameEventMeta, type WsClient } from '../../../lib/
 import { gameMachine } from '../state/gameMachine'
 import { canDiscardCard, canDrawCard, canPlaceCard } from '../state/gameReducer'
 
+export function createClientActionId(): string {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+    const bytes = crypto.getRandomValues(new Uint8Array(16))
+    bytes[6] = (bytes[6] & 0x0f) | 0x40
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('')
+}
+
 export function useGameRoom(roomCode: string | undefined, localPlayerId: string) {
     const [snapshot, send] = useMachine(gameMachine)
     const wsRef = useRef<WsClient | null>(null)
     const [timerAnchor, setTimerAnchor] = useState<TurnTimerAnchor | null>(null)
     const [repaintAtMs, setRepaintAtMs] = useState(() => performance.now())
+    const [rejectionFeedback, setRejectionFeedback] = useState<string | null>(null)
     const gameState = snapshot.context.gameState
 
     useEffect(() => {
@@ -23,6 +32,7 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
 
         const ws = createWsClient(roomCode, localPlayerId)
         wsRef.current = ws
+        let rejectionTimer: number | undefined
 
         const reconcileTimer = (meta?: GameEventMeta) => {
             if (!meta) return
@@ -38,7 +48,7 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
 
         ws.on('game:state', (payload, meta) => {
             reconcileTimer(meta)
-            send({ type: 'GAME_STATE', state: payload as never })
+            send({ type: 'GAME_STATE', state: payload as never, localPlayerId })
         })
 
         ws.on('game:card_drawn', (payload, meta) => {
@@ -62,13 +72,24 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
 
         ws.on('game:board_updated', (payload, meta) => {
             reconcileTimer(meta)
-            const { playerId, wordBoard, handCount, hand } = payload as {
+            const { playerId, wordBoard, handCount, hand, boardRevision, clientActionId } = payload as {
                 playerId: string
                 wordBoard: WordBoardState
                 handCount: number
                 hand?: Card[]
+                boardRevision: number
+                clientActionId?: string
             }
-            send({ type: 'BOARD_UPDATED', localPlayerId, playerId, wordBoard, handCount, hand })
+            send({ type: 'BOARD_UPDATED', localPlayerId, playerId, wordBoard, handCount, hand, boardRevision, clientActionId })
+        })
+
+        ws.on('game:error', (payload) => {
+            const { clientActionId } = payload as { code: string; message: string; clientActionId?: string }
+            const message = 'That move was rejected. Your board has been refreshed.'
+            send({ type: 'ACTION_REJECTED', clientActionId, message })
+            setRejectionFeedback(message)
+            if (rejectionTimer !== undefined) window.clearTimeout(rejectionTimer)
+            rejectionTimer = window.setTimeout(() => setRejectionFeedback(null), 5_000)
         })
 
         ws.on('game:turn_ended', (payload, meta) => {
@@ -116,6 +137,7 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
         })
 
         return () => {
+            if (rejectionTimer !== undefined) window.clearTimeout(rejectionTimer)
             ws.close()
             if (wsRef.current === ws) {
                 wsRef.current = null
@@ -151,40 +173,45 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
     function place(cardId: string, rowIndex: number, slotIndex: number) {
         if (!canPlaceCard(gameState)) return
 
-        send({ type: 'LOCAL_CARD_PLACED_OPTIMISTICALLY', localPlayerId, cardId, rowIndex, slotIndex })
-        wsRef.current?.send('game:place_card', { cardId, rowIndex, slotIndex })
+        const clientActionId = createClientActionId()
+        send({ type: 'LOCAL_CARD_PLACED_OPTIMISTICALLY', localPlayerId, clientActionId, cardId, rowIndex, slotIndex })
+        wsRef.current?.send('game:place_card', { cardId, rowIndex, slotIndex, clientActionId })
     }
 
     function unplace(rowIndex: number, slotIndex: number) {
         if (!canPlaceCard(gameState)) return
 
-        send({ type: 'LOCAL_CARD_UNPLACED_OPTIMISTICALLY', localPlayerId, rowIndex, slotIndex })
+        const clientActionId = createClientActionId()
+        send({ type: 'LOCAL_CARD_UNPLACED_OPTIMISTICALLY', localPlayerId, clientActionId, rowIndex, slotIndex })
 
-        wsRef.current?.send('game:unplace_card', { rowIndex, slotIndex })
+        wsRef.current?.send('game:unplace_card', { rowIndex, slotIndex, clientActionId })
     }
 
     function clearWord(rowIndex: number) {
         if (!canPlaceCard(gameState)) return
 
-        send({ type: 'LOCAL_WORD_CLEARED_OPTIMISTICALLY', localPlayerId, rowIndex })
+        const clientActionId = createClientActionId()
+        send({ type: 'LOCAL_WORD_CLEARED_OPTIMISTICALLY', localPlayerId, clientActionId, rowIndex })
 
-        wsRef.current?.send('game:clear_word', { rowIndex })
+        wsRef.current?.send('game:clear_word', { rowIndex, clientActionId })
     }
 
     function clearBoard() {
         if (!canPlaceCard(gameState)) return
 
-        send({ type: 'LOCAL_BOARD_CLEARED_OPTIMISTICALLY', localPlayerId })
+        const clientActionId = createClientActionId()
+        send({ type: 'LOCAL_BOARD_CLEARED_OPTIMISTICALLY', localPlayerId, clientActionId })
 
-        wsRef.current?.send('game:clear_board', {})
+        wsRef.current?.send('game:clear_board', { clientActionId })
     }
 
     function discard(cardId: string) {
         if (!canDiscardCard(gameState, localPlayerId)) return
 
-        send({ type: 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY', localPlayerId, cardId })
+        const clientActionId = createClientActionId()
+        send({ type: 'LOCAL_CARD_DISCARDED_OPTIMISTICALLY', localPlayerId, clientActionId, cardId })
 
-        wsRef.current?.send('game:discard_card', { cardId })
+        wsRef.current?.send('game:discard_card', { cardId, clientActionId })
     }
 
     function restartLobby() {
@@ -197,6 +224,7 @@ export function useGameRoom(roomCode: string | undefined, localPlayerId: string)
 
     return {
         gameState,
+        rejectionFeedback,
         timeRemainingMs: remainingFromAnchor(timerAnchor, repaintAtMs),
         turnDurationMs: timerAnchor?.durationMs ?? 0,
         draw,

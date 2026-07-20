@@ -1,8 +1,9 @@
 import { produce } from 'immer'
-import type { Card, GameState, TurnPhase, WordBoardState, GamePlayer } from '../../../lib/gameTypes'
+import type { Card, GameState, TurnPhase, WordBoardState } from '../../../lib/gameTypes'
+import { applyBoardOperation, projectGameState, type PendingBoardOperation } from './boardProjection'
 
 export type GameAction =
-    | { type: 'game/state'; state: GameState }
+    | { type: 'game/state'; state: GameState; localPlayerId?: string }
     | {
         type: 'game/cardDrawn'
         localPlayerId: string
@@ -18,17 +19,20 @@ export type GameAction =
         wordBoard: WordBoardState
         handCount: number
         hand?: Card[]
+        boardRevision: number
+        clientActionId?: string
     }
     | { type: 'game/turnEnded'; nextPlayerId: string; discardPileTop: Card }
     | { type: 'game/turnSkipped'; playerId: string; nextPlayerId?: string }
     | { type: 'game/playerWon'; winnerId: string }
     | { type: 'game/playerConnectionChanged'; playerId: string; isConnected: boolean }
-    | { type: 'local/cardPlacedOptimistically'; localPlayerId: string; cardId: string; rowIndex: number; slotIndex: number }
-    | { type: 'local/cardUnplacedOptimistically'; localPlayerId: string; rowIndex: number; slotIndex: number }
-    | { type: 'local/wordClearedOptimistically'; localPlayerId: string; rowIndex: number }
-    | { type: 'local/boardClearedOptimistically'; localPlayerId: string }
-    | { type: 'local/cardDiscardedOptimistically'; localPlayerId: string; cardId: string }
+    | { type: 'local/cardPlacedOptimistically'; localPlayerId: string; clientActionId?: string; cardId: string; rowIndex: number; slotIndex: number }
+    | { type: 'local/cardUnplacedOptimistically'; localPlayerId: string; clientActionId?: string; rowIndex: number; slotIndex: number }
+    | { type: 'local/wordClearedOptimistically'; localPlayerId: string; clientActionId?: string; rowIndex: number }
+    | { type: 'local/boardClearedOptimistically'; localPlayerId: string; clientActionId?: string }
+    | { type: 'local/cardDiscardedOptimistically'; localPlayerId: string; clientActionId?: string; cardId: string }
     | { type: 'local/discardPileDrawnOptimistically'; localPlayerId: string }
+    | { type: 'game/actionRejected'; clientActionId?: string; message: string }
 
 export function canPlaceCard(state: GameState | null): boolean {
     if (!state) return false
@@ -50,105 +54,35 @@ export function canDiscardCard(state: GameState | null, localPlayerId: string): 
     return state.turn.phase === 'arrange'
 }
 
-type BoardLocation = {
-    rowIndex: number
-    slotIndex: number
-}
-
-type CardLocation = { type: 'hand'; index: number } | ({ type: 'board' } & BoardLocation)
-
-function getSlot(wordBoard: WordBoardState, rowIndex: number, slotIndex: number) {
-    return wordBoard.rows[rowIndex]?.slots[slotIndex] ?? null
-}
-
-function markCardRemovedFromBoard(wordBoard: WordBoardState, rowIndex: number) {
-    const row = wordBoard.rows[rowIndex]
-    if (!row) return
-
-    row.isComplete = false
-    wordBoard.allComplete = false
-}
-
-function findCardLocation(player: NonNullable<GamePlayer>, cardId: string): CardLocation | null {
-    const hand = player.hand ?? []
-    const handIndex = hand.findIndex((card) => card.id === cardId)
-    if (handIndex !== -1) {
-        return { type: 'hand', index: handIndex }
+function pendingOperationFor(action: GameAction): PendingBoardOperation | null {
+    const clientActionId = 'clientActionId' in action ? action.clientActionId ?? 'legacy-local-action' : ''
+    switch (action.type) {
+        case 'local/cardPlacedOptimistically':
+            return { type: 'place', clientActionId, cardId: action.cardId, rowIndex: action.rowIndex, slotIndex: action.slotIndex }
+        case 'local/cardUnplacedOptimistically':
+            return { type: 'unplace', clientActionId, rowIndex: action.rowIndex, slotIndex: action.slotIndex }
+        case 'local/wordClearedOptimistically':
+            return { type: 'clear-word', clientActionId, rowIndex: action.rowIndex }
+        case 'local/boardClearedOptimistically':
+            return { type: 'clear-board', clientActionId }
+        case 'local/cardDiscardedOptimistically':
+            return { type: 'discard', clientActionId, cardId: action.cardId }
+        default:
+            return null
     }
-
-    for (let rowIndex = 0; rowIndex < player.wordBoard.rows.length; rowIndex += 1) {
-        const row = player.wordBoard.rows[rowIndex]
-        for (let slotIndex = 0; slotIndex < row.slots.length; slotIndex += 1) {
-            if (row.slots[slotIndex].card?.id === cardId) {
-                return { type: 'board', rowIndex, slotIndex }
-            }
-        }
-    }
-
-    return null
-}
-
-function removeCardAtLocation(
-    player: NonNullable<GamePlayer>,
-    location: CardLocation,
-): Card | null {
-    if (location.type === 'hand') {
-        const hand = player.hand ?? []
-        const [card] = hand.splice(location.index, 1)
-        player.hand = hand
-        player.handCount = hand.length
-        return card ?? null
-    }
-
-    const sourceSlot = getSlot(player.wordBoard, location.rowIndex, location.slotIndex)
-    const card = sourceSlot?.card ?? null
-    if (!sourceSlot || !card) return null
-
-    sourceSlot.card = null
-    markCardRemovedFromBoard(player.wordBoard, location.rowIndex)
-    return card
-}
-
-function addCardToHand(player: NonNullable<GamePlayer>, card: Card) {
-    const hand = player.hand ?? []
-    hand.push(card)
-    player.hand = hand
-    player.handCount = hand.length
-}
-
-function clearWordRow(player: NonNullable<GamePlayer>, rowIndex: number) {
-    const row = player.wordBoard.rows[rowIndex]
-    if (!row) return
-
-    let cleared = false
-    for (const slot of row.slots) {
-        if (!slot.card) continue
-        addCardToHand(player, slot.card)
-        slot.card = null
-        cleared = true
-    }
-
-    row.isComplete = false
-    if (cleared || player.wordBoard.allComplete) {
-        player.wordBoard.allComplete = false
-    }
-}
-
-function clearWordBoard(player: NonNullable<GamePlayer>) {
-    for (let rowIndex = 0; rowIndex < player.wordBoard.rows.length; rowIndex += 1) {
-        clearWordRow(player, rowIndex)
-    }
-}
-
-function getNextPlayerId(state: GameState, currentPlayerId: string): string {
-    const currentIndex = state.players.findIndex((player) => player.id === currentPlayerId)
-    if (currentIndex === -1) return state.players[0]?.id ?? currentPlayerId
-    return state.players[(currentIndex + 1) % state.players.length]?.id ?? currentPlayerId
 }
 
 export function gameReducer(state: GameState | null, action: GameAction): GameState | null {
     if (action.type === 'game/state') return action.state
     if (!state) return state
+    const pendingOperation = pendingOperationFor(action)
+    if (pendingOperation) {
+        const localPlayerId = 'localPlayerId' in action ? action.localPlayerId : ''
+        if (pendingOperation.type === 'discard') {
+            return canDiscardCard(state, localPlayerId) ? applyBoardOperation(state, localPlayerId, pendingOperation) : state
+        }
+        return canPlaceCard(state) ? applyBoardOperation(state, localPlayerId, pendingOperation) : state
+    }
 
     return produce(state, (draft) => {
         switch (action.type) {
@@ -178,6 +112,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 if (player) {
                     player.wordBoard = action.wordBoard
                     player.handCount = action.handCount
+                    player.boardRevision = action.boardRevision
                     if (player.id === action.localPlayerId && action.hand) {
                         player.hand = action.hand
                     }
@@ -207,97 +142,125 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 if (player) player.isConnected = action.isConnected
                 break
             }
-            case 'local/cardPlacedOptimistically': {
-                if (!canPlaceCard(draft)) break
-                const player = draft.players.find((p) => p.id === action.localPlayerId)
-                if (!player) break
-
-                const source = findCardLocation(player, action.cardId)
-                const targetSlot = getSlot(player.wordBoard, action.rowIndex, action.slotIndex)
-                if (!source || !targetSlot) break
-                if (source.type === 'board' && source.rowIndex === action.rowIndex && source.slotIndex === action.slotIndex) {
-                    break
-                }
-
-                if (source.type === 'board' && targetSlot.card) {
-                    const sourceSlot = getSlot(player.wordBoard, source.rowIndex, source.slotIndex)
-                    if (!sourceSlot?.card) break
-
-                    const movingCard = sourceSlot.card
-                    sourceSlot.card = targetSlot.card
-                    targetSlot.card = movingCard
-                    markCardRemovedFromBoard(player.wordBoard, source.rowIndex)
-                    markCardRemovedFromBoard(player.wordBoard, action.rowIndex)
-                    break
-                }
-
-                const movingCard = removeCardAtLocation(player, source)
-                if (!movingCard) break
-
-                const displacedCard = targetSlot.card
-                targetSlot.card = movingCard
-                if (displacedCard) {
-                    addCardToHand(player, displacedCard)
-                }
-                break
-            }
-            case 'local/cardUnplacedOptimistically': {
-                if (!canPlaceCard(draft)) break
-                const player = draft.players.find((p) => p.id === action.localPlayerId)
-                const sourceSlot = player ? getSlot(player.wordBoard, action.rowIndex, action.slotIndex) : null
-                const card = sourceSlot?.card ?? null
-                if (!player || !sourceSlot || !card) break
-
-                sourceSlot.card = null
-                markCardRemovedFromBoard(player.wordBoard, action.rowIndex)
-                addCardToHand(player, card)
-                break
-            }
-            case 'local/wordClearedOptimistically': {
-                if (!canPlaceCard(draft)) break
-                const player = draft.players.find((p) => p.id === action.localPlayerId)
-                if (!player) break
-
-                clearWordRow(player, action.rowIndex)
-                break
-            }
-            case 'local/boardClearedOptimistically': {
-                if (!canPlaceCard(draft)) break
-                const player = draft.players.find((p) => p.id === action.localPlayerId)
-                if (!player) break
-
-                clearWordBoard(player)
-                break
-            }
-            case 'local/cardDiscardedOptimistically': {
-                if (!canDiscardCard(draft, action.localPlayerId)) break
-                const player = draft.players.find((p) => p.id === action.localPlayerId)
-                if (!player) break
-
-                const source = findCardLocation(player, action.cardId)
-                if (!source) break
-
-                const discardedCard = removeCardAtLocation(player, source)
-                if (!discardedCard) break
-
-                draft.discardPileTop = discardedCard
-                draft.turn.currentPlayerId = getNextPlayerId(draft, draft.turn.currentPlayerId)
-                draft.turn.phase = 'draw' as TurnPhase
-                draft.turn.drawnCard = null
-                break
-            }
             case 'local/discardPileDrawnOptimistically': {
                 if (!canDrawCard(draft, action.localPlayerId)) break
                 const player = draft.players.find((p) => p.id === action.localPlayerId)
                 const drawnCard = draft.discardPileTop
                 if (!player || !drawnCard) break
 
-                addCardToHand(player, drawnCard)
+                const hand = player.hand ?? []
+                if (!hand.some((card) => card.id === drawnCard.id)) hand.push(drawnCard)
+                player.hand = hand
+                player.handCount = hand.length
                 draft.discardPileTop = null
                 draft.turn.phase = 'arrange' as TurnPhase
                 draft.turn.drawnCard = drawnCard
                 break
             }
+            case 'game/actionRejected':
+                break
         }
     })
+}
+
+export type GameRejection = {
+    clientActionId?: string
+    message: string
+}
+
+export type GameReconciliationState = {
+    authoritativeGameState: GameState | null
+    pendingBoardOperations: PendingBoardOperation[]
+    gameState: GameState | null
+    localPlayerId: string
+    rejection: GameRejection | null
+}
+
+export const initialGameReconciliationState: GameReconciliationState = {
+    authoritativeGameState: null,
+    pendingBoardOperations: [],
+    gameState: null,
+    localPlayerId: '',
+    rejection: null,
+}
+
+function actionLocalPlayerId(action: GameAction, fallback: string): string {
+    return 'localPlayerId' in action ? action.localPlayerId ?? fallback : fallback
+}
+
+function authoritativeRevision(state: GameState, playerId: string): number {
+    const revision = state.players.find((player) => player.id === playerId)?.boardRevision
+    return revision ?? -1
+}
+
+export function gameReconciliationReducer(
+    state: GameReconciliationState,
+    action: GameAction,
+): GameReconciliationState {
+    const localPlayerId = actionLocalPlayerId(action, state.localPlayerId)
+
+    if (action.type === 'game/state') {
+        return {
+            authoritativeGameState: action.state,
+            pendingBoardOperations: [],
+            gameState: action.state,
+            localPlayerId,
+            rejection: null,
+        }
+    }
+
+    if (action.type === 'game/actionRejected') {
+        const pendingBoardOperations = action.clientActionId
+            ? state.pendingBoardOperations.filter((operation) => operation.clientActionId !== action.clientActionId)
+            : state.pendingBoardOperations
+        return {
+            ...state,
+            pendingBoardOperations,
+            gameState: projectGameState(state.authoritativeGameState, localPlayerId, pendingBoardOperations),
+            localPlayerId,
+            rejection: { clientActionId: action.clientActionId, message: action.message },
+        }
+    }
+
+    const pendingOperation = pendingOperationFor(action)
+    if (pendingOperation && state.gameState) {
+        const projected = applyBoardOperation(state.gameState, localPlayerId, pendingOperation)
+        if (projected === state.gameState) return { ...state, localPlayerId }
+        const pendingBoardOperations = [...state.pendingBoardOperations, pendingOperation]
+        return {
+            ...state,
+            pendingBoardOperations,
+            gameState: projectGameState(state.authoritativeGameState, localPlayerId, pendingBoardOperations),
+            localPlayerId,
+            rejection: null,
+        }
+    }
+
+    if (!state.authoritativeGameState) return { ...state, localPlayerId }
+
+    if (action.type === 'game/boardUpdated') {
+        const isNewer = action.boardRevision > authoritativeRevision(state.authoritativeGameState, action.playerId)
+        const authoritativeGameState = isNewer
+            ? gameReducer(state.authoritativeGameState, action)
+            : state.authoritativeGameState
+        const pendingBoardOperations =
+            action.playerId === localPlayerId && action.clientActionId
+                ? state.pendingBoardOperations.filter((operation) => operation.clientActionId !== action.clientActionId)
+                : state.pendingBoardOperations
+        return {
+            ...state,
+            authoritativeGameState,
+            pendingBoardOperations,
+            gameState: projectGameState(authoritativeGameState, localPlayerId, pendingBoardOperations),
+            localPlayerId,
+        }
+    }
+
+    const authoritativeGameState = gameReducer(state.authoritativeGameState, action)
+    return {
+        ...state,
+        authoritativeGameState,
+        gameState: projectGameState(authoritativeGameState, localPlayerId, state.pendingBoardOperations),
+        localPlayerId,
+    }
 }

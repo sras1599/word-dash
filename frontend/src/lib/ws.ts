@@ -14,8 +14,9 @@ export class WsClient {
     private handlers = new Map<string, Set<MessageHandler>>();
     private attempt = 0;
     private closed = false;
+    private hasOpened = false;
     private readonly url: string;
-    private queue: string[] = [];
+    private queue: Array<{ event: string; data: string }> = [];
 
     constructor(url: string) {
         this.url = url;
@@ -28,9 +29,10 @@ export class WsClient {
 
         ws.onopen = () => {
             this.attempt = 0;
+            this.hasOpened = true;
             // Flush any messages that were sent before the connection was open.
-            for (const msg of this.queue) {
-                ws.send(msg);
+            for (const message of this.queue) {
+                ws.send(message.data);
             }
             this.queue = [];
         };
@@ -41,6 +43,9 @@ export class WsClient {
         };
 
         ws.onclose = (closeEvent) => {
+            // Gameplay actions are not idempotent, so never carry them into a
+            // new connection generation. The reconnect snapshot is authoritative.
+            this.queue = this.queue.filter(({ event }) => !event.startsWith('game:'))
             if (!this.closed && !closeEvent.wasClean && this.attempt < MAX_RETRIES) {
                 const delay = 100 * Math.pow(2, this.attempt);
                 this.attempt++;
@@ -49,12 +54,15 @@ export class WsClient {
         };
     }
 
-    send(event: string, payload?: unknown) {
+    send(event: string, payload?: unknown): boolean {
         const data = JSON.stringify({ event, payload });
         if (this.ws?.readyState === WebSocket.OPEN) {
             this.ws.send(data);
+            return true;
         } else {
-            this.queue.push(data);
+            if (this.hasOpened && event.startsWith('game:')) return false;
+            this.queue.push({ event, data });
+            return true;
         }
     }
 

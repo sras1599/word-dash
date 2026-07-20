@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Card, GameState } from '../../../lib/gameTypes'
-import { gameReducer } from './gameReducer'
+import {
+    gameReconciliationReducer,
+    gameReducer,
+    initialGameReconciliationState,
+    type GameReconciliationState,
+} from './gameReducer'
 
 function createGameState({
     hand = [{ id: 'c1', letter: 'A' }],
@@ -58,6 +63,30 @@ function createGameState({
     }
 }
 
+function createRapidPlacementState(): GameState {
+    const state = createGameState({
+        hand: [
+            { id: 'card-a', letter: 'A' },
+            { id: 'card-b', letter: 'B' },
+            { id: 'card-c', letter: 'C' },
+        ],
+    })
+    state.players[0].boardRevision = 0
+    state.players[0].wordBoard.rows[0].slots = [
+        { slotIndex: 0, card: null },
+        { slotIndex: 1, card: null },
+        { slotIndex: 2, card: null },
+    ]
+    return state
+}
+
+function reconcile(
+    state: GameReconciliationState,
+    action: Parameters<typeof gameReconciliationReducer>[1],
+) {
+    return gameReconciliationReducer(state, action)
+}
+
 describe('gameReducer', () => {
     it('applies card draw events for the local player', () => {
         vi.spyOn(Date, 'now').mockReturnValue(123)
@@ -90,6 +119,7 @@ describe('gameReducer', () => {
             wordBoard,
             handCount: 0,
             hand: [],
+            boardRevision: 1,
         })
 
         expect(state?.players[0].wordBoard).toBe(wordBoard)
@@ -431,5 +461,194 @@ describe('gameReducer', () => {
             discardedTop,
         ])
         expect(reconciled?.players[0].handCount).toBe(2)
+    })
+})
+
+describe('optimistic board reconciliation', () => {
+    it('keeps rapid placements projected over an intermediate authoritative update', () => {
+        const authoritative = createRapidPlacementState()
+        let state = reconcile(initialGameReconciliationState, {
+            type: 'game/state',
+            state: authoritative,
+            localPlayerId: 'p1',
+        })
+        state = reconcile(state, {
+            type: 'local/cardPlacedOptimistically',
+            localPlayerId: 'p1',
+            clientActionId: 'action-a',
+            cardId: 'card-a',
+            rowIndex: 0,
+            slotIndex: 0,
+        })
+        state = reconcile(state, {
+            type: 'local/cardPlacedOptimistically',
+            localPlayerId: 'p1',
+            clientActionId: 'action-b',
+            cardId: 'card-b',
+            rowIndex: 0,
+            slotIndex: 1,
+        })
+
+        const afterA = createRapidPlacementState()
+        afterA.players[0].wordBoard.rows[0].slots[0].card = { id: 'card-a', letter: 'A' }
+        afterA.players[0].hand = [
+            { id: 'card-b', letter: 'B' },
+            { id: 'card-c', letter: 'C' },
+        ]
+        afterA.players[0].handCount = 2
+        state = reconcile(state, {
+            type: 'game/boardUpdated',
+            localPlayerId: 'p1',
+            playerId: 'p1',
+            wordBoard: afterA.players[0].wordBoard,
+            hand: afterA.players[0].hand,
+            handCount: 2,
+            boardRevision: 1,
+            clientActionId: 'action-a',
+        })
+
+        expect(state.pendingBoardOperations.map(({ clientActionId }) => clientActionId)).toEqual(['action-b'])
+        expect(state.gameState?.players[0].wordBoard.rows[0].slots.map(({ card }) => card?.id ?? null)).toEqual([
+            'card-a',
+            'card-b',
+            null,
+        ])
+        expect(state.gameState?.players[0].hand?.map(({ id }) => id)).toEqual(['card-c'])
+    })
+
+    it('uses exact ids without allowing stale acknowledgements to rewind newer intent', () => {
+        let state = reconcile(initialGameReconciliationState, {
+            type: 'game/state',
+            state: createRapidPlacementState(),
+            localPlayerId: 'p1',
+        })
+        for (const [suffix, cardId, slotIndex] of [
+            ['a', 'card-a', 0],
+            ['b', 'card-b', 1],
+            ['c', 'card-c', 2],
+        ] as const) {
+            state = reconcile(state, {
+                type: 'local/cardPlacedOptimistically',
+                localPlayerId: 'p1',
+                clientActionId: `action-${suffix}`,
+                cardId,
+                rowIndex: 0,
+                slotIndex,
+            })
+        }
+
+        const afterAB = createRapidPlacementState()
+        afterAB.players[0].wordBoard.rows[0].slots[0].card = { id: 'card-a', letter: 'A' }
+        afterAB.players[0].wordBoard.rows[0].slots[1].card = { id: 'card-b', letter: 'B' }
+        afterAB.players[0].hand = [{ id: 'card-c', letter: 'C' }]
+        afterAB.players[0].handCount = 1
+        state = reconcile(state, {
+            type: 'game/boardUpdated',
+            localPlayerId: 'p1',
+            playerId: 'p1',
+            wordBoard: afterAB.players[0].wordBoard,
+            hand: afterAB.players[0].hand,
+            handCount: 1,
+            boardRevision: 2,
+            clientActionId: 'action-b',
+        })
+
+        const afterA = createRapidPlacementState()
+        afterA.players[0].wordBoard.rows[0].slots[0].card = { id: 'card-a', letter: 'A' }
+        afterA.players[0].hand = [
+            { id: 'card-b', letter: 'B' },
+            { id: 'card-c', letter: 'C' },
+        ]
+        afterA.players[0].handCount = 2
+        state = reconcile(state, {
+            type: 'game/boardUpdated',
+            localPlayerId: 'p1',
+            playerId: 'p1',
+            wordBoard: afterA.players[0].wordBoard,
+            hand: afterA.players[0].hand,
+            handCount: 2,
+            boardRevision: 1,
+            clientActionId: 'action-a',
+        })
+
+        expect(state.authoritativeGameState?.players[0].boardRevision).toBe(2)
+        expect(state.pendingBoardOperations.map(({ clientActionId }) => clientActionId)).toEqual(['action-c'])
+        expect(state.gameState?.players[0].wordBoard.rows[0].slots.map(({ card }) => card?.id ?? null)).toEqual([
+            'card-a',
+            'card-b',
+            'card-c',
+        ])
+    })
+
+    it('preserves unknown acknowledgements across turn events and removes only a correlated rejection', () => {
+        let state = reconcile(initialGameReconciliationState, {
+            type: 'game/state',
+            state: createRapidPlacementState(),
+            localPlayerId: 'p1',
+        })
+        for (const [clientActionId, cardId, slotIndex] of [
+            ['action-a', 'card-a', 0],
+            ['action-b', 'card-b', 1],
+        ] as const) {
+            state = reconcile(state, {
+                type: 'local/cardPlacedOptimistically',
+                localPlayerId: 'p1',
+                clientActionId,
+                cardId,
+                rowIndex: 0,
+                slotIndex,
+            })
+        }
+        state = reconcile(state, {
+            type: 'game/boardUpdated',
+            localPlayerId: 'p1',
+            playerId: 'p1',
+            wordBoard: createRapidPlacementState().players[0].wordBoard,
+            hand: createRapidPlacementState().players[0].hand,
+            handCount: 3,
+            boardRevision: 1,
+            clientActionId: 'unknown-action',
+        })
+        state = reconcile(state, {
+            type: 'game/turnSkipped',
+            playerId: 'p2',
+            nextPlayerId: 'p1',
+        })
+        state = reconcile(state, {
+            type: 'game/actionRejected',
+            clientActionId: 'action-a',
+            message: 'That move was rejected.',
+        })
+
+        expect(state.pendingBoardOperations.map(({ clientActionId }) => clientActionId)).toEqual(['action-b'])
+        expect(state.gameState?.players[0].wordBoard.rows[0].slots[0].card).toBeNull()
+        expect(state.gameState?.players[0].wordBoard.rows[0].slots[1].card?.id).toBe('card-b')
+        expect(state.rejection?.message).toBe('That move was rejected.')
+    })
+
+    it('keeps terminal projection until a personalized full snapshot clears it', () => {
+        let state = reconcile(initialGameReconciliationState, {
+            type: 'game/state',
+            state: createRapidPlacementState(),
+            localPlayerId: 'p1',
+        })
+        state = reconcile(state, {
+            type: 'local/cardPlacedOptimistically',
+            localPlayerId: 'p1',
+            clientActionId: 'action-a',
+            cardId: 'card-a',
+            rowIndex: 0,
+            slotIndex: 0,
+        })
+        state = reconcile(state, { type: 'game/playerWon', winnerId: 'p2' })
+        expect(state.pendingBoardOperations).toHaveLength(1)
+        expect(state.gameState?.players[0].wordBoard.rows[0].slots[0].card?.id).toBe('card-a')
+
+        const terminal = createRapidPlacementState()
+        terminal.phase = 'finished'
+        terminal.winnerId = 'p2'
+        state = reconcile(state, { type: 'game/state', state: terminal, localPlayerId: 'p1' })
+        expect(state.pendingBoardOperations).toEqual([])
+        expect(state.gameState).toBe(terminal)
     })
 })

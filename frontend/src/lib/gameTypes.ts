@@ -41,6 +41,7 @@ export type GamePlayer = BasePlayer & {
     handCount: number
     hand?: Card[]
     wordBoard: WordBoardState
+    boardRevision?: number
 }
 
 export type GamePhase = 'waiting' | 'playing' | 'finished'

@@ -65,4 +65,46 @@ describe('gameMachine', () => {
             { id: 'd1', letter: 'D' },
         ])
     })
+
+    it('keeps authoritative, pending, and projected board state separate until acknowledgement', () => {
+        const actor = createActor(gameMachine).start()
+        const authoritative = createGameState('playing', 'draw')
+        authoritative.players[0].boardRevision = 0
+        authoritative.players[0].wordBoard = {
+            allComplete: false,
+            rows: [{
+                targetLength: 1,
+                isComplete: false,
+                slots: [{ slotIndex: 0, card: null }],
+            }],
+        }
+        actor.send({ type: 'GAME_STATE', state: authoritative, localPlayerId: 'p1' })
+        actor.send({
+            type: 'LOCAL_CARD_PLACED_OPTIMISTICALLY',
+            localPlayerId: 'p1',
+            clientActionId: 'action-1',
+            cardId: 'c1',
+            rowIndex: 0,
+            slotIndex: 0,
+        })
+
+        let context = actor.getSnapshot().context
+        expect(context.authoritativeGameState?.players[0].hand).toEqual([{ id: 'c1', letter: 'A' }])
+        expect(context.gameState?.players[0].wordBoard.rows[0].slots[0].card?.id).toBe('c1')
+        expect(context.pendingBoardOperations).toHaveLength(1)
+
+        actor.send({
+            type: 'BOARD_UPDATED',
+            localPlayerId: 'p1',
+            playerId: 'p1',
+            wordBoard: context.gameState!.players[0].wordBoard,
+            hand: [],
+            handCount: 0,
+            boardRevision: 1,
+            clientActionId: 'action-1',
+        })
+        context = actor.getSnapshot().context
+        expect(context.pendingBoardOperations).toEqual([])
+        expect(context.authoritativeGameState?.players[0].boardRevision).toBe(1)
+    })
 })
