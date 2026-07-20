@@ -170,4 +170,15 @@ Add or update a story when adding a primitive variant, visual state, responsive 
 - Keep game-specific behavior in game components.
 - Add or update a Storybook story when adding a variant, state, or visual rule.
 - Prefer native HTML semantics before custom interaction logic.
-- Remove transitional aliases after the adoption phase completes.
+- Do not use legacy token aliases in new code. They are compatibility aliases for older page and game-specific CSS, and should be removed only after those components migrate to `--wd-*` names.
+
+## Global CSS Conventions
+
+Public app-wide classes are intentionally small:
+
+- `wd-page`, `wd-content-layer`, `wd-floating-bg`, and `wd-floating-letter` support shared page-shell structure.
+- `wd-floating-letter--tile` supports the decorative page-letter treatment.
+- `wd-sr-only` provides reusable visually-hidden content.
+- `wd-eyebrow` remains a shared text treatment for compact uppercase labels.
+
+The old `wd-btn` utility classes were removed after Home, Lobby, and Game chrome moved to the `Button` and `IconButton` primitives. New button-like UI should use primitives instead of global utility classes.

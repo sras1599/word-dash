@@ -428,10 +428,6 @@
     box-sizing: border-box;
 }
 
-.page-lobby__custom-input--error {
-    border-color: color-mix(in srgb, var(--error) 50%, transparent);
-}
-
 .page-lobby__custom-input::placeholder {
     color: color-mix(in srgb, var(--on-surface-variant) 62%, transparent);
 }

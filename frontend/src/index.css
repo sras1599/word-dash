@@ -83,7 +83,7 @@
   --wd-z-chrome: 5;
   --wd-z-overlay: 20;
 
-  /* Transitional aliases. Remove after production adoption is complete. */
+  /* Compatibility aliases for legacy page and game CSS. New code should use --wd-* tokens. */
   --background: var(--wd-surface-page);
   --primary: var(--wd-color-primary);
   --primary-container: var(--wd-color-primary-container);
@@ -175,7 +175,7 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--on-surface);
+  color: var(--wd-text-primary);
   font-family: var(--wd-font-headline);
 }
 
@@ -243,56 +243,6 @@ h6 {
   border-radius: var(--fl-radius, var(--wd-radius-xl));
   box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--wd-text-primary) 25%, transparent);
   backdrop-filter: blur(24px);
-}
-
-.wd-btn {
-  font-family: var(--wd-font-headline);
-  cursor: pointer;
-  transition: all var(--wd-motion-standard);
-}
-
-.wd-btn:focus-visible {
-  outline: 3px solid var(--wd-border-focus);
-  outline-offset: 4px;
-}
-
-.wd-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.56;
-  box-shadow: none;
-}
-
-.wd-btn--lift {
-  --wd-btn-rest-transform: none;
-  --wd-btn-hover-transform: translateY(-4px);
-  --wd-btn-active-transform: scale(0.95);
-
-  transform: var(--wd-btn-rest-transform);
-}
-
-.wd-btn--lift:hover:not(:disabled) {
-  transform: var(--wd-btn-hover-transform);
-}
-
-.wd-btn--lift:active:not(:disabled) {
-  transform: var(--wd-btn-active-transform);
-}
-
-.wd-btn--primary {
-  background: var(--wd-color-primary);
-  color: var(--wd-text-on-primary);
-  box-shadow: var(--wd-shadow-control-primary);
-}
-
-.wd-btn--secondary {
-  background: var(--wd-color-secondary);
-  color: var(--wd-text-on-primary);
-  box-shadow: var(--wd-shadow-control-secondary);
-}
-
-.wd-btn--ghost {
-  background: transparent;
-  color: var(--wd-color-primary);
 }
 
 .wd-eyebrow {
