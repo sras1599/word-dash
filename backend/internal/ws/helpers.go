@@ -35,10 +35,16 @@ var roomErrorCodes = []errorCodeMapping{
 
 // sendErr sends a standardised game:error message to the client.
 func sendErr(c *client, code, message string) {
-	c.send("game:error", map[string]string{
-		"code":    code,
-		"message": message,
-	})
+	sendErrWithAction(c, code, message, "")
+}
+
+// sendErrWithAction includes correlation only when the failed request supplied it.
+func sendErrWithAction(c *client, code, message, clientActionID string) {
+	c.send("game:error", buildGameErrorPayload(code, message, clientActionID))
+}
+
+func buildGameErrorPayload(code, message, clientActionID string) gameErrorPayload {
+	return gameErrorPayload{Code: code, Message: message, ClientActionID: clientActionID}
 }
 
 // decodePayload unmarshals raw JSON into v. On failure it sends an
@@ -46,6 +52,20 @@ func sendErr(c *client, code, message string) {
 func decodePayload(c *client, raw json.RawMessage, v any) bool {
 	if err := json.Unmarshal(raw, v); err != nil {
 		sendErr(c, "INVALID_PAYLOAD", "invalid payload")
+		return false
+	}
+	return true
+}
+
+// decodeActionPayload preserves an action id from a structurally readable
+// payload when the rest of the request cannot be decoded.
+func decodeActionPayload(c *client, raw json.RawMessage, v any) bool {
+	if err := json.Unmarshal(raw, v); err != nil {
+		var correlation struct {
+			ClientActionID string `json:"clientActionId"`
+		}
+		_ = json.Unmarshal(raw, &correlation)
+		sendErrWithAction(c, "INVALID_PAYLOAD", "invalid payload", correlation.ClientActionID)
 		return false
 	}
 	return true
@@ -105,13 +125,22 @@ func mappedErrorCode(err error, mappings []errorCodeMapping, fallback string) st
 func buildGameStatePayload(state *room.GameState, forPlayerID string) gameStatePayload {
 	return gameStatePayload{
 		RoomCode:       state.RoomCode,
+		HostPlayerID:   hostPlayerID(state),
 		Variation:      variationJSON{WordLengths: state.Variation.WordLengths},
 		Players:        buildGamePlayersJSON(state, forPlayerID),
 		DrawPileCount:  state.DrawPileCount,
 		DiscardPileTop: buildOptionalCardJSON(state.DiscardPileTop),
 		Turn:           buildTurnJSON(state, forPlayerID),
 		Phase:          string(state.Phase),
+		WinnerID:       state.WinnerID,
 	}
+}
+
+func hostPlayerID(state *room.GameState) string {
+	if len(state.Players) == 0 {
+		return ""
+	}
+	return state.Players[0].ID
 }
 
 // buildGamePlayersJSON builds player snapshots, including one private hand.
@@ -126,13 +155,14 @@ func buildGamePlayersJSON(state *room.GameState, forPlayerID string) []gamePlaye
 // buildGamePlayerJSON converts a room player into game-state JSON.
 func buildGamePlayerJSON(p room.Player, includeHand bool) gamePlayerJSON {
 	return gamePlayerJSON{
-		ID:          p.ID,
-		Name:        p.Name,
-		HandCount:   len(p.Hand),
-		Hand:        maybeHandJSON(p.Hand, includeHand),
-		WordBoard:   buildWordBoardJSON(p.WordBoard),
-		IsReady:     p.IsReady,
-		IsConnected: p.IsConnected,
+		ID:            p.ID,
+		Name:          p.Name,
+		HandCount:     len(p.Hand),
+		Hand:          maybeHandJSON(p.Hand, includeHand),
+		WordBoard:     buildWordBoardJSON(p.WordBoard),
+		BoardRevision: p.BoardRevision,
+		IsReady:       p.IsReady,
+		IsConnected:   p.IsConnected,
 	}
 }
 
@@ -257,21 +287,23 @@ func lobbyPlayerJoined(state *room.GameState, playerID string) (lobbyPlayerJoine
 func boardUpdateFor(state *room.GameState, playerID string) boardUpdate {
 	for _, p := range state.Players {
 		if p.ID == playerID {
-			return boardUpdate{board: p.WordBoard, hand: buildHandJSON(p.Hand)}
+			return boardUpdate{board: p.WordBoard, hand: buildHandJSON(p.Hand), revision: p.BoardRevision}
 		}
 	}
 	return boardUpdate{}
 }
 
 // boardPayloadFor builds a board update with hand data only for the actor.
-func boardPayloadFor(pid, playerID string, update boardUpdate) boardUpdatedPayload {
+func boardPayloadFor(pid, playerID, clientActionID string, update boardUpdate) boardUpdatedPayload {
 	payload := boardUpdatedPayload{
-		PlayerID:  playerID,
-		WordBoard: buildWordBoardJSON(update.board),
-		HandCount: len(update.hand),
+		PlayerID:      playerID,
+		WordBoard:     buildWordBoardJSON(update.board),
+		HandCount:     len(update.hand),
+		BoardRevision: update.revision,
 	}
 	if pid == playerID {
 		payload.Hand = update.hand
+		payload.ClientActionID = clientActionID
 	}
 	return payload
 }

@@ -9,6 +9,22 @@ import (
 	"github.com/sras1599/wordit/backend/internal/room"
 )
 
+func TestPutGetPreservesBoardRevision(t *testing.T) {
+	store := NewStore()
+	state := testPlayingState(nil)
+	state.Players[0].BoardRevision = 9
+	if err := store.Put(state); err != nil {
+		t.Fatalf("put state: %v", err)
+	}
+	reloaded, err := store.Get("ROOM1")
+	if err != nil {
+		t.Fatalf("get state: %v", err)
+	}
+	if got := reloaded.Players[0].BoardRevision; got != 9 {
+		t.Fatalf("board revision = %d, want 9", got)
+	}
+}
+
 func TestUpdateGameStatePersistsPlacedUnplacedCardsAndWinner(t *testing.T) {
 	store := NewStore()
 	state := testPlayingState([]room.Card{

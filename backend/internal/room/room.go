@@ -62,12 +62,13 @@ type Turn struct {
 }
 
 type Player struct {
-	ID          string
-	Name        string
-	Hand        []Card
-	WordBoard   WordBoard
-	IsReady     bool
-	IsConnected bool
+	ID            string
+	Name          string
+	Hand          []Card
+	WordBoard     WordBoard
+	BoardRevision uint64
+	IsReady       bool
+	IsConnected   bool
 }
 
 type GamePhase string

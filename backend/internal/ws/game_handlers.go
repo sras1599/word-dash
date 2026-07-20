@@ -9,21 +9,24 @@ import (
 )
 
 type boardUpdate struct {
-	board room.WordBoard
-	hand  []cardJSON
+	board    room.WordBoard
+	hand     []cardJSON
+	revision uint64
 }
 
 type placeCardResult struct {
 	boardUpdate
-	winner room.Player
-	won    bool
+	winner         room.Player
+	won            bool
+	clientActionID string
 }
 
 type discardCardResult struct {
 	boardUpdate
-	discarded    *room.Card
-	nextPlayerID string
-	reason       string
+	discarded      *room.Card
+	nextPlayerID   string
+	reason         string
+	clientActionID string
 }
 
 // syncGameConnection marks a player connected and sends their private game state.
@@ -122,11 +125,11 @@ func (h *Hub) handleGamePlaceCard(c *client, roomCode, playerID string, rawPaylo
 // decodePlaceCard decodes and validates the place-card request payload.
 func decodePlaceCard(c *client, rawPayload json.RawMessage) (placeCardRequest, bool) {
 	var req placeCardRequest
-	if !decodePayload(c, rawPayload, &req) {
+	if !decodeActionPayload(c, rawPayload, &req) {
 		return req, false
 	}
 	if req.CardID == "" {
-		sendErr(c, "INVALID_PAYLOAD", "invalid place_card payload")
+		sendErrWithAction(c, "INVALID_PAYLOAD", "invalid place_card payload", req.ClientActionID)
 		return req, false
 	}
 	return req, true
@@ -134,12 +137,12 @@ func decodePlaceCard(c *client, rawPayload json.RawMessage) (placeCardRequest, b
 
 // placeCard applies placement and captures the board and win result.
 func (h *Hub) placeCard(c *client, roomCode, playerID string, req placeCardRequest) (room.GameState, placeCardResult, bool) {
-	var result placeCardResult
+	result := placeCardResult{clientActionID: req.ClientActionID}
 	state, err := h.updateBeforeDeadline(roomCode, func(state *room.GameState) error {
 		return h.applyPlaceCard(state, playerID, req, &result)
 	})
 	if err != nil {
-		sendErr(c, gameErrorCode(err), err.Error())
+		sendErrWithAction(c, gameErrorCode(err), err.Error(), req.ClientActionID)
 		return state, result, false
 	}
 	return state, result, true
@@ -148,6 +151,9 @@ func (h *Hub) placeCard(c *client, roomCode, playerID string, req placeCardReque
 // applyPlaceCard mutates game state for a placement and checks for a winner.
 func (h *Hub) applyPlaceCard(state *room.GameState, playerID string, req placeCardRequest, result *placeCardResult) error {
 	if err := game.PlaceCard(state, playerID, req.CardID, req.RowIndex, req.SlotIndex, h.dict); err != nil {
+		return err
+	}
+	if err := incrementBoardRevision(state, playerID); err != nil {
 		return err
 	}
 	result.boardUpdate = boardUpdateFor(state, playerID)
@@ -164,10 +170,11 @@ func declareWinner(state *room.GameState, playerID string, result *placeCardResu
 
 // afterPlaceCard broadcasts board updates and announces a win if needed.
 func (h *Hub) afterPlaceCard(roomCode, playerID string, state *room.GameState, result placeCardResult) {
-	h.broadcastBoardUpdated(state, playerID, result.boardUpdate)
+	h.broadcastBoardUpdated(state, playerID, result.clientActionID, result.boardUpdate)
 	if result.won {
 		h.stopTurnTimer(roomCode)
 		h.broadcastPlayerWon(state, result.winner)
+		h.syncGameStateToRoom(state)
 	}
 }
 
@@ -188,14 +195,14 @@ func (h *Hub) handleGameUnplaceCard(c *client, roomCode, playerID string, rawPay
 	}
 	state, update, ok := h.unplaceCard(c, roomCode, playerID, req)
 	if ok {
-		h.broadcastBoardUpdated(&state, playerID, update)
+		h.broadcastBoardUpdated(&state, playerID, req.ClientActionID, update)
 	}
 }
 
 // decodeUnplaceCard decodes the unplace-card request payload.
 func decodeUnplaceCard(c *client, rawPayload json.RawMessage) (unplaceCardRequest, bool) {
 	var req unplaceCardRequest
-	return req, decodePayload(c, rawPayload, &req)
+	return req, decodeActionPayload(c, rawPayload, &req)
 }
 
 // unplaceCard applies the unplace action through the room store.
@@ -205,7 +212,7 @@ func (h *Hub) unplaceCard(c *client, roomCode, playerID string, req unplaceCardR
 		return applyUnplaceCard(state, playerID, req, &update)
 	})
 	if err != nil {
-		sendErr(c, gameErrorCode(err), err.Error())
+		sendErrWithAction(c, gameErrorCode(err), err.Error(), req.ClientActionID)
 		return state, update, false
 	}
 	return state, update, true
@@ -214,6 +221,9 @@ func (h *Hub) unplaceCard(c *client, roomCode, playerID string, req unplaceCardR
 // applyUnplaceCard mutates state and captures the updated board view.
 func applyUnplaceCard(state *room.GameState, playerID string, req unplaceCardRequest, update *boardUpdate) error {
 	if err := game.UnplaceCard(state, playerID, req.RowIndex, req.SlotIndex); err != nil {
+		return err
+	}
+	if err := incrementBoardRevision(state, playerID); err != nil {
 		return err
 	}
 	*update = boardUpdateFor(state, playerID)
@@ -228,14 +238,14 @@ func (h *Hub) handleGameClearWord(c *client, roomCode, playerID string, rawPaylo
 	}
 	state, update, ok := h.clearWord(c, roomCode, playerID, req)
 	if ok {
-		h.broadcastBoardUpdated(&state, playerID, update)
+		h.broadcastBoardUpdated(&state, playerID, req.ClientActionID, update)
 	}
 }
 
 // decodeClearWord decodes the clear-word request payload.
 func decodeClearWord(c *client, rawPayload json.RawMessage) (clearWordRequest, bool) {
 	var req clearWordRequest
-	return req, decodePayload(c, rawPayload, &req)
+	return req, decodeActionPayload(c, rawPayload, &req)
 }
 
 // clearWord applies the clear-row action through the room store.
@@ -245,7 +255,7 @@ func (h *Hub) clearWord(c *client, roomCode, playerID string, req clearWordReque
 		return applyClearWord(state, playerID, req, &update)
 	})
 	if err != nil {
-		sendErr(c, gameErrorCode(err), err.Error())
+		sendErrWithAction(c, gameErrorCode(err), err.Error(), req.ClientActionID)
 		return state, update, false
 	}
 	return state, update, true
@@ -256,26 +266,41 @@ func applyClearWord(state *room.GameState, playerID string, req clearWordRequest
 	if err := game.ClearWord(state, playerID, req.RowIndex); err != nil {
 		return err
 	}
+	if err := incrementBoardRevision(state, playerID); err != nil {
+		return err
+	}
 	*update = boardUpdateFor(state, playerID)
 	return nil
 }
 
 // handleGameClearBoard processes moving every board card back into hand.
-func (h *Hub) handleGameClearBoard(c *client, roomCode, playerID string) {
-	state, update, ok := h.clearBoard(c, roomCode, playerID)
+func (h *Hub) handleGameClearBoard(c *client, roomCode, playerID string, rawPayload json.RawMessage) {
+	req, ok := decodeClearBoard(c, rawPayload)
+	if !ok {
+		return
+	}
+	state, update, ok := h.clearBoard(c, roomCode, playerID, req)
 	if ok {
-		h.broadcastBoardUpdated(&state, playerID, update)
+		h.broadcastBoardUpdated(&state, playerID, req.ClientActionID, update)
 	}
 }
 
+func decodeClearBoard(c *client, rawPayload json.RawMessage) (clearBoardRequest, bool) {
+	var req clearBoardRequest
+	if len(rawPayload) == 0 || string(rawPayload) == "null" {
+		return req, true
+	}
+	return req, decodeActionPayload(c, rawPayload, &req)
+}
+
 // clearBoard applies the clear-board action through the room store.
-func (h *Hub) clearBoard(c *client, roomCode, playerID string) (room.GameState, boardUpdate, bool) {
+func (h *Hub) clearBoard(c *client, roomCode, playerID string, req clearBoardRequest) (room.GameState, boardUpdate, bool) {
 	var update boardUpdate
 	state, err := h.updateBeforeDeadline(roomCode, func(state *room.GameState) error {
 		return applyClearBoard(state, playerID, &update)
 	})
 	if err != nil {
-		sendErr(c, gameErrorCode(err), err.Error())
+		sendErrWithAction(c, gameErrorCode(err), err.Error(), req.ClientActionID)
 		return state, update, false
 	}
 	return state, update, true
@@ -284,6 +309,9 @@ func (h *Hub) clearBoard(c *client, roomCode, playerID string) (room.GameState, 
 // applyClearBoard mutates state and captures the updated board view.
 func applyClearBoard(state *room.GameState, playerID string, update *boardUpdate) error {
 	if err := game.ClearBoard(state, playerID); err != nil {
+		return err
+	}
+	if err := incrementBoardRevision(state, playerID); err != nil {
 		return err
 	}
 	*update = boardUpdateFor(state, playerID)
@@ -305,11 +333,11 @@ func (h *Hub) handleGameDiscardCard(c *client, roomCode, playerID string, rawPay
 // decodeDiscardCard decodes and validates the discard-card request payload.
 func decodeDiscardCard(c *client, rawPayload json.RawMessage) (discardCardRequest, bool) {
 	var req discardCardRequest
-	if !decodePayload(c, rawPayload, &req) {
+	if !decodeActionPayload(c, rawPayload, &req) {
 		return req, false
 	}
 	if req.CardID == "" {
-		sendErr(c, "INVALID_PAYLOAD", "invalid discard_card payload")
+		sendErrWithAction(c, "INVALID_PAYLOAD", "invalid discard_card payload", req.ClientActionID)
 		return req, false
 	}
 	return req, true
@@ -317,12 +345,12 @@ func decodeDiscardCard(c *client, rawPayload json.RawMessage) (discardCardReques
 
 // discardCard applies discard behavior and captures the next-player result.
 func (h *Hub) discardCard(c *client, roomCode, playerID string, req discardCardRequest) (room.GameState, discardCardResult, bool) {
-	var result discardCardResult
+	result := discardCardResult{clientActionID: req.ClientActionID}
 	state, err := h.updateBeforeDeadline(roomCode, func(state *room.GameState) error {
 		return h.applyDiscardCard(state, playerID, req, &result)
 	})
 	if err != nil {
-		sendErr(c, gameErrorCode(err), err.Error())
+		sendErrWithAction(c, gameErrorCode(err), err.Error(), req.ClientActionID)
 		return state, result, false
 	}
 	return state, result, true
@@ -334,6 +362,9 @@ func (h *Hub) applyDiscardCard(state *room.GameState, playerID string, req disca
 	if err != nil {
 		return err
 	}
+	if err := incrementBoardRevision(state, playerID); err != nil {
+		return err
+	}
 	result.boardUpdate = boardUpdateFor(state, playerID)
 	result.discarded = discarded
 	result.nextPlayerID = nextPlayerID
@@ -343,9 +374,18 @@ func (h *Hub) applyDiscardCard(state *room.GameState, playerID string, req disca
 
 // afterDiscardCard broadcasts board reconciliation, turn end, and auto-skips.
 func (h *Hub) afterDiscardCard(roomCode, playerID string, state *room.GameState, result discardCardResult) {
-	h.broadcastBoardUpdated(state, playerID, result.boardUpdate)
+	h.broadcastBoardUpdated(state, playerID, result.clientActionID, result.boardUpdate)
 	h.broadcastTurnEnded(playerID, state, result)
 	h.skipDisconnectedTurns(roomCode)
+}
+
+func incrementBoardRevision(state *room.GameState, playerID string) error {
+	player, err := state.GetPlayer(playerID)
+	if err != nil {
+		return err
+	}
+	player.BoardRevision++
+	return nil
 }
 
 // broadcastTurnEnded announces a completed discard turn.

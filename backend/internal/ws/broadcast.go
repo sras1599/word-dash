@@ -70,10 +70,10 @@ func appendClient(clients *[]*client, cl *client) {
 }
 
 // broadcastBoardUpdated sends a board update with private hand data scoped per player.
-func (h *Hub) broadcastBoardUpdated(state *room.GameState, playerID string, update boardUpdate) {
+func (h *Hub) broadcastBoardUpdated(state *room.GameState, playerID, clientActionID string, update boardUpdate) {
 	meta := h.gameMeta(state)
 	for pid, cl := range h.roomClients(state) {
-		cl.sendGame("game:board_updated", boardPayloadFor(pid, playerID, update), meta)
+		cl.sendGame("game:board_updated", boardPayloadFor(pid, playerID, clientActionID, update), meta)
 	}
 }
 

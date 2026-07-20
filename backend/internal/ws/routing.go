@@ -118,7 +118,7 @@ func routeGameClearWord(h *Hub, c *client, roomCode, playerID string, raw json.R
 
 // routeGameClearBoard forwards clear-board payloads to the handler.
 func routeGameClearBoard(h *Hub, c *client, roomCode, playerID string, raw json.RawMessage) {
-	h.handleGameClearBoard(c, roomCode, playerID)
+	h.handleGameClearBoard(c, roomCode, playerID, raw)
 }
 
 // routeGameDiscardCard forwards discard-card payloads to the handler.

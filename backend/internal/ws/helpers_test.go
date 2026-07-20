@@ -57,6 +57,57 @@ func TestClearEventsAreRegistered(t *testing.T) {
 	}
 }
 
+func TestBoardPayloadScopesActionCorrelationAndIncludesRevision(t *testing.T) {
+	update := boardUpdate{
+		board:    room.NewWordBoard(room.Variation{WordLengths: []int{1}}),
+		hand:     []cardJSON{{ID: "card-a", Letter: "A"}},
+		revision: 7,
+	}
+
+	actor := boardPayloadFor("player-1", "player-1", "action-123", update)
+	if actor.ClientActionID != "action-123" || actor.BoardRevision != 7 || len(actor.Hand) != 1 {
+		t.Fatalf("actor payload = %#v", actor)
+	}
+
+	opponent := boardPayloadFor("player-2", "player-1", "action-123", update)
+	if opponent.ClientActionID != "" || opponent.BoardRevision != 7 || opponent.Hand != nil {
+		t.Fatalf("opponent payload = %#v", opponent)
+	}
+}
+
+func TestGameStateSnapshotIncludesPersistedBoardRevision(t *testing.T) {
+	state := newClearActionWSState()
+	state.Players[0].BoardRevision = 12
+	winnerID := "player-1"
+	state.WinnerID = &winnerID
+
+	payload := buildGameStatePayload(state, "player-1")
+	if got := payload.Players[0].BoardRevision; got != 12 {
+		t.Fatalf("board revision = %d, want 12", got)
+	}
+	if payload.HostPlayerID != "player-1" || payload.WinnerID == nil || *payload.WinnerID != winnerID {
+		t.Fatalf("snapshot authority fields = host %q, winner %#v", payload.HostPlayerID, payload.WinnerID)
+	}
+}
+
+func TestCorrelatedErrorPayloadOmitsOrCarriesActionID(t *testing.T) {
+	correlated := buildGameErrorPayload("INVALID_CARD", "invalid card", "action-123")
+	if correlated.ClientActionID != "action-123" {
+		t.Fatalf("correlated error = %#v", correlated)
+	}
+	uncorrelated := buildGameErrorPayload("INVALID_PAYLOAD", "invalid payload", "")
+	if uncorrelated.ClientActionID != "" {
+		t.Fatalf("uncorrelated error = %#v", uncorrelated)
+	}
+}
+
+func TestDecodeClearBoardCarriesClientActionID(t *testing.T) {
+	req, ok := decodeClearBoard(nil, []byte(`{"clientActionId":"clear-123"}`))
+	if !ok || req.ClientActionID != "clear-123" {
+		t.Fatalf("decoded clear board = %#v, ok = %v", req, ok)
+	}
+}
+
 func TestApplyClearWordCapturesBoardUpdate(t *testing.T) {
 	state := newClearActionWSState()
 	var update boardUpdate
@@ -77,6 +128,9 @@ func TestApplyClearWordCapturesBoardUpdate(t *testing.T) {
 	}
 	if update.board.AllComplete {
 		t.Fatal("board allComplete = true, want false")
+	}
+	if got := state.Players[0].BoardRevision; got != 1 {
+		t.Fatalf("board revision = %d, want 1", got)
 	}
 }
 
@@ -101,6 +155,9 @@ func TestApplyClearBoardCapturesBoardUpdate(t *testing.T) {
 				t.Fatalf("row %d slot %d card = %#v, want nil", rowIndex, slotIndex, slot.Card)
 			}
 		}
+	}
+	if got := state.Players[0].BoardRevision; got != 1 {
+		t.Fatalf("board revision = %d, want 1", got)
 	}
 }
 

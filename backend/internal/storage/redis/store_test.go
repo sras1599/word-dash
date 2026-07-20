@@ -33,8 +33,9 @@ func TestEncodeDecodePreservesGameBoardDiscardAndWinner(t *testing.T) {
 					},
 					AllComplete: true,
 				},
-				IsReady:     true,
-				IsConnected: true,
+				BoardRevision: 7,
+				IsReady:       true,
+				IsConnected:   true,
 			},
 		},
 		DrawPileCount: 1,
@@ -74,6 +75,9 @@ func TestEncodeDecodePreservesGameBoardDiscardAndWinner(t *testing.T) {
 	}
 	if got := len(decoded.Players[0].Hand); got != 1 {
 		t.Fatalf("expected one decoded hand card, got %d", got)
+	}
+	if got := decoded.Players[0].BoardRevision; got != 7 {
+		t.Fatalf("decoded board revision = %d, want 7", got)
 	}
 	if decoded.DiscardPileTop == nil || decoded.DiscardPileTop.ID != "card-d" {
 		t.Fatalf("expected decoded discard top card-d, got %#v", decoded.DiscardPileTop)

@@ -16,6 +16,12 @@ type outgoingMessage struct {
 	Meta    *gameEventMeta `json:"meta,omitempty"`
 }
 
+type gameErrorPayload struct {
+	Code           string `json:"code"`
+	Message        string `json:"message"`
+	ClientActionID string `json:"clientActionId,omitempty"`
+}
+
 type gameEventMeta struct {
 	ServerNowMs int64         `json:"serverNowMs"`
 	Turn        *turnMetaJSON `json:"turn"`
@@ -101,13 +107,14 @@ type wordBoardJSON struct {
 }
 
 type gamePlayerJSON struct {
-	ID          string        `json:"id"`
-	Name        string        `json:"name"`
-	HandCount   int           `json:"handCount"`
-	Hand        []cardJSON    `json:"hand,omitempty"`
-	WordBoard   wordBoardJSON `json:"wordBoard"`
-	IsReady     bool          `json:"isReady"`
-	IsConnected bool          `json:"isConnected"`
+	ID            string        `json:"id"`
+	Name          string        `json:"name"`
+	HandCount     int           `json:"handCount"`
+	Hand          []cardJSON    `json:"hand,omitempty"`
+	WordBoard     wordBoardJSON `json:"wordBoard"`
+	BoardRevision uint64        `json:"boardRevision"`
+	IsReady       bool          `json:"isReady"`
+	IsConnected   bool          `json:"isConnected"`
 }
 
 type turnJSON struct {
@@ -118,12 +125,14 @@ type turnJSON struct {
 
 type gameStatePayload struct {
 	RoomCode       string           `json:"roomCode"`
+	HostPlayerID   string           `json:"hostPlayerId"`
 	Variation      variationJSON    `json:"variation"`
 	Players        []gamePlayerJSON `json:"players"`
 	DrawPileCount  int              `json:"drawPileCount"`
 	DiscardPileTop *cardJSON        `json:"discardPileTop"`
 	Turn           turnJSON         `json:"turn"`
 	Phase          string           `json:"phase"`
+	WinnerID       *string          `json:"winnerId"`
 }
 
 // --- Game events ---
@@ -139,10 +148,12 @@ type turnSkippedPayload struct {
 }
 
 type boardUpdatedPayload struct {
-	PlayerID  string        `json:"playerId"`
-	WordBoard wordBoardJSON `json:"wordBoard"`
-	HandCount int           `json:"handCount"`
-	Hand      []cardJSON    `json:"hand,omitempty"`
+	PlayerID       string        `json:"playerId"`
+	WordBoard      wordBoardJSON `json:"wordBoard"`
+	HandCount      int           `json:"handCount"`
+	Hand           []cardJSON    `json:"hand,omitempty"`
+	BoardRevision  uint64        `json:"boardRevision"`
+	ClientActionID string        `json:"clientActionId,omitempty"`
 }
 
 type turnEndedPayload struct {
@@ -174,20 +185,28 @@ type cardDrawnPayload struct {
 }
 
 type placeCardRequest struct {
-	CardID    string `json:"cardId"`
-	RowIndex  int    `json:"rowIndex"`
-	SlotIndex int    `json:"slotIndex"`
+	CardID         string `json:"cardId"`
+	RowIndex       int    `json:"rowIndex"`
+	SlotIndex      int    `json:"slotIndex"`
+	ClientActionID string `json:"clientActionId,omitempty"`
 }
 
 type unplaceCardRequest struct {
-	RowIndex  int `json:"rowIndex"`
-	SlotIndex int `json:"slotIndex"`
+	RowIndex       int    `json:"rowIndex"`
+	SlotIndex      int    `json:"slotIndex"`
+	ClientActionID string `json:"clientActionId,omitempty"`
 }
 
 type clearWordRequest struct {
-	RowIndex int `json:"rowIndex"`
+	RowIndex       int    `json:"rowIndex"`
+	ClientActionID string `json:"clientActionId,omitempty"`
+}
+
+type clearBoardRequest struct {
+	ClientActionID string `json:"clientActionId,omitempty"`
 }
 
 type discardCardRequest struct {
-	CardID string `json:"cardId"`
+	CardID         string `json:"cardId"`
+	ClientActionID string `json:"clientActionId,omitempty"`
 }
