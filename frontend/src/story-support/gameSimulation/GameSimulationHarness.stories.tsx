@@ -118,6 +118,23 @@ export const FourPlayerSimulation: Story = {
     },
 }
 
+export const SlowNetworkReconciliation: Story = {
+    args: {
+        scenario: 'slow-network',
+        showControls: false,
+        showEventLog: true,
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+        await expect(canvas.getByLabelText('Slot 1, contains letter A')).toBeVisible()
+        await expect(canvas.getByLabelText('Slot 2, contains letter O')).toBeVisible()
+        await expect(canvas.getByLabelText('Slot 3, contains letter I')).toBeVisible()
+        await expect(
+            canvas.getByText('delayed board_updated(revision 1, ack simulation-1)'),
+        ).toBeVisible()
+    },
+}
+
 export const MobileHudLayout: Story = {
     parameters: {
         viewport: {

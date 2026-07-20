@@ -51,6 +51,21 @@ describe('game simulation', () => {
             .toBe(true)
     })
 
+    it('replays rapid placements over a delayed intermediate acknowledgement', () => {
+        const state = createScenarioState('slow-network')
+        const localPlayer = state.gameState.players.find(({ id }) => id === LOCAL_PLAYER_ID)!
+
+        expect(localPlayer.wordBoard.rows[0].slots.map(({ card }) => card?.id ?? null)).toEqual([
+            'hand-1',
+            'hand-2',
+            'hand-3',
+        ])
+        expect(state.reconciliation.pendingBoardOperations.map(({ clientActionId }) => clientActionId)).toEqual([
+            'simulation-2',
+            'simulation-3',
+        ])
+    })
+
     it('creates isolated deterministic resets and scenario fixtures', () => {
         const first = createSimulationState()
         const changed = drawCard(first, 'draw')

@@ -1,5 +1,11 @@
 import type { Card, GamePhase, GameState, TurnPhase } from '../../lib/gameTypes'
-import { gameReducer, type GameAction } from '../../pages/Game/state/gameReducer'
+import { applyBoardOperation } from '../../pages/Game/state/boardProjection'
+import {
+    gameReconciliationReducer,
+    initialGameReconciliationState,
+    type GameAction,
+    type GameReconciliationState,
+} from '../../pages/Game/state/gameReducer'
 import {
     createSimulationFixture,
     DEFAULT_TURN_DURATION_MS,
@@ -15,6 +21,7 @@ export type SimulationEvent = {
 
 export type GameSimulationState = {
     gameState: GameState
+    reconciliation: GameReconciliationState
     drawDeck: Card[]
     eventLog: SimulationEvent[]
     nextEventId: number
@@ -28,6 +35,7 @@ export type SimulationScenario =
     | 'urgent'
     | 'invalid-word'
     | 'disconnected'
+    | 'slow-network'
     | 'finished'
 
 function record(state: GameSimulationState, label: string): GameSimulationState {
@@ -50,8 +58,12 @@ function applyGameAction(
     action: GameAction,
     label: string,
 ): GameSimulationState {
-    const gameState = gameReducer(state.gameState, action)
-    return record({ ...state, gameState: gameState ?? state.gameState }, label)
+    const reconciliation = gameReconciliationReducer(state.reconciliation, action)
+    return record({
+        ...state,
+        reconciliation,
+        gameState: reconciliation.gameState ?? state.gameState,
+    }, label)
 }
 
 function nextPlayerId(gameState: GameState): string {
@@ -74,8 +86,14 @@ export function createSimulationState(
     options?: SimulationFixtureOptions,
     fixture: SimulationFixture = createSimulationFixture(options),
 ): GameSimulationState {
+    const reconciliation = gameReconciliationReducer(initialGameReconciliationState, {
+        type: 'game/state',
+        state: fixture.gameState,
+        localPlayerId: LOCAL_PLAYER_ID,
+    })
     return {
         gameState: fixture.gameState,
+        reconciliation,
         drawDeck: fixture.drawDeck,
         eventLog: [],
         nextEventId: 1,
@@ -121,6 +139,7 @@ export function placeCard(
     return applyGameAction(state, {
         type: 'local/cardPlacedOptimistically',
         localPlayerId: LOCAL_PLAYER_ID,
+        clientActionId: `simulation-${state.nextEventId}`,
         cardId,
         rowIndex,
         slotIndex,
@@ -135,6 +154,7 @@ export function unplaceCard(
     return applyGameAction(state, {
         type: 'local/cardUnplacedOptimistically',
         localPlayerId: LOCAL_PLAYER_ID,
+        clientActionId: `simulation-${state.nextEventId}`,
         rowIndex,
         slotIndex,
     }, `unplace(${rowIndex}, ${slotIndex})`)
@@ -144,6 +164,7 @@ export function clearWord(state: GameSimulationState, rowIndex: number): GameSim
     return applyGameAction(state, {
         type: 'local/wordClearedOptimistically',
         localPlayerId: LOCAL_PLAYER_ID,
+        clientActionId: `simulation-${state.nextEventId}`,
         rowIndex,
     }, `clearWord(${rowIndex})`)
 }
@@ -152,15 +173,39 @@ export function clearBoard(state: GameSimulationState): GameSimulationState {
     return applyGameAction(state, {
         type: 'local/boardClearedOptimistically',
         localPlayerId: LOCAL_PLAYER_ID,
+        clientActionId: `simulation-${state.nextEventId}`,
     }, 'clearBoard()')
 }
 
 export function discardCard(state: GameSimulationState, cardId: string): GameSimulationState {
-    return applyGameAction(state, {
+    const clientActionId = `simulation-${state.nextEventId}`
+    const optimistic = applyGameAction(state, {
         type: 'local/cardDiscardedOptimistically',
         localPlayerId: LOCAL_PLAYER_ID,
+        clientActionId,
         cardId,
     }, `discard(${cardId})`)
+    const localPlayer = optimistic.gameState.players.find(({ id }) => id === LOCAL_PLAYER_ID)!
+    let reconciliation = gameReconciliationReducer(optimistic.reconciliation, {
+        type: 'game/boardUpdated',
+        localPlayerId: LOCAL_PLAYER_ID,
+        playerId: LOCAL_PLAYER_ID,
+        wordBoard: localPlayer.wordBoard,
+        hand: localPlayer.hand,
+        handCount: localPlayer.handCount,
+        boardRevision: (optimistic.reconciliation.authoritativeGameState?.players[0].boardRevision ?? 0) + 1,
+        clientActionId,
+    })
+    reconciliation = gameReconciliationReducer(reconciliation, {
+        type: 'game/turnEnded',
+        nextPlayerId: optimistic.gameState.turn.currentPlayerId,
+        discardPileTop: optimistic.gameState.discardPileTop!,
+    })
+    return {
+        ...optimistic,
+        reconciliation,
+        gameState: reconciliation.gameState ?? optimistic.gameState,
+    }
 }
 
 export function advanceTurn(state: GameSimulationState): GameSimulationState {
@@ -306,6 +351,30 @@ export function createScenarioState(
             return fillWord(state, false)
         case 'disconnected':
             return setPlayerConnected(state, state.gameState.players[1].id, false)
+        case 'slow-network': {
+            const authoritativeBase = state.gameState
+            state = placeCard(state, 'hand-1', 0, 0)
+            state = placeCard(state, 'hand-2', 0, 1)
+            state = placeCard(state, 'hand-3', 0, 2)
+            const afterFirst = applyBoardOperation(authoritativeBase, LOCAL_PLAYER_ID, {
+                type: 'place',
+                clientActionId: 'simulation-1',
+                cardId: 'hand-1',
+                rowIndex: 0,
+                slotIndex: 0,
+            })
+            const localPlayer = afterFirst.players.find(({ id }) => id === LOCAL_PLAYER_ID)!
+            return applyGameAction(state, {
+                type: 'game/boardUpdated',
+                localPlayerId: LOCAL_PLAYER_ID,
+                playerId: LOCAL_PLAYER_ID,
+                wordBoard: localPlayer.wordBoard,
+                hand: localPlayer.hand,
+                handCount: localPlayer.handCount,
+                boardRevision: 1,
+                clientActionId: 'simulation-1',
+            }, 'delayed board_updated(revision 1, ack simulation-1)')
+        }
         case 'finished':
             return finishGame(state, LOCAL_PLAYER_ID)
     }
