@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 
+import { Button, Panel } from '../../../components/ui'
 import { WordRow } from '../../../components/WordRow/WordRow'
 import type { GamePlayer } from '../../../lib/gameTypes'
 
@@ -26,7 +27,7 @@ function getWinningRowStyle(slotCount: number): CSSProperties {
 export function GameOverDialog({ winner, isHost, onPlayAgain, onHome }: GameOverDialogProps) {
     return (
         <div className="page-game__overlay" role="dialog" aria-modal="true" aria-label="Game over">
-            <div className="page-game__overlay-card">
+            <Panel className="page-game__overlay-card" elevation="elevated">
                 <p className="page-game__overlay-eyebrow">Match Complete</p>
                 <h2 className="page-game__overlay-heading">{winner.name} wins!</h2>
                 <section className="page-game__overlay-words" aria-label="Winning words">
@@ -42,15 +43,15 @@ export function GameOverDialog({ winner, isHost, onPlayAgain, onHome }: GameOver
                 </section>
                 <div className="page-game__overlay-actions">
                     {isHost && (
-                        <button className="page-game__overlay-btn page-game__overlay-btn--primary" onClick={onPlayAgain}>
+                        <Button className="page-game__overlay-btn" onClick={onPlayAgain}>
                             Play Again
-                        </button>
+                        </Button>
                     )}
-                    <button className="page-game__overlay-btn page-game__overlay-btn--secondary" onClick={onHome}>
+                    <Button className="page-game__overlay-btn" variant="ghost" onClick={onHome}>
                         Home
-                    </button>
+                    </Button>
                 </div>
-            </div>
+            </Panel>
         </div>
     )
 }

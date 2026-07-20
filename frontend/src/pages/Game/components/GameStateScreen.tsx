@@ -1,4 +1,5 @@
 import { BrandLogo } from '../../../components/BrandLogo/BrandLogo'
+import { Button, Panel } from '../../../components/ui'
 
 type GameStateScreenProps = {
     title?: string
@@ -12,15 +13,15 @@ export function GameStateScreen({ title, copy, actionLabel, onAction }: GameStat
         <main className="page-game__state-shell">
             <BrandLogo className="page-game__state-logo" />
             {title ? (
-                <div className="page-game__state-panel">
+                <Panel className="page-game__state-panel" elevation="elevated">
                     <h1 className="page-game__state-title">{title}</h1>
                     {copy && <p className="page-game__state-copy">{copy}</p>}
                     {actionLabel && onAction && (
-                        <button className="page-game__state-btn" type="button" onClick={onAction}>
+                        <Button className="page-game__state-btn" type="button" onClick={onAction}>
                             {actionLabel}
-                        </button>
+                        </Button>
                     )}
-                </div>
+                </Panel>
             ) : (
                 <p className="page-game__loading-text">Connecting…</p>
             )}

@@ -106,9 +106,7 @@
     cursor: pointer;
 }
 
-.page-game__nav-brand:focus-visible,
-.page-game__state-btn:focus-visible,
-.page-game__overlay-btn:focus-visible {
+.page-game__nav-brand:focus-visible {
     outline: 3px solid var(--primary);
     outline-offset: 4px;
 }
@@ -172,6 +170,7 @@
 .page-game__state-panel {
     width: min(100%, 32rem);
     padding: 1.75rem;
+    border: 0;
     border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--surface-container-lowest) 94%, transparent);
     box-shadow: var(--page-game-panel-shadow);
@@ -224,35 +223,7 @@
 
 .page-game__overlay-btn,
 .page-game__state-btn {
-    border: 0;
-    padding: 0.9rem 1.35rem;
-    border-radius: var(--radius-full);
-    font-size: 0.95rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.page-game__overlay-btn:hover,
-.page-game__state-btn:hover {
-    transform: translateY(-4px);
-}
-
-.page-game__overlay-btn:active,
-.page-game__state-btn:active {
-    transform: scale(0.95);
-}
-
-.page-game__overlay-btn--primary,
-.page-game__state-btn {
-    background: var(--primary);
-    color: var(--on-primary);
-    box-shadow: 0 18px 35px color-mix(in srgb, var(--primary) 24%, transparent);
-}
-
-.page-game__overlay-btn--secondary {
-    background: color-mix(in srgb, var(--surface-container-highest) 84%, transparent);
-    color: var(--on-surface);
+    min-width: 7rem;
 }
 
 .page-game__state-shell {

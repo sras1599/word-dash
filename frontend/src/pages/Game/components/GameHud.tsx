@@ -1,5 +1,6 @@
 import { useId, useState, type CSSProperties } from 'react'
 import { Icon } from '../../../components/Icon/Icon'
+import { IconButton } from '../../../components/ui'
 import type { GameState } from '../../../lib/gameTypes'
 import { cx } from '../../../lib/cx'
 import { createGameHudModel } from './gameHudModel'
@@ -41,16 +42,14 @@ export function GameHud({
             )}
             aria-label="Turn guidance"
         >
-            <button
+            <IconButton
                 className="game-hud__toggle"
-                type="button"
-                aria-label={isExpanded ? 'Collapse turn guidance' : 'Expand turn guidance'}
+                label={isExpanded ? 'Collapse turn guidance' : 'Expand turn guidance'}
                 aria-controls={detailsId}
                 aria-expanded={isExpanded}
                 onClick={() => setIsExpanded((expanded) => !expanded)}
-            >
-                <span aria-hidden="true">{isExpanded ? '›' : '‹'}</span>
-            </button>
+                icon={<span aria-hidden="true">{isExpanded ? '›' : '‹'}</span>}
+            />
 
             <div className="game-hud__content" id={detailsId}>
                 <strong className="game-hud__compact-title" aria-hidden="true">
