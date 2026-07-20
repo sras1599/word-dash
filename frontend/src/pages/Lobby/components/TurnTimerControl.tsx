@@ -1,4 +1,5 @@
 import { Icon } from '../../../components/Icon/Icon'
+import { IconButton } from '../../../components/ui'
 
 type TurnTimerControlProps = {
     minutes: string
@@ -35,15 +36,13 @@ export function TurnTimerControl({
             </div>
 
             <div className="page-lobby__timer-controls">
-                <button
-                    className="wd-btn wd-btn--lift page-lobby__timer-step"
-                    type="button"
+                <IconButton
+                    className="page-lobby__timer-step"
                     onClick={() => onStep(-15)}
                     disabled={!isHost}
-                    aria-label="Decrease turn time"
-                >
-                    <Icon name="minus" className="page-lobby__timer-step-icon" />
-                </button>
+                    label="Decrease turn time"
+                    icon={<Icon name="minus" className="page-lobby__timer-step-icon" />}
+                />
 
                 <div className="page-lobby__timer-display">
                     <label className="wd-sr-only" htmlFor="turn-minutes">
@@ -81,15 +80,13 @@ export function TurnTimerControl({
                     />
                 </div>
 
-                <button
-                    className="wd-btn wd-btn--lift page-lobby__timer-step"
-                    type="button"
+                <IconButton
+                    className="page-lobby__timer-step"
                     onClick={() => onStep(15)}
                     disabled={!isHost}
-                    aria-label="Increase turn time"
-                >
-                    <Icon name="plus" className="page-lobby__timer-step-icon" />
-                </button>
+                    label="Increase turn time"
+                    icon={<Icon name="plus" className="page-lobby__timer-step-icon" />}
+                />
             </div>
         </section>
     )

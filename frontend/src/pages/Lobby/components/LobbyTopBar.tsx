@@ -1,4 +1,5 @@
 import { BrandLogo } from '../../../components/BrandLogo/BrandLogo'
+import { Button } from '../../../components/ui'
 
 type LobbyTopBarProps = {
     roomCode: string
@@ -20,9 +21,9 @@ export function LobbyTopBar({ roomCode, onCopyRoomCode, copyStatus = 'idle' }: L
             </div>
 
             <div className="page-lobby__topbar-actions">
-                <button className="wd-btn wd-btn--lift page-lobby__copy-btn" type="button" onClick={onCopyRoomCode}>
+                <Button className="page-lobby__copy-btn" type="button" onClick={onCopyRoomCode}>
                     Copy Room Code
-                </button>
+                </Button>
                 <span
                     className={`page-lobby__copy-status page-lobby__copy-status--${copyStatus}`}
                     aria-live="polite"

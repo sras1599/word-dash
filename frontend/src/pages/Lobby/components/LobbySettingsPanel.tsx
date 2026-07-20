@@ -1,5 +1,5 @@
 import { Icon } from '../../../components/Icon/Icon'
-import { cx } from '../../../lib/cx'
+import { Button, Panel } from '../../../components/ui'
 import type { Variation } from '../../../lib/gameTypes'
 import type { VariationTab } from '../../../lib/variation'
 import { TurnTimerControl } from './TurnTimerControl'
@@ -50,7 +50,7 @@ export function LobbySettingsPanel({
 }: LobbySettingsPanelProps) {
     return (
         <section className="page-lobby__settings-column" aria-labelledby="page-lobby-settings-title">
-            <div className="page-lobby__settings-card">
+            <Panel className="page-lobby__settings-card" elevation="elevated">
                 <div className="page-lobby__settings-ornament" aria-hidden="true">
                     <Icon name="tune" className="page-lobby__settings-ornament-icon" />
                 </div>
@@ -90,20 +90,22 @@ export function LobbySettingsPanel({
 
                 {isHost && (
                     <div className="page-lobby__settings-footer">
-                        <button
-                            className={cx('wd-btn', 'wd-btn--lift', 'wd-btn--secondary', 'page-lobby__start-btn')}
+                        <Button
+                            variant="secondary"
+                            size="lg"
+                            className="page-lobby__start-btn"
                             type="button"
                             onClick={onStart}
                             disabled={!canStart}
                         >
                             Start →
-                        </button>
+                        </Button>
                         <p className="page-lobby__start-note">
                             {canStart ? 'Everyone is ready.' : 'Need at least 2 ready players to start.'}
                         </p>
                     </div>
                 )}
-            </div>
+            </Panel>
         </section>
     )
 }

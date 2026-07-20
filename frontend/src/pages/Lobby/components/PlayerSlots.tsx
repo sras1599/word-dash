@@ -1,4 +1,5 @@
 import { Icon } from '../../../components/Icon/Icon'
+import { Button, Panel } from '../../../components/ui'
 import { cx } from '../../../lib/cx'
 import type { LobbyPlayer } from '../../../lib/gameTypes'
 
@@ -30,7 +31,7 @@ export function PlayerSlots({
 
     return (
         <section className="page-lobby__players-column" aria-labelledby="page-lobby-players-title">
-            <div className="page-lobby__players-card">
+            <Panel className="page-lobby__players-card">
                 <div className="page-lobby__players-header">
                     <h2 className="page-lobby__players-title" id="page-lobby-players-title">
                         Players
@@ -53,7 +54,7 @@ export function PlayerSlots({
                         />
                     ))}
                 </div>
-            </div>
+            </Panel>
         </section>
     )
 }
@@ -124,18 +125,14 @@ function PlayerSlot({ player, toneClass, isCurrentPlayer, isHost, isLocalReady, 
 
                     <div className="page-lobby__player-actions">
                         {isCurrentPlayer ? (
-                            <button
-                                className={cx(
-                                    'wd-btn',
-                                    'wd-btn--lift',
-                                    isLocalReady ? 'wd-btn--primary' : 'wd-btn--secondary',
-                                    'page-lobby__ready-btn',
-                                )}
+                            <Button
+                                variant={isLocalReady ? 'primary' : 'secondary'}
+                                className="page-lobby__ready-btn"
                                 type="button"
                                 onClick={onReadyToggle}
                             >
                                 {isLocalReady ? 'Not Ready' : 'Ready'}
-                            </button>
+                            </Button>
                         ) : player.isReady ? (
                             <span className="page-lobby__player-check" aria-label="Ready">
                                 <Icon name="check" className="page-lobby__player-check-icon" />

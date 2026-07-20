@@ -1,4 +1,5 @@
 import { Icon } from '../../../components/Icon/Icon'
+import { Button, FormField, getFormFieldDescription, SegmentedControl, TextInput } from '../../../components/ui'
 import { cx } from '../../../lib/cx'
 import { areWordLengthsEqual, VARIATION_PRESET_GROUPS, VARIATION_TABS, type VariationTab } from '../../../lib/variation'
 
@@ -40,25 +41,14 @@ export function VariationPicker({
                 <p className="page-lobby__variation-caption">Choose a preset or enter a custom dash.</p>
             </div>
 
-            <div className="page-lobby__variation-tabs" role="tablist" aria-label="Variation difficulty">
-                {VARIATION_TABS.map((tab) => (
-                    <button
-                        key={tab}
-                        className={cx(
-                            'wd-btn',
-                            'page-lobby__variation-tab',
-                            activeTab === tab && 'page-lobby__variation-tab--active',
-                        )}
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === tab}
-                        onClick={() => onTabChange(tab)}
-                        disabled={!isHost}
-                    >
-                        {tab}
-                    </button>
-                ))}
-            </div>
+            <SegmentedControl
+                className="page-lobby__variation-tabs"
+                label="Variation difficulty"
+                options={VARIATION_TABS.map((tab) => ({ value: tab, label: tab }))}
+                value={activeTab}
+                onChange={(nextTab) => onTabChange(nextTab as VariationTab)}
+                disabled={!isHost}
+            />
 
             <div className={cx('page-lobby__variation-panel', variationOpen && 'page-lobby__variation-panel--open')}>
                 <h2 className="page-lobby__panel-title">
@@ -71,24 +61,26 @@ export function VariationPicker({
                             const isSelected = areWordLengthsEqual(preset.wordLengths, currentWordLengths)
 
                             return (
-                                <button
+                                <Button
                                     key={preset.label}
+                                    variant="ghost"
                                     className={cx(
-                                        'wd-btn',
                                         'page-lobby__preset-button',
                                         isSelected && 'page-lobby__preset-button--selected',
                                     )}
                                     type="button"
                                     onClick={() => onPresetClick(preset.wordLengths)}
                                     disabled={!isHost}
+                                    trailingIcon={
+                                        isSelected ? (
+                                            <span className="page-lobby__preset-button-check" aria-hidden="true">
+                                                <Icon name="check" className="page-lobby__preset-check-icon" />
+                                            </span>
+                                        ) : undefined
+                                    }
                                 >
                                     <span className="page-lobby__preset-button-label">{preset.label}</span>
-                                    {isSelected && (
-                                        <span className="page-lobby__preset-button-check" aria-hidden="true">
-                                            <Icon name="check" className="page-lobby__preset-check-icon" />
-                                        </span>
-                                    )}
-                                </button>
+                                </Button>
                             )
                         })}
                     </div>
@@ -97,14 +89,17 @@ export function VariationPicker({
                         <p className="page-lobby__custom-caption">Add custom word lengths for your dash.</p>
 
                         <div className="page-lobby__custom-row">
-                            <div className="page-lobby__custom-field">
-                                <label className="wd-sr-only" htmlFor="variation-custom">
-                                    Custom variation
-                                </label>
-                                <input
+                            <FormField
+                                id="variation-custom"
+                                className="page-lobby__custom-field"
+                                label="Custom variation"
+                                error={customError}
+                                disabled={!isHost}
+                            >
+                                <TextInput
                                     id="variation-custom"
-                                    className={cx('page-lobby__custom-input', customError && 'page-lobby__custom-input--error')}
-                                    type="text"
+                                    className="page-lobby__custom-input"
+                                    invalid={!!customError}
                                     inputMode="numeric"
                                     placeholder="e.g. 4,7"
                                     maxLength={20}
@@ -114,25 +109,20 @@ export function VariationPicker({
                                         if (e.key === 'Enter') onCustomApply()
                                     }}
                                     disabled={!isHost}
-                                    aria-describedby={customError ? 'custom-variation-error' : undefined}
+                                    aria-describedby={getFormFieldDescription('variation-custom', false, !!customError)}
                                 />
-                            </div>
+                            </FormField>
 
-                            <button
-                                className="wd-btn wd-btn--lift wd-btn--secondary page-lobby__custom-apply-btn"
+                            <Button
+                                variant="secondary"
+                                className="page-lobby__custom-apply-btn"
                                 type="button"
                                 onClick={onCustomApply}
                                 disabled={!isHost}
                             >
                                 Apply
-                            </button>
+                            </Button>
                         </div>
-
-                        {customError && (
-                            <p id="custom-variation-error" className="page-lobby__custom-error" role="alert">
-                                {customError}
-                            </p>
-                        )}
 
                         <div className="page-lobby__custom-chips" aria-label="Current variation">
                             <p className="page-lobby__custom-current-label">Current</p>
