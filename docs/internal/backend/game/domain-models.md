@@ -50,6 +50,7 @@ type Player struct {
     Name        string
     Hand        []Card // normal hand only - does not include DrawnCard
     WordBoard   WordBoard // empty in waiting rooms; initialized when the game starts
+    BoardRevision uint64 // persisted monotonic revision for board/hand mutation snapshots
     IsReady     bool
     IsConnected bool
 }
@@ -78,3 +79,5 @@ type GameState struct {
 Note: `Turn.DrawnCard` is kept separate from `Player.Hand` so the server can always identify the extra card to auto-discard on timeout without ambiguity.
 
 `Player.WordBoard` is not built when a room is created or when players join. The board is initialized from the final locked-in `Variation` during the `StartGame` transition.
+
+`Player.BoardRevision` advances for each accepted board-mutation request and is persisted by both stores. It orders authoritative board/hand payloads; client action ids independently correlate one request with its success or rejection.

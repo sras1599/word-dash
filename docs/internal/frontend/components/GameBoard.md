@@ -57,11 +57,11 @@ The gameplay-content layout component for the game screen. It assembles the play
 | Child callback                           | WebSocket event dispatched                          |
 |------------------------------------------|-----------------------------------------------------|
 | `CardPile.onDraw(source)`                | `game:draw_card { source }`                         |
-| `WordSlot.onPlace(cardId, row, slot)`    | `game:place_card { cardId, rowIndex, slotIndex }`   |
-| `WordSlot.onUnplace(row, slot)`          | `game:unplace_card { rowIndex, slotIndex }`         |
-| `WordBoard.onClearWord(row)`             | `game:clear_word { rowIndex }`                      |
-| `GameBoard.onClearBoard()`               | `game:clear_board {}`                               |
-| `CardPile.onDiscard(cardId)`             | `game:discard_card { cardId }`                      |
+| `WordSlot.onPlace(cardId, row, slot)`    | `game:place_card { cardId, rowIndex, slotIndex, clientActionId }` |
+| `WordSlot.onUnplace(row, slot)`          | `game:unplace_card { rowIndex, slotIndex, clientActionId }` |
+| `WordBoard.onClearWord(row)`             | `game:clear_word { rowIndex, clientActionId }`      |
+| `GameBoard.onClearBoard()`               | `game:clear_board { clientActionId }`               |
+| `CardPile.onDiscard(cardId)`             | `game:discard_card { cardId, clientActionId }`      |
 
 Keyboard shortcuts are enabled by default on the game board and reuse the same callbacks:
 

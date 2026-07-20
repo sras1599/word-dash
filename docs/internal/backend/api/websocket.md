@@ -59,11 +59,11 @@ All messages in both directions are JSON objects with the shape:
 | Event               | Payload                                 | Valid phase |
 |---------------------|-----------------------------------------|-------------|
 | `game:draw_card`    | `{ "source": "draw" \| "discard" }` | `draw`      |
-| `game:place_card`   | `{ "cardId", "rowIndex", "slotIndex" }` | `draw` or `arrange` |
-| `game:unplace_card` | `{ "rowIndex", "slotIndex" }`       | `draw` or `arrange` |
-| `game:clear_word`   | `{ "rowIndex": number }`            | `draw` or `arrange` |
-| `game:clear_board`  | `{}` or _(none)_                    | `draw` or `arrange` |
-| `game:discard_card` | `{ "cardId" }`                        | `arrange`   |
+| `game:place_card`   | `{ "cardId", "rowIndex", "slotIndex", "clientActionId"? }` | `draw` or `arrange` |
+| `game:unplace_card` | `{ "rowIndex", "slotIndex", "clientActionId"? }`       | `draw` or `arrange` |
+| `game:clear_word`   | `{ "rowIndex": number, "clientActionId"? }`            | `draw` or `arrange` |
+| `game:clear_board`  | `{ "clientActionId"? }` or _(none)_                    | `draw` or `arrange` |
+| `game:discard_card` | `{ "cardId", "clientActionId"? }`                        | `arrange`   |
 
 Draw and discard events must come from the current turn holder. Board-edit events (`game:place_card`, `game:unplace_card`, `game:clear_word`, and `game:clear_board`) apply only to the sender's own board and are accepted during any player's `draw` or `arrange` turn phase. Events received outside their valid phase, or turn-owned events from a non-current player, are rejected with `game:error`.
 
@@ -71,25 +71,29 @@ Draw and discard events must come from the current turn holder. Board-edit event
 
 `game:clear_word` returns all cards in the requested word row to the sender's hand in slot order. `game:clear_board` returns all placed board cards to the sender's hand in row-major order. Empty slots and empty rows are ignored.
 
+`clientActionId` is an optional opaque correlation value for backward compatibility. The server does not interpret or deduplicate it.
+
 ### Server -> Client
 
 | Event                      | Payload |
 |----------------------------|---------|
-| `game:state`               | Full `GameState` snapshot. Sent to all players on game start and to the reconnecting player on reconnect. |
+| `game:state`               | Personalized full `GameState` snapshot. Every player includes persisted `boardRevision`; only the recipient includes their private hand. Sent on game start, reconnect, and after terminal reconciliation. |
 | `game:card_drawn`          | `{ playerId, source, card: Card \| null, drawPileCount, discardPileTop }`. `card` is `null` for non-drawing players. |
-| `game:board_updated`       | `{ playerId, wordBoard: WordBoard }`. Broadcast to all players after every `place`, `unplace`, `clear_word`, or `clear_board` action. |
+| `game:board_updated`       | `{ playerId, wordBoard, handCount, hand?, boardRevision, clientActionId? }`. `hand` and the echoed action id are included only for the actor. |
 | `game:turn_ended`          | `{ playerId, reason: "discarded" \| "timeout", discardedCard: Card, discardPileTop: Card, nextPlayerId }` |
 | `game:turn_skipped`        | `{ playerId, reason: "disconnected" \| "timeout", nextPlayerId }` |
 | `game:player_won`          | `{ winnerId, winnerName, winningWordBoard: WordBoard }` |
 | `game:player_disconnected` | `{ playerId }` |
 | `game:player_reconnected`  | `{ playerId }` |
-| `game:error`               | `{ code, message }` - sent only to the offending player. |
+| `game:error`               | `{ code, message, clientActionId? }` - sent only to the offending player; correlation is echoed when recoverable. |
 
 `game:state` establishes the active turn on initial connection and reconnection. Later turns begin as part of `game:turn_ended` or `game:turn_skipped`; `nextPlayerId` identifies the new active player.
 
 Clients derive remaining time from `endsAtMs - serverNowMs` at receipt and elapsed local monotonic time afterward. Intervals repaint only; they do not decrement game state. Metadata with an older turn sequence is ignored. Urgency begins after 80% of `durationMs` has elapsed (20% remains).
 
 After a backend restart, the first connection to a persisted playing room recreates its in-memory deadline watcher and reconciles the deadline before the connection snapshot is sent. Reconnection never resets or extends a deadline, and backend downtime counts against the turn.
+
+Each accepted board-mutation request increments the acting player's persisted monotonic `boardRevision`. Clients use revisions to ignore stale or duplicate board updates and use `clientActionId` separately to acknowledge one exact optimistic operation. A winning placement is followed by `game:player_won` and then a personalized terminal `game:state`, which is the boundary for discarding any remaining local projection.
 
 ## Error Codes
 

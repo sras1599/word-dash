@@ -164,6 +164,7 @@ Valid during any player's draw or arrange phase; the server applies it only to t
   cardId: string;
   rowIndex: number;
   slotIndex: number;
+  clientActionId?: string;
 }
 ```
 If the target slot is occupied, hand cards displace the old board card to the end of hand, while board cards swap positions with the target card.
@@ -175,6 +176,7 @@ Valid during any player's draw or arrange phase; the server applies it only to t
 {
   rowIndex: number;
   slotIndex: number;
+  clientActionId?: string;
 }
 ```
 
@@ -184,6 +186,7 @@ Valid during any player's draw or arrange phase; the server applies it only to t
 ```ts
 {
   rowIndex: number;
+  clientActionId?: string;
 }
 ```
 
@@ -191,7 +194,7 @@ Valid during any player's draw or arrange phase; the server applies it only to t
 Remove all cards from the word board back to hand in row-major order.
 Valid during any player's draw or arrange phase; the server applies it only to the sender's own board.
 ```ts
-{}
+{ clientActionId?: string }
 ```
 
 #### `game:discard_card`
@@ -199,6 +202,7 @@ Discard a card to end the arrange phase.
 ```ts
 {
   cardId: string;
+  clientActionId?: string;
 }
 ```
 
@@ -213,6 +217,7 @@ GameState
 ```
 
 Only the receiving player gets their full hand in the snapshot. Other players are represented by `handCount` plus public state.
+Every player snapshot includes a persisted monotonic `boardRevision`. A full snapshot is the reconnect and terminal authority boundary: the frontend trusts it and clears pending board operations.
 
 #### `game:card_drawn`
 When a player draws from the draw pile, only that player receives the actual card contents. When a player draws from the discard pile, every client can see the card because it was already public.
@@ -234,10 +239,12 @@ Sent after a `place_card`, `unplace_card`, `clear_word`, or `clear_board` action
   wordBoard: WordBoard;
   handCount: number;
   hand?: Card[];
+  boardRevision: number;
+  clientActionId?: string;
 }
 ```
 
-Only the acting player receives the optional `hand` field.
+Only the acting player receives `hand` and the optional echoed `clientActionId`. All recipients receive `boardRevision`.
 
 #### `game:turn_ended`
 Broadcast when the active player ends their turn by discarding or times out after drawing.
@@ -291,6 +298,7 @@ Sent only to the client whose action was rejected.
 {
   code: string;
   message: string;
+  clientActionId?: string;
 }
 ```
 
@@ -298,7 +306,11 @@ Sent only to the client whose action was rejected.
 
 ## Notes
 
-- The server is the single source of truth. Clients should wait for `game:board_updated`, `game:turn_ended`, or `game:state` before reconciling game state.
+- The server is the single source of truth. For the local player, the frontend renders the latest authoritative snapshot plus its queue of unacknowledged board operations. An intermediate update replaces the authoritative base, removes only its exactly correlated operation, and replays the rest.
+- Missing or unknown action ids never discard pending intent. Stale or duplicate `boardRevision` values cannot replace the authoritative base, although an exact action id may still acknowledge its matching operation.
+- Opponent updates are applied directly when their revision is newer. `game:turn_ended` and `game:turn_skipped` do not clear the local queue because neither contains board and hand state.
+- `game:error` removes only a matching operation and exposes transient accessible feedback. A personalized `game:state` clears the queue on initial load, reconnect, and terminal reconciliation.
+- `WsClient` may flush messages queued before its first connection opens, but it drops gameplay mutations sent during reconnect rather than silently resending non-idempotent actions.
 - `lobby:state` and `game:state` are full snapshots. The other events are incremental updates.
 - Lobby disconnects remove the player immediately. In-game disconnects do not remove the player; they are marked disconnected and can be skipped later with `game:turn_skipped`.
 - Every successful server-to-client `game:*` event includes `{ serverNowMs, turn }` envelope metadata. `turn` contains `{ sequence, endsAtMs, durationMs }`, or is `null` after the game finishes.

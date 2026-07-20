@@ -56,6 +56,7 @@ type Player = {
   name: string;
   hand: Card[];          // cards in hand (normal hand size = sum of variation.wordLengths)
   wordBoard: WordBoard;  // this player's word arrangement
+  boardRevision: number; // monotonic server revision for board/hand reconciliation
   isReady: boolean;      // in lobby: has clicked "Ready"
   isConnected: boolean;  // whether the player's WebSocket is currently active
 };
@@ -90,3 +91,5 @@ type GameState = {
 - **`wordBoard.rows`** are ordered to match `variation.wordLengths` (index 0 = shortest word).
 - The server validates dictionary words; `WordRowState.isComplete` is set server-side and sent to the client — the client never computes it locally.
 - Player ordering in `players[]` reflects turn order (clockwise). The dealer is the first element; turns proceed by index.
+- The XState context keeps the wire-shaped authoritative `GameState`, a queue of pending local board operations, and the projected `gameState` rendered by the UI. Full personalized snapshots clear the queue; incremental updates replace only a newer authoritative base and replay pending intent.
+- Keyboard placement sends each operation immediately. No keyboard micro-batching is used because reconciliation removes the visible latency issue without a measured message-volume problem.
