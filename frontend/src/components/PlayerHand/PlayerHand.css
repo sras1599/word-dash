@@ -49,7 +49,12 @@
 }
 
 .player-hand__cards::-webkit-scrollbar {
-    display: none;
+    height: 0.4rem;
+}
+
+.player-hand__cards::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 38%, transparent);
 }
 
 .player-hand__empty {

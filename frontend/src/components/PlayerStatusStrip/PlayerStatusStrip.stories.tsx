@@ -43,7 +43,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The local player is prompted to draw and receives the active-turn badge. */
+/** The local player is identified as active without duplicating the HUD instruction. */
 export const LocalDrawTurn: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement)
@@ -51,8 +51,8 @@ export const LocalDrawTurn: Story = {
         const status = within(strip)
 
         await expect(status.getByText('You', { selector: '.player-status-strip__name' })).toBeInTheDocument()
-        await expect(status.getByText('Draw a card')).toBeInTheDocument()
-        await expect(status.getByText('Your Turn')).toBeInTheDocument()
+        await expect(status.getByText('Drawing…')).toBeInTheDocument()
+        await expect(status.queryByText('Draw a card')).not.toBeInTheDocument()
         await expect(status.getByText('12', { selector: '.player-status-strip__count-value' })).toBeInTheDocument()
     },
 }
@@ -65,7 +65,7 @@ export const OpponentTurn: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement)
 
-        await expect(canvas.getByText('Drawing...')).toBeInTheDocument()
+        await expect(canvas.getByText('Drawing…')).toBeInTheDocument()
         await expect(canvas.queryByText('Your Turn')).not.toBeInTheDocument()
     },
 }
@@ -96,7 +96,7 @@ export const DisconnectedPlayer: Story = {
         const canvas = within(canvasElement)
 
         await expect(canvas.getByText('Disconnected')).toBeInTheDocument()
-        await expect(canvas.queryByText('Drawing...')).not.toBeInTheDocument()
+        await expect(canvas.queryByText('Drawing…')).not.toBeInTheDocument()
     },
 }
 
@@ -116,8 +116,8 @@ export const FinishedWithWinner: Story = {
     },
 }
 
-/** Player cards stack into a single column at the narrow mobile breakpoint. */
-export const MobileStacked: Story = {
+/** Player cards retain server order in the compact horizontal mobile strip. */
+export const MobileStrip: Story = {
     args: {
         players: [
             ...PLAYERS,
@@ -139,5 +139,7 @@ export const MobileStacked: Story = {
         const canvas = within(canvasElement)
 
         await expect(canvas.getAllByRole('article')).toHaveLength(3)
+        await expect(canvas.getAllByRole('article').map((card) => card.getAttribute('aria-label')?.split(',')[0]))
+            .toEqual(['Alice', 'Bob', 'Carol Jones'])
     },
 }

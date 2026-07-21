@@ -18,6 +18,8 @@ export interface CardPileProps {
     onDraw?: (type: 'draw' | 'discard') => void
     /** Called when a card is dropped onto the discard pile during the arrange phase. */
     onDiscard?: (cardId: string) => void
+    /** Discards the currently selected card when the discard pile is activated. */
+    onDiscardSelected?: () => void
 }
 
 export function CardPile({
@@ -27,8 +29,11 @@ export function CardPile({
     isActive = false,
     isDropTarget = false,
     onDraw,
+    onDiscardSelected,
 }: CardPileProps) {
-    const isInteractive = isActive && !!onDraw
+    const canDraw = isActive && !!onDraw
+    const canDiscardSelection = type === 'discard' && isDropTarget && !!onDiscardSelected
+    const isInteractive = canDraw || canDiscardSelection
     const canRegisterDropArea = type === 'discard'
     const canDrop = isDropTarget && canRegisterDropArea
     const isEmpty = cardCount === 0
@@ -39,14 +44,22 @@ export function CardPile({
     })
 
     const handleClick = () => {
-        if (isInteractive) onDraw?.(type)
+        if (canDraw) {
+            onDraw?.(type)
+        } else if (canDiscardSelection) {
+            onDiscardSelected?.()
+        }
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         if (!isInteractive) return
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            onDraw?.(type)
+            if (canDraw) {
+                onDraw?.(type)
+            } else if (canDiscardSelection) {
+                onDiscardSelected?.()
+            }
         }
     }
 
@@ -68,6 +81,9 @@ export function CardPile({
             : topCard
                 ? `Discard pile, top card is ${topCard.letter}`
                 : 'Discard pile, empty'
+    const interactiveAriaLabel = canDiscardSelection
+        ? `${ariaLabel}, discard selected card`
+        : ariaLabel
 
     return (
         <div
@@ -77,7 +93,7 @@ export function CardPile({
             onKeyDown={isInteractive ? handleKeyDown : undefined}
             role={isInteractive ? 'button' : undefined}
             tabIndex={isInteractive ? 0 : undefined}
-            aria-label={ariaLabel}
+            aria-label={interactiveAriaLabel}
         >
             <div className="card-pile__stack">
                 {/* Stack illusion: ghost cards peek out from behind the top card */}

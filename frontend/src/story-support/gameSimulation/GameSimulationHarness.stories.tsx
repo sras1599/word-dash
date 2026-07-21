@@ -3,7 +3,7 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { GameSimulationHarness } from './GameSimulationHarness'
 
 const meta = {
-    title: 'Experiments/Game/Interactive Simulation',
+    title: 'WordDash/Game/Interactive Simulation',
     component: GameSimulationHarness,
     parameters: {
         layout: 'fullscreen',
@@ -17,6 +17,22 @@ const meta = {
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+export const ProductionDrawLayout: Story = {
+    args: {
+        playerCount: 4,
+        showControls: false,
+        showEventLog: false,
+    },
+    play: async ({ canvasElement }) => {
+        const hud = canvasElement.querySelector<HTMLElement>('.game-hud')
+        if (!hud) throw new Error('Expected command HUD')
+
+        const hudRect = hud.getBoundingClientRect()
+        const viewportCenter = canvasElement.ownerDocument.documentElement.clientWidth / 2
+        await expect(Math.abs((hudRect.left + hudRect.width / 2) - viewportCenter)).toBeLessThan(2)
+    },
+}
 
 export const TwoPlayerSimulation: Story = {
     args: {
@@ -39,10 +55,19 @@ export const TwoPlayerSimulation: Story = {
 
         try {
             const hud = canvas.getByRole('complementary', { name: 'Turn guidance' })
+            const initialHudRect = hud.getBoundingClientRect()
+            const announcement = canvasElement.querySelector<HTMLElement>('.game-hud__announcement')
+            if (!announcement) throw new Error('Expected HUD announcement region')
+            const announcementText = announcement.textContent
             await expect(
                 canvas.getByRole('timer', { name: 'Time remaining 1:00' }),
             ).toBeInTheDocument()
             await expect(hud).not.toHaveClass('game-hud--urgent')
+
+            await userEvent.click(canvas.getByRole('button', { name: 'Advance 5s' }))
+            await expect(announcement).toHaveTextContent(announcementText ?? '')
+            await expect(hud.getBoundingClientRect().width).toBe(initialHudRect.width)
+            await expect(hud.getBoundingClientRect().height).toBe(initialHudRect.height)
 
             await userEvent.click(canvas.getByRole('button', { name: /draw pile/i }))
             await expect(canvas.getByRole('button', { name: 'Arrange phase' }))
@@ -50,10 +75,10 @@ export const TwoPlayerSimulation: Story = {
 
             await userEvent.keyboard('{Shift>}H{/Shift}')
             await userEvent.keyboard('{Shift>}D{/Shift}')
-            await expect(canvas.getByText('Drawing...')).toBeInTheDocument()
+            await expect(canvas.getByText('Drawing…')).toBeInTheDocument()
 
             await userEvent.click(canvas.getByRole('button', { name: 'Advance turn' }))
-            await expect(canvas.getAllByText('Draw a card').length).toBeGreaterThan(0)
+            await expect(canvas.getByText('Your turn · Draw a card', { selector: '.game-hud__title' })).toBeVisible()
 
             await userEvent.click(canvas.getByRole('button', { name: 'Waiting' }))
             await userEvent.click(canvas.getByRole('button', { name: 'Playing' }))
@@ -62,6 +87,8 @@ export const TwoPlayerSimulation: Story = {
                 await canvas.findByRole('timer', { name: 'Time remaining 0:09' }),
             ).toBeInTheDocument()
             await expect(hud).toHaveClass('game-hud--urgent')
+            await expect(hud.getBoundingClientRect().width).toBe(initialHudRect.width)
+            await expect(hud.getBoundingClientRect().height).toBe(initialHudRect.height)
             await userEvent.click(canvas.getByRole('button', { name: 'Leave urgency' }))
             await expect(
                 await canvas.findByRole('timer', { name: 'Time remaining 1:00' }),
@@ -135,6 +162,26 @@ export const SlowNetworkReconciliation: Story = {
     },
 }
 
+export const PointerOnlyTurn: Story = {
+    args: {
+        playerCount: 2,
+        showControls: false,
+        showEventLog: false,
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        await userEvent.click(canvas.getByRole('button', { name: /draw pile, 40 cards/i }))
+
+        const firstHandCard = canvasElement.querySelector<HTMLElement>('.player-hand .card[role="button"]')
+        if (!firstHandCard) throw new Error('Expected a selectable hand card')
+
+        await userEvent.click(firstHandCard)
+        await userEvent.click(canvas.getByRole('button', { name: /discard pile.*discard selected card/i }))
+        await expect(canvas.getByText("Bob's turn", { selector: '.game-hud__title' })).toBeVisible()
+    },
+}
+
 export const MobileHudLayout: Story = {
     parameters: {
         viewport: {
@@ -159,8 +206,44 @@ export const MobileHudLayout: Story = {
         )
 
         await expect(overlaps).toBe(false)
-        await expect(canvas.getByText('Draw', { selector: '.game-hud__compact-title' }))
+        await expect(canvas.getByText('Your turn · Draw a card', { selector: '.game-hud__title' }))
             .toBeVisible()
         await expect(canvas.getByRole('timer')).toBeVisible()
+        await expect(canvasElement.ownerDocument.documentElement.scrollWidth)
+            .toBe(canvasElement.ownerDocument.documentElement.clientWidth)
+    },
+}
+
+export const ResponsiveStress: Story = {
+    args: {
+        scenario: 'stress',
+        playerCount: 4,
+        wordLengths: [8, 9, 10],
+        longContent: true,
+        discardPileEmpty: true,
+        drawPileCount: 2,
+        nearlyComplete: true,
+        overflowingHand: true,
+        showControls: false,
+        showEventLog: false,
+    },
+    parameters: {
+        viewport: { defaultViewport: 'tablet' },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+        const board = canvasElement.querySelector<HTMLElement>('.game-board')
+        const hand = canvasElement.querySelector<HTMLElement>('.player-hand__cards')
+
+        if (!board || !hand) throw new Error('Expected production game layout')
+
+        await expect(canvas.getByRole('region', { name: 'Player status' }).children).toHaveLength(4)
+        await expect(canvas.getByRole('region', { name: 'Card pile dock' })).toBeVisible()
+        await expect(canvas.getByLabelText('Discard pile, empty')).toBeVisible()
+        await expect(canvas.getByLabelText('Draw pile, 1 card')).toBeVisible()
+        await expect(board.querySelector('[data-emphasis="primary"]')).not.toBeNull()
+        await expect(getComputedStyle(hand).overflowX).toBe('auto')
+        await expect(canvasElement.ownerDocument.documentElement.scrollWidth)
+            .toBe(canvasElement.ownerDocument.documentElement.clientWidth)
     },
 }

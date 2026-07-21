@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { expect, waitFor, within } from 'storybook/test'
 import {
     createScenarioState,
     DEFAULT_TURN_DURATION_MS,
@@ -41,7 +41,8 @@ export const Draw: Story = {
         const canvas = within(canvasElement)
         await expect(canvas.getAllByRole('timer')).toHaveLength(1)
         await expect(canvas.getAllByRole('status')).toHaveLength(1)
-        await expect(canvas.getByText('Draw a card')).toBeInTheDocument()
+        await expect(canvas.getByText('Your turn · Draw a card', { selector: '.game-hud__title' }))
+            .toBeInTheDocument()
 
         window.scrollTo({ top: document.documentElement.scrollHeight })
         await waitFor(() => {
@@ -67,7 +68,7 @@ export const Urgent: Story = {
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement)
-        await expect(canvas.getByText('Discard now', { selector: '.game-hud__title' }))
+        await expect(canvas.getByText('Your turn · Discard now', { selector: '.game-hud__title' }))
             .toBeInTheDocument()
         await expect(canvas.getByRole('timer', { name: 'Time remaining 0:07' }))
             .toBeInTheDocument()
@@ -94,7 +95,7 @@ export const Waiting: Story = {
     },
 }
 
-export const MobileCollapsed: Story = {
+export const MobileCompact: Story = {
     parameters: {
         viewport: {
             defaultViewport: 'mobile1',
@@ -102,31 +103,10 @@ export const MobileCollapsed: Story = {
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement)
-        await expect(canvas.getByText('Draw', { selector: '.game-hud__compact-title' }))
+        await expect(canvas.getByText('Your turn · Draw a card', { selector: '.game-hud__title' }))
             .toBeVisible()
         await expect(canvas.getByRole('timer')).toBeVisible()
-        await expect(canvas.getByRole('button', { name: 'Expand turn guidance' }))
-            .toHaveAttribute('aria-expanded', 'false')
-    },
-}
-
-export const MobileExpanded: Story = {
-    parameters: {
-        viewport: {
-            defaultViewport: 'mobile1',
-        },
-    },
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement)
-        const toggle = canvas.getByRole('button', { name: 'Expand turn guidance' })
-
-        toggle.focus()
-        await expect(toggle).toHaveFocus()
-        await userEvent.keyboard('{Enter}')
-
-        await expect(canvas.getByRole('button', { name: 'Collapse turn guidance' }))
-            .toHaveAttribute('aria-expanded', 'true')
-        await expect(canvas.getByText('Choose the deck or discard pile.')).toBeVisible()
+        await expect(canvas.queryByRole('button', { name: /turn guidance/i })).not.toBeInTheDocument()
     },
 }
 

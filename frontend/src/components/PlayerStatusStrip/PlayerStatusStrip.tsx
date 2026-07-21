@@ -65,7 +65,7 @@ function getPlayerStatus(
     }
 
     if (player.id === currentPlayerId) {
-        return turnPhase === 'draw' ? (player.isLocal ? 'Draw a card' : 'Drawing...') : 'Playing...'
+        return turnPhase === 'draw' ? 'Drawing…' : 'Building…'
     }
 
     return player.isLocal ? 'You' : 'Opponent'
@@ -79,6 +79,13 @@ function PlayerStatusCard({
     winnerId,
 }: PlayerStatusCardProps) {
     const isCurrent = player.id === currentPlayerId
+    const status = getPlayerStatus(player, phase, currentPlayerId, turnPhase, winnerId)
+    const accessibleName = [
+        player.isLocal ? `${player.name}, you` : player.name,
+        isCurrent ? 'active player' : null,
+        status,
+        `${player.cardCount} ${player.cardCount === 1 ? 'card' : 'cards'}`,
+    ].filter(Boolean).join(', ')
 
     return (
         <article
@@ -88,9 +95,9 @@ function PlayerStatusCard({
                 isCurrent && 'player-status-strip__card--active',
                 !player.isConnected && 'player-status-strip__card--disconnected',
             )}
+            aria-label={accessibleName}
+            aria-current={isCurrent ? 'true' : undefined}
         >
-            {player.isLocal && isCurrent && <span className="player-status-strip__badge">Your Turn</span>}
-
             <div className="player-status-strip__main">
                 <div
                     className={cx(
@@ -111,7 +118,7 @@ function PlayerStatusCard({
                             !player.isConnected && 'player-status-strip__role--disconnected',
                         )}
                     >
-                        {getPlayerStatus(player, phase, currentPlayerId, turnPhase, winnerId)}
+                        {status}
                     </p>
                 </div>
             </div>
@@ -121,6 +128,7 @@ function PlayerStatusCard({
                     'player-status-strip__count',
                     isCurrent && 'player-status-strip__count--active',
                 )}
+                aria-label={`${player.cardCount} ${player.cardCount === 1 ? 'card' : 'cards'} in hand`}
             >
                 <span className="player-status-strip__count-icon" aria-hidden="true">
                     <Icon name="cards" />

@@ -27,14 +27,14 @@ describe('createGameHudModel', () => {
             ownerLabel: 'Your turn',
             title: 'Draw a card',
             detail: 'Choose the deck or discard pile.',
-            compactTitle: 'Draw',
+            primaryLabel: 'Your turn · Draw a card',
             timerLabel: '0:42',
             progress: 0.7,
         })
 
         expect(createModel('arrange-draw')).toMatchObject({
             title: 'Build words or discard',
-            compactTitle: 'Build / discard',
+            primaryLabel: 'Your turn · Build words or discard',
         })
     })
 
@@ -46,7 +46,7 @@ describe('createGameHudModel', () => {
 
         expect(model).toMatchObject({
             title: 'Discard now',
-            compactTitle: 'Discard now',
+            primaryLabel: 'Your turn · Discard now',
             detail: 'Your drawn card will be discarded when time expires.',
             isUrgent: true,
         })
@@ -58,7 +58,7 @@ describe('createGameHudModel', () => {
 
         expect(model.ownerLabel).toBe('Opponent turn')
         expect(model.title).toBe("Bob With An Extraordinarily Long Display Name's turn")
-        expect(model.compactTitle).toBe('Waiting')
+        expect(model.primaryLabel).toBe("Bob With An Extraordinarily Long Display Name's turn")
         expect(model.detail).toBe('You can continue arranging your words.')
     })
 
@@ -69,7 +69,7 @@ describe('createGameHudModel', () => {
         expect(model).toMatchObject({
             ownerLabel: 'Getting ready',
             title: 'Preparing the board',
-            compactTitle: 'Preparing',
+            primaryLabel: 'Preparing the board',
             timerLabel: '—',
             timerAriaLabel: 'Turn timer inactive',
             isActive: false,

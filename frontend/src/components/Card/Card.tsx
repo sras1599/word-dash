@@ -81,6 +81,15 @@ export function Card({
     }
 
     const isVowel = !faceDown && !!card && 'AEIOU'.includes(card.letter.toUpperCase())
+    const cardAriaLabel = faceDown
+        ? 'Face-down card'
+        : card
+            ? [
+                `Letter ${card.letter}`,
+                isDrawn ? 'drawn this turn' : null,
+                willAutoDiscard ? 'will be discarded when time expires' : null,
+            ].filter(Boolean).join(', ')
+            : 'Empty card slot'
 
     const className = [
         'card',
@@ -111,13 +120,7 @@ export function Card({
             role={isInteractive ? 'button' : undefined}
             tabIndex={isInteractive ? 0 : undefined}
             aria-pressed={isInteractive ? selected : undefined}
-            aria-label={
-                faceDown
-                    ? 'Face-down card'
-                    : card
-                        ? `Letter ${card.letter}`
-                        : 'Empty card slot'
-            }
+            aria-label={cardAriaLabel}
         >
             {faceDown ? (
                 <div className="card__back" aria-hidden="true">

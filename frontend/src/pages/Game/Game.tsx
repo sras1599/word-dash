@@ -121,14 +121,17 @@ export function Game() {
             floatingLetterClassName="page-game__floating-letter"
             floatingLetters={FLOATING_LETTERS}
         >
-            <GameTopBar onHome={handleHome} />
-
-            <GameHud
-                gameState={gameState}
-                localPlayerId={localPlayerId}
-                timeRemainingMs={timeRemainingMs}
-                turnDurationMs={turnDurationMs}
-                timerIsUrgent={timerIsUrgent}
+            <GameTopBar
+                onHome={handleHome}
+                hud={(
+                    <GameHud
+                        gameState={gameState}
+                        localPlayerId={localPlayerId}
+                        timeRemainingMs={timeRemainingMs}
+                        turnDurationMs={turnDurationMs}
+                        timerIsUrgent={timerIsUrgent}
+                    />
+                )}
             />
 
             {rejectionFeedback && (
@@ -140,6 +143,7 @@ export function Game() {
             <main className="wd-content-layer page-game__main">
                 <GameBoard
                     phase={gameState.phase}
+                    playerOrder={gameState.players.map((player) => player.id)}
                     localPlayerId={localPlayerId}
                     winnerId={gameState.winnerId}
                     localPlayer={localPlayerData ? { ...localPlayerData, hand: localHand } : null}
@@ -151,6 +155,7 @@ export function Game() {
                     handCount={handCount}
                     drawnCardId={drawnCardId}
                     willAutoDiscardCardId={isArrangePhase && timerIsUrgent ? drawnCardId : null}
+                    timerIsUrgent={timerIsUrgent}
                     onDraw={draw}
                     onPlace={place}
                     onUnplace={unplace}

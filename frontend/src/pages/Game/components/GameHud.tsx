@@ -1,6 +1,5 @@
-import { useId, useState, type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 import { Icon } from '../../../components/Icon/Icon'
-import { IconButton } from '../../../components/ui'
 import type { GameState } from '../../../lib/gameTypes'
 import { cx } from '../../../lib/cx'
 import { createGameHudModel } from './gameHudModel'
@@ -21,8 +20,6 @@ export function GameHud({
     turnDurationMs,
     timerIsUrgent,
 }: GameHudProps) {
-    const detailsId = useId()
-    const [isExpanded, setIsExpanded] = useState(false)
     const model = createGameHudModel({
         gameState,
         localPlayerId,
@@ -37,35 +34,20 @@ export function GameHud({
         <aside
             className={cx(
                 'game-hud',
-                isExpanded && 'game-hud--expanded',
                 model.isUrgent && 'game-hud--urgent',
             )}
             aria-label="Turn guidance"
+            data-emphasis={model.isUrgent ? 'primary' : 'informational'}
         >
-            <IconButton
-                className="game-hud__toggle"
-                label={isExpanded ? 'Collapse turn guidance' : 'Expand turn guidance'}
-                aria-controls={detailsId}
-                aria-expanded={isExpanded}
-                onClick={() => setIsExpanded((expanded) => !expanded)}
-                icon={<span aria-hidden="true">{isExpanded ? '›' : '‹'}</span>}
-            />
-
-            <div className="game-hud__content" id={detailsId}>
-                <strong className="game-hud__compact-title" aria-hidden="true">
-                    {model.compactTitle}
-                </strong>
-
-                <div
-                    className="game-hud__copy"
-                    role="status"
-                    aria-live="polite"
-                    aria-atomic="true"
-                >
-                    <span className="game-hud__owner">{model.ownerLabel}</span>
-                    <strong className="game-hud__title">{model.title}</strong>
+            <div className="game-hud__content">
+                <div className="game-hud__copy" aria-hidden="true">
+                    <strong className="game-hud__title">{model.primaryLabel}</strong>
                     <span className="game-hud__detail">{model.detail}</span>
                 </div>
+
+                <span className="game-hud__announcement" role="status" aria-live="polite" aria-atomic="true">
+                    {model.announcement}
+                </span>
 
                 <div
                     className="game-hud__timer"

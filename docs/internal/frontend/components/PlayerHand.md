@@ -52,8 +52,9 @@ The drawn card is visually separated — pushed to the right or given a distinct
 
 ## Key Behaviours
 
-- Cards in the hand are laid out in a single horizontal row, wrapping if needed (though hand size is bounded by the variation, max ~14 cards).
+- Cards remain in a single horizontal row. Overflow scrolls intentionally with a visible scrollbar instead of increasing tray height.
 - During dragging, the original card position shows a ghost / dimmed placeholder so the hand layout does not collapse.
 - `drawnCard` is always shown last (rightmost), and uses the `isDrawn` prop on `Card` to show the teal border.
 - When `isDraggable` is false, all cards show the non-interactive locked style (slightly muted, no hover effect).
 - The component does not decide what is valid to discard; `GameBoard` and the server enforce discard rules.
+- The production shell is labelled `Your Hand`, uses compact padding, and stays in normal layout flow so it cannot cover the board or pile dock.

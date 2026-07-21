@@ -6,42 +6,24 @@
 
 ## Purpose
 
-The main gameplay screen for the Word. Set. Go. variant. All active game interaction happens here. The layout keeps the local player's board front-and-centre while showing opponents' status in a sidebar or header band.
+The main gameplay screen for the Word. Set. Go. variant. All active game interaction happens here. The layout keeps each information class in a stable region and makes the current required action the strongest signal.
 
 ---
 
 ## Layout
 
-```
+```text
 ┌────────────────────────────────────────────────────────────┐
-│  GameTopBar: WordIt! (Home)                                 │
-├────────────────────────────────────────────────────────────┤
-│                                              ┌─────────────┐│
-│  Opponents band (top)                       │ Turn rail   ││
-│  ┌──────────────┐  ┌──────────────┐         │ Instruction ││
-│  │ OpponentStatus│  │ OpponentStatus│         │ Timer       ││
-│  └──────────────┘  └──────────────┘         └─────────────┘│
-│                                                             │
-├────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Centre — Card piles                                        │
-│      [DrawPile]          [DiscardPile]                      │
-│                                                             │
-├────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Local player area                                          │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                    WordBoard                         │  │
-│  │  (WordRow for each target word)                      │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                    PlayerHand                        │  │
-│  │  (draggable cards)                                   │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                             │
+│ Home/logo          owner · action · timer        utilities  │
+├────────────┬──────────────────────────────────┬─────────────┤
+│ Players    │ Word-building workspace          │ Integrated  │
+│            │                                  │ pile dock   │
+├────────────┴──────────────────────────────────┴─────────────┤
+│ Your Hand — compact, horizontally scrollable when needed   │
 └────────────────────────────────────────────────────────────┘
 ```
+
+The top bar is sticky. The hand is part of normal layout flow rather than a fixed overlay. Tablet/reflow uses a horizontal player strip, and mobile stacks the workspace and intact pile dock while retaining the compact HUD.
 
 ---
 
@@ -50,7 +32,7 @@ The main gameplay screen for the Word. Set. Go. variant. All active game interac
 The game page has distinct visual states driven by `GameState.turn.phase` and `GameState.localPlayerId`:
 
 ### It is the local player's turn — Draw phase
-- Draw pile and discard pile are visually highlighted/active (glowing border or prompt label "Draw a card").
+- Draw pile and discard pile are grouped as the primary emphasized region.
 - The player must click one of the two piles to draw before the arrange phase begins.
 
 ### It is the local player's turn — Arrange phase

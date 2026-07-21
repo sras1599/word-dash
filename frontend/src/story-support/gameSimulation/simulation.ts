@@ -35,6 +35,7 @@ export type SimulationScenario =
     | 'urgent'
     | 'invalid-word'
     | 'disconnected'
+    | 'stress'
     | 'slow-network'
     | 'finished'
 
@@ -350,6 +351,9 @@ export function createScenarioState(
             state = drawCard(state, 'draw')
             return fillWord(state, false)
         case 'disconnected':
+            return setPlayerConnected(state, state.gameState.players[1].id, false)
+        case 'stress':
+            state = drawCard(state, 'draw')
             return setPlayerConnected(state, state.gameState.players[1].id, false)
         case 'slow-network': {
             const authoritativeBase = state.gameState

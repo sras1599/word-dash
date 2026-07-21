@@ -10,6 +10,10 @@ export type SimulationFixtureOptions = {
     playerCount?: 2 | 4
     wordLengths?: number[]
     longContent?: boolean
+    discardPileEmpty?: boolean
+    drawPileCount?: number
+    nearlyComplete?: boolean
+    overflowingHand?: boolean
 }
 
 export type SimulationFixture = {
@@ -38,11 +42,35 @@ function createEmptyBoard(variation: Variation): WordBoardState {
     }
 }
 
+function createNearlyCompleteBoard(variation: Variation): WordBoardState {
+    let cardIndex = 0
+
+    return {
+        rows: variation.wordLengths.map((targetLength, rowIndex) => ({
+            targetLength,
+            slots: Array.from({ length: targetLength }, (_, slotIndex) => {
+                const isLastSlot = slotIndex === targetLength - 1
+                const card = isLastSlot
+                    ? null
+                    : {
+                        id: `board-${rowIndex + 1}-${slotIndex + 1}`,
+                        letter: LETTERS[cardIndex++ % LETTERS.length],
+                    }
+
+                return { slotIndex, card }
+            }),
+            isComplete: false,
+        })),
+        allComplete: false,
+    }
+}
+
 function createPlayer(
     index: number,
     variation: Variation,
     handSize: number,
     longContent: boolean,
+    nearlyComplete: boolean,
 ): GamePlayer {
     const hand = index === 0 ? createCards('hand', handSize, 2) : undefined
 
@@ -55,7 +83,9 @@ function createPlayer(
         isConnected: true,
         handCount: handSize,
         hand,
-        wordBoard: createEmptyBoard(variation),
+        wordBoard: index === 0 && nearlyComplete
+            ? createNearlyCompleteBoard(variation)
+            : createEmptyBoard(variation),
     }
 }
 
@@ -63,13 +93,17 @@ export function createSimulationFixture({
     playerCount = 2,
     wordLengths = [3, 4, 5],
     longContent = false,
+    discardPileEmpty = false,
+    drawPileCount = 40,
+    nearlyComplete = false,
+    overflowingHand = false,
 }: SimulationFixtureOptions = {}): SimulationFixture {
     const variation = { wordLengths }
     const boardCardCount = wordLengths.reduce((total, length) => total + length, 0)
-    const handSize = longContent ? boardCardCount + 12 : boardCardCount
+    const handSize = longContent || overflowingHand ? boardCardCount + 12 : boardCardCount
     const players = Array.from({ length: playerCount }, (_, index) =>
-        createPlayer(index, variation, handSize, longContent))
-    const drawDeck = createCards('draw', 40, 8)
+        createPlayer(index, variation, handSize, longContent, nearlyComplete))
+    const drawDeck = createCards('draw', drawPileCount, 8)
 
     return {
         gameState: {
@@ -77,7 +111,7 @@ export function createSimulationFixture({
             variation,
             players,
             drawPileCount: drawDeck.length,
-            discardPileTop: { id: 'discard-start', letter: 'A' },
+            discardPileTop: discardPileEmpty ? null : { id: 'discard-start', letter: 'A' },
             turn: {
                 currentPlayerId: LOCAL_PLAYER_ID,
                 phase: 'draw',

@@ -5,7 +5,7 @@
 ───────────────────────────────────────────── */
 .card-pile {
     --pile-width: 80px;
-    --pile-teal: #2db89c;
+    --pile-teal: var(--secondary, #406925);
     --pile-radius: calc(var(--pile-width) * 0.09);
     --pile-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.14);
 
@@ -67,10 +67,12 @@
    Count badge (draw pile only)
 ───────────────────────────────────────────── */
 .card-pile__badge {
+    min-width: 4.75rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.85);
+    color: var(--on-surface-variant, #5e3f3b);
     letter-spacing: 0.03em;
+    text-align: center;
     white-space: nowrap;
 }
 
@@ -79,7 +81,7 @@
    Subtle static cue signals the player to act.
 ───────────────────────────────────────────── */
 .card-pile--active .card-pile__stack {
-    filter: drop-shadow(0 0 4px rgba(45, 184, 156, 0.28));
+    --card-box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary, #406925) 48%, transparent);
 }
 
 /* ─────────────────────────────────────────────
@@ -103,9 +105,9 @@
 }
 
 .card-pile--interactive:focus-visible {
-    outline: 2px solid var(--pile-teal);
+    outline: 3px solid var(--pile-teal);
     outline-offset: 4px;
-    border-radius: 4px;
+    border-radius: 0.65rem;
 }
 
 /* ─────────────────────────────────────────────

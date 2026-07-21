@@ -90,4 +90,29 @@ describe('game simulation', () => {
         expect(valid.gameState.players[0].wordBoard.rows[0].isComplete).toBe(true)
         expect(disconnected.gameState.players[1].isConnected).toBe(false)
     })
+
+    it('builds the deterministic redesign pressure fixture', () => {
+        const stress = createScenarioState('stress', {
+            playerCount: 4,
+            wordLengths: [8, 9, 10],
+            longContent: true,
+            discardPileEmpty: true,
+            drawPileCount: 2,
+            nearlyComplete: true,
+            overflowingHand: true,
+        })
+        const localPlayer = stress.gameState.players[0]
+
+        expect(stress.gameState.players).toHaveLength(4)
+        expect(stress.gameState.players[1].isConnected).toBe(false)
+        expect(stress.gameState.players[1].name).toContain('Extraordinarily Long')
+        expect(stress.gameState.discardPileTop).toBeNull()
+        expect(stress.gameState.drawPileCount).toBe(1)
+        expect(stress.gameState.turn.phase).toBe('arrange')
+        expect(localPlayer.handCount).toBeGreaterThan(27)
+        expect(localPlayer.wordBoard.rows.every((row) =>
+            row.slots.slice(0, -1).every(({ card }) => card !== null)
+            && row.slots.at(-1)?.card === null,
+        )).toBe(true)
+    })
 })

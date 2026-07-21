@@ -35,6 +35,10 @@ export type GameSimulationHarnessProps = {
     playerCount?: 2 | 4
     wordLengths?: number[]
     longContent?: boolean
+    discardPileEmpty?: boolean
+    drawPileCount?: number
+    nearlyComplete?: boolean
+    overflowingHand?: boolean
     showControls?: boolean
     showEventLog?: boolean
 }
@@ -44,10 +48,22 @@ export function GameSimulationHarness({
     playerCount = 2,
     wordLengths,
     longContent = false,
+    discardPileEmpty = false,
+    drawPileCount,
+    nearlyComplete = false,
+    overflowingHand = false,
     showControls = true,
     showEventLog = true,
 }: GameSimulationHarnessProps) {
-    const fixtureOptions = { playerCount, wordLengths, longContent }
+    const fixtureOptions = {
+        playerCount,
+        wordLengths,
+        longContent,
+        discardPileEmpty,
+        drawPileCount,
+        nearlyComplete,
+        overflowingHand,
+    }
     const [simulation, setSimulation] = useState(() =>
         createScenarioState(scenario, fixtureOptions))
     const [winnerId, setWinnerId] = useState(LOCAL_PLAYER_ID)
@@ -130,7 +146,7 @@ export function GameSimulationHarness({
         clockSnapshot.durationMs,
     )
     return (
-        <div className="game-simulation page-game" data-testid="game-simulation">
+        <div className="game-simulation page-game" data-testid="game-simulation" data-scenario={scenario}>
             {showControls && (
                 <aside className="game-simulation__controls" aria-label="Simulation controls">
                     <div className="game-simulation__control-group">
@@ -233,19 +249,23 @@ export function GameSimulationHarness({
                 </aside>
             )}
 
-            <GameTopBar onHome={() => undefined} />
-
-            <GameHud
-                gameState={gameState}
-                localPlayerId={LOCAL_PLAYER_ID}
-                timeRemainingMs={clockSnapshot.remainingMs}
-                turnDurationMs={clockSnapshot.durationMs}
-                timerIsUrgent={timerUrgent}
+            <GameTopBar
+                onHome={() => undefined}
+                hud={(
+                    <GameHud
+                        gameState={gameState}
+                        localPlayerId={LOCAL_PLAYER_ID}
+                        timeRemainingMs={clockSnapshot.remainingMs}
+                        turnDurationMs={clockSnapshot.durationMs}
+                        timerIsUrgent={timerUrgent}
+                    />
+                )}
             />
 
             <main className="page-game__main game-simulation__board">
                 <GameBoard
                     phase={gameState.phase}
+                    playerOrder={gameState.players.map((player) => player.id)}
                     localPlayerId={LOCAL_PLAYER_ID}
                     winnerId={gameState.winnerId}
                     localPlayer={localPlayer ? {
@@ -264,6 +284,7 @@ export function GameSimulationHarness({
                             ? drawnCardId
                             : null
                     }
+                    timerIsUrgent={timerUrgent}
                     onDraw={(source) => update((current) => drawCard(current, source))}
                     onPlace={(cardId, rowIndex, slotIndex) =>
                         update((current) => placeCard(current, cardId, rowIndex, slotIndex))}

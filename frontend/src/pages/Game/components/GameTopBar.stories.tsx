@@ -27,7 +27,7 @@ export const Default: Story = {
         const canvas = within(canvasElement)
 
         await expect(canvas.queryByRole('timer')).not.toBeInTheDocument()
-        await expect(getComputedStyle(canvas.getByRole('navigation')).position).toBe('relative')
+        await expect(getComputedStyle(canvas.getByRole('banner')).position).toBe('sticky')
         await userEvent.click(canvas.getByRole('button', { name: 'Return home' }))
         await expect(args.onHome).toHaveBeenCalledOnce()
     },

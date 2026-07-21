@@ -1,32 +1,80 @@
 .game-board {
     --word-slot-width: var(--page-game-card-width, 5rem);
+    --game-board-player-column: 11rem;
+    --game-board-pile-column: 7.5rem;
 
+    position: relative;
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 2.75rem;
+    display: grid;
+    grid-template-columns: var(--game-board-player-column) minmax(0, 1fr) var(--game-board-pile-column);
+    grid-template-areas:
+        "players workspace piles"
+        "hand hand hand"
+        "help help help";
+    align-items: start;
+    gap: 0.85rem 0;
 }
 
-.game-board__hand-heading,
-.game-board__hand-header,
-.game-board__board-actions,
-.game-board__shortcuts-header,
-.game-board__shortcuts-header-copy,
-.game-board__shortcuts-category-heading,
-.game-board__shortcut-keys {
+.game-board__players {
+    grid-area: players;
+    min-width: 0;
+    margin-right: 0.85rem;
+}
+
+.game-board__players .player-status-strip {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.game-board__board-section,
+.game-board__piles,
+.game-board__hand-shell,
+.game-board__players {
+    transition: background-color 190ms ease-out, box-shadow 190ms ease-out, opacity 190ms ease-out;
+}
+
+.game-board [data-emphasis="primary"] {
+    box-shadow:
+        inset 0 0 0 2px color-mix(in srgb, var(--secondary, #406925) 48%, transparent),
+        0 18px 40px -32px color-mix(in srgb, var(--secondary, #406925) 48%, transparent);
+}
+
+.game-board [data-emphasis="unavailable"] {
+    opacity: 0.72;
 }
 
 .game-board__board-section {
+    grid-area: workspace;
+    min-width: 0;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 58%, transparent);
+    border-radius: 1.5rem 0.35rem 0.35rem 1.5rem;
+    background: color-mix(in srgb, var(--surface-container-lowest, #fff) 70%, transparent);
+}
+
+.game-board__board-section .word-board {
+    width: 100%;
+    max-width: 100%;
+    align-items: stretch;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 38%, transparent) transparent;
+}
+
+.game-board__board-section .word-board__row-wrapper {
+    width: max-content;
+    flex: 0 0 auto;
+    margin-inline: auto;
 }
 
 .game-board__board-header {
-    width: min(100%, 42rem);
+    width: min(100%, 46rem);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
@@ -34,91 +82,75 @@
 }
 
 .game-board__board-copy {
+    min-width: 0;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.35rem;
+    justify-content: center;
     text-align: center;
 }
 
 .game-board__board-title,
 .game-board__pile-label,
-.game-board__hand-count {
-    letter-spacing: 0.22em;
+.game-board__hand-title {
+    margin: 0;
+    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 76%, transparent);
+    font-family: var(--font-headline, inherit);
+    font-weight: 800;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
 }
 
-.game-board__board-title {
-    margin: 0;
-    font-family: var(--font-headline, inherit);
-    font-size: 0.92rem;
-    font-weight: 800;
-    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 56%, transparent);
-}
-
-.game-board__clear-board-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    min-height: 2.5rem;
-    padding: 0.55rem 0.9rem;
-    border: 0;
-    border-radius: var(--radius-full, 9999px);
-    background: var(--primary-container, #ffdad5);
-    color: var(--on-primary-container, #410002);
-    font-size: 0.78rem;
-    font-weight: 800;
-    box-shadow: 0 12px 22px color-mix(in srgb, var(--primary, #bb000e) 14%, transparent);
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-    white-space: nowrap;
+.game-board__board-title,
+.game-board__pile-label {
+    font-size: 0.72rem;
 }
 
 .game-board__board-actions {
+    display: flex;
+    align-items: center;
     justify-content: flex-end;
-    gap: 0.55rem;
-    flex-wrap: wrap;
 }
 
+.game-board__clear-board-btn,
 .game-board__shortcuts-btn {
-    position: fixed;
-    right: 1.5rem;
-    bottom: calc(12.75rem + env(safe-area-inset-bottom));
-    z-index: 6;
+    min-height: 2.75rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.45rem;
-    min-height: 2.5rem;
-    padding: 0.45rem 0.65rem;
+    padding: 0.5rem 0.75rem;
     border: 0;
     border-radius: var(--radius-full, 9999px);
-    background: color-mix(in srgb, var(--surface-container-lowest, #ffffff) 88%, transparent);
     color: var(--on-surface-variant, #5e3f3b);
-    box-shadow: 0 16px 34px -18px color-mix(in srgb, var(--on-surface, #1b1b1b) 34%, transparent);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 800;
     cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.game-board__clear-board-btn {
+    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 72%, var(--surface-container-lowest, #fff));
+    color: var(--primary, #bb000e);
+}
+
+.game-board__shortcuts-btn {
+    grid-area: help;
+    justify-self: end;
+    background: color-mix(in srgb, var(--surface-container-lowest, #fff) 78%, transparent);
 }
 
 .game-board__clear-board-btn:hover,
 .game-board__shortcuts-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 28px color-mix(in srgb, var(--primary, #bb000e) 18%, transparent);
+    background: var(--surface-container-lowest, #fff);
 }
 
 .game-board__clear-board-btn:focus-visible,
 .game-board__shortcuts-btn:focus-visible,
 .game-board__shortcuts-close:focus-visible {
     outline: 3px solid var(--primary, #bb000e);
-    outline-offset: 4px;
+    outline-offset: 3px;
 }
 
-.game-board__clear-icon {
-    width: 1rem;
-    height: 1rem;
-}
-
+.game-board__clear-icon,
 .game-board__shortcuts-btn-icon {
     width: 1rem;
     height: 1rem;
@@ -126,84 +158,97 @@
 }
 
 .game-board__piles {
+    grid-area: piles;
+    min-width: 0;
+    align-self: stretch;
     display: flex;
-    align-items: flex-end;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    gap: 3.75rem;
-    flex-wrap: wrap;
+    gap: 1rem;
+    margin-left: -1px;
+    padding: 0.85rem 0.4rem;
+    border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 58%, transparent);
+    border-left-color: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 84%, transparent);
+    border-radius: 0 1.5rem 1.5rem 0;
+    background: color-mix(in srgb, var(--surface-container-lowest, #fff) 42%, transparent);
 }
 
 .game-board__pile {
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.8rem;
+    gap: 0.4rem;
+}
+
+.game-board__pile .card-pile {
+    --pile-width: var(--page-game-card-width, 5rem);
 }
 
 .game-board__pile-label {
-    margin: 0;
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 56%, transparent);
+    width: 100%;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .game-board__hand-footer {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 4;
+    grid-area: hand;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .game-board__hand-shell {
-    border-top: 1px solid color-mix(in srgb, var(--surface-container-lowest, #ffffff) 55%, transparent);
-    border-top-left-radius: var(--radius-xl, 3rem);
-    border-top-right-radius: var(--radius-xl, 3rem);
-    background: color-mix(in srgb, var(--surface-container-low, #f6f3f2) 96%, transparent);
-    box-shadow: 0 -20px 50px -15px color-mix(in srgb, var(--on-surface, #1b1b1b) 10%, transparent);
-    backdrop-filter: blur(18px);
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 56%, transparent);
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--surface-container-low, #f6f3f2) 84%, transparent);
+    box-shadow: 0 14px 32px -30px color-mix(in srgb, var(--on-surface, #1b1b1b) 32%, transparent);
 }
 
 .game-board__hand-content {
-    width: min(100%, 96rem);
-    margin: 0 auto;
-    padding: 1.75rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom));
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
+    min-width: 0;
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.55rem 0.75rem calc(0.65rem + env(safe-area-inset-bottom));
 }
 
-.game-board__hand-header {
-    justify-content: space-between;
-    gap: 1rem;
-}
-
+.game-board__hand-header,
 .game-board__hand-heading {
-    gap: 0.75rem;
+    display: flex;
+    align-items: center;
 }
 
 .game-board__hand-title {
-    margin: 0;
-    font-family: var(--font-headline, inherit);
-    font-size: 1.9rem;
-    font-weight: 800;
+    font-size: 0.72rem;
 }
 
-.game-board__hand-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.35rem 0.65rem;
-    border-radius: var(--radius-full, 9999px);
-    background: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 86%, transparent);
-    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 76%, transparent);
-    font-size: 0.72rem;
-    font-weight: 700;
+.game-board__hand-footer .player-hand__cards {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    margin-top: 0;
+    padding: 0.45rem 0.35rem 0.55rem;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 38%, transparent) transparent;
+}
+
+.game-board__hand-footer .player-hand {
+    width: 100%;
+    min-width: 0;
+    align-items: stretch;
+    overflow: hidden;
 }
 
 .game-board__drag-overlay {
-    pointer-events: none;
     z-index: 20;
+    pointer-events: none;
 }
 
 .game-board__shortcuts-backdrop {
@@ -224,36 +269,44 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    overflow: hidden;
     padding: 1.1rem 0 1.1rem 1.1rem;
     border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 70%, transparent);
     border-radius: 1.5rem;
-    background: color-mix(in srgb, var(--surface-container-lowest, #ffffff) 96%, transparent);
+    background: color-mix(in srgb, var(--surface-container-lowest, #fff) 96%, transparent);
     color: var(--on-surface, #1b1b1b);
     box-shadow: 0 30px 90px -32px color-mix(in srgb, var(--on-surface, #1b1b1b) 48%, transparent);
-    overflow: hidden;
-    animation: game-board-shortcuts-enter 0.18s ease-out;
+    animation: game-board-shortcuts-enter 180ms ease-out;
+}
+
+.game-board__shortcuts-header,
+.game-board__shortcuts-header-copy,
+.game-board__shortcuts-category-heading,
+.game-board__shortcut-keys {
+    display: flex;
+    align-items: center;
 }
 
 .game-board__shortcuts-header {
-    padding-right: 1.1rem;
     justify-content: space-between;
     gap: 1rem;
+    padding-right: 1.1rem;
 }
 
 .game-board__shortcuts-header-copy {
-    gap: 0.8rem;
     min-width: 0;
+    gap: 0.8rem;
 }
 
 .game-board__shortcuts-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     width: 2.75rem;
     height: 2.75rem;
     flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 0.85rem;
-    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 68%, var(--surface-container-lowest, #ffffff));
+    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 68%, var(--surface-container-lowest, #fff));
     color: var(--primary, #bb000e);
 }
 
@@ -266,8 +319,7 @@
 
 .game-board__shortcuts-eyebrow {
     margin: 0;
-    color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 62%, transparent);
-    font-family: var(--font-headline, inherit);
+    color: var(--on-surface-variant, #5e3f3b);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.14em;
@@ -278,16 +330,15 @@
     margin: 0.1rem 0 0;
     font-family: var(--font-headline, inherit);
     font-size: 1.45rem;
-    font-weight: 800;
 }
 
 .game-board__shortcuts-close {
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.35rem;
-    height: 2.35rem;
-    flex: 0 0 auto;
     border: 0;
     border-radius: var(--radius-full, 9999px);
     background: var(--surface-container-low, #f6f3f2);
@@ -304,32 +355,13 @@
 .game-board__shortcuts-scroll-body {
     max-height: calc(min(82vh, 42rem) - 5.25rem);
     min-height: 0;
-    padding-right: 1.8rem;
     overflow: auto;
-    scrollbar-width: none;
-}
-
-.game-board__shortcuts-scroll-body::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+    padding-right: 1.8rem;
+    scrollbar-width: thin;
 }
 
 .game-board__shortcuts-scrollbar {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 0.42rem;
-    border-radius: 0 0 1.4rem 0;
-    background: color-mix(in srgb, var(--surface-container-low, #f6f3f2) 86%, transparent);
-}
-
-.game-board__shortcuts-scrollbar-thumb {
-    position: absolute;
-    right: 0;
-    left: 0;
-    border-radius: var(--radius-full, 9999px);
-    background: color-mix(in srgb, var(--primary, #bb000e) 46%, var(--surface-container-low, #f6f3f2));
+    display: none;
 }
 
 .game-board__shortcuts-category-list {
@@ -356,7 +388,6 @@
     margin: 0;
     font-family: var(--font-headline, inherit);
     font-size: 0.9rem;
-    font-weight: 800;
 }
 
 .game-board__shortcuts-items {
@@ -365,14 +396,14 @@
 }
 
 .game-board__shortcuts-row {
+    min-height: 3.15rem;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.8rem;
-    min-height: 3.15rem;
     padding: 0.65rem 0.75rem;
     border-radius: 0.8rem;
-    background: color-mix(in srgb, var(--surface-container-lowest, #ffffff) 88%, transparent);
+    background: color-mix(in srgb, var(--surface-container-lowest, #fff) 88%, transparent);
 }
 
 .game-board__shortcuts-row-copy {
@@ -396,23 +427,22 @@
 }
 
 .game-board__shortcut-keys {
+    min-width: max-content;
     justify-content: flex-end;
     gap: 0.3rem;
-    min-width: max-content;
 }
 
 .game-board__shortcut-keys kbd {
+    min-width: 1.8rem;
+    min-height: 1.7rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 1.8rem;
-    min-height: 1.7rem;
     padding: 0.18rem 0.45rem;
     border: 1px solid color-mix(in srgb, var(--on-surface, #1b1b1b) 14%, transparent);
     border-bottom-width: 2px;
     border-radius: 0.42rem;
-    background: var(--surface-container-lowest, #ffffff);
-    color: var(--on-surface, #1b1b1b);
+    background: var(--surface-container-lowest, #fff);
     font-family: var(--font-headline, inherit);
     font-size: 0.72rem;
     font-weight: 800;
@@ -420,20 +450,79 @@
 }
 
 @keyframes game-board-shortcuts-enter {
-    from {
-        opacity: 0;
-        transform: translateY(0.5rem) scale(0.98);
+    from { opacity: 0; transform: translateY(0.5rem) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 72rem) {
+    .game-board {
+        grid-template-columns: minmax(0, 1fr) var(--game-board-pile-column);
+        grid-template-areas:
+            "players players"
+            "workspace piles"
+            "hand hand"
+            "help help";
     }
 
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+    .game-board__players {
+        margin-right: 0;
+    }
+
+    .game-board__players .player-status-strip {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
     }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 50rem) {
     .game-board {
-        gap: 2rem;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "players" "workspace" "piles" "hand" "help";
+    }
+
+    .game-board__players {
+        overflow-x: auto;
+        padding: 0.2rem;
+    }
+
+    .game-board__players .player-status-strip {
+        display: flex;
+        flex-direction: row;
+        width: max-content;
+        min-width: 100%;
+    }
+
+    .game-board__players .player-status-strip__card {
+        width: min(13rem, 76vw);
+        flex: 1 0 auto;
+    }
+
+    .game-board__board-section {
+        border-radius: 1.25rem;
+    }
+
+    .game-board__piles {
+        align-self: auto;
+        flex-direction: row;
+        justify-content: center;
+        gap: clamp(1.5rem, 12vw, 4rem);
+        margin-left: 0;
+        border-left-color: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 58%, transparent);
+        border-radius: 1.25rem;
+    }
+
+    .game-board__pile-label {
+        overflow: visible;
+    }
+
+    .game-board__hand-shell {
+        border-radius: 1rem;
+    }
+}
+
+@media (max-width: 35rem) {
+    .game-board__board-section {
+        padding: 0.75rem 0.5rem;
     }
 
     .game-board__board-header {
@@ -441,25 +530,8 @@
         justify-items: center;
     }
 
-    .game-board__board-actions {
-        justify-content: center;
-    }
-
-    .game-board__piles {
-        gap: 2.5rem;
-    }
-
     .game-board__hand-content {
-        padding: 1.15rem 1rem calc(1rem + env(safe-area-inset-bottom));
-    }
-
-    .game-board__hand-title {
-        font-size: 1.45rem;
-    }
-
-    .game-board__shortcuts-btn {
-        right: 1rem;
-        bottom: calc(9.75rem + env(safe-area-inset-bottom));
+        padding-inline: 0.5rem;
     }
 
     .game-board__shortcuts-backdrop {
@@ -473,12 +545,9 @@
         border-radius: 1.25rem 1.25rem 0 0;
     }
 
-    .game-board__shortcuts-category-list {
-        grid-template-columns: 1fr;
-    }
-
+    .game-board__shortcuts-category-list,
     .game-board__shortcuts-row {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: 1fr;
     }
 
     .game-board__shortcut-keys {
@@ -487,23 +556,24 @@
     }
 }
 
-@media (max-width: 560px) {
-    .game-board__piles {
-        gap: 1.5rem;
-    }
-
-    .game-board__hand-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .game-board__shortcuts-header h2 {
-        font-size: 1.18rem;
+@media (prefers-reduced-motion: reduce) {
+    .game-board__board-section,
+    .game-board__piles,
+    .game-board__hand-shell,
+    .game-board__players,
+    .game-board__shortcuts-modal {
+        transition-duration: 0.001ms;
+        animation: none;
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .game-board__shortcuts-modal {
-        animation: none;
+@media (forced-colors: active) {
+    .game-board [data-emphasis="primary"] {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+    }
+
+    .game-board [data-emphasis="unavailable"] {
+        opacity: 1;
     }
 }

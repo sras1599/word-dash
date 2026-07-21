@@ -81,14 +81,28 @@
 }
 
 .page-game__nav {
-    position: relative;
-    z-index: 1;
-    display: flex;
+    position: sticky;
+    z-index: 10;
+    top: 0;
+    display: grid;
+    grid-template-columns: minmax(7rem, 1fr) minmax(18rem, 36rem) minmax(7rem, 1fr);
     align-items: center;
+    gap: 1rem;
+    min-height: 4.75rem;
     padding: 0.75rem 1.5rem;
     background: color-mix(in srgb, var(--surface-container-lowest) 72%, transparent);
     box-shadow: var(--page-game-nav-shadow);
     backdrop-filter: blur(24px);
+}
+
+.page-game__nav-hud {
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.page-game__nav-utilities {
+    min-width: 0;
 }
 
 .page-game__overlay-actions {
@@ -104,6 +118,7 @@
     padding: 0;
     background: transparent;
     cursor: pointer;
+    justify-self: start;
 }
 
 .page-game__nav-brand:focus-visible {
@@ -132,7 +147,7 @@
     z-index: 1;
     width: min(100%, 96rem);
     margin: 0 auto;
-    padding: 2rem 1.5rem calc(18rem + env(safe-area-inset-bottom));
+    padding: 1.5rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 2.75rem;
@@ -276,9 +291,6 @@
         --page-game-card-width: 4.6rem;
     }
 
-    .page-game__main {
-        padding-bottom: calc(16rem + env(safe-area-inset-bottom));
-    }
 }
 
 @media (max-width: 760px) {
@@ -287,12 +299,21 @@
     }
 
     .page-game__nav {
+        grid-template-columns: auto minmax(0, 1fr);
         padding: 0.65rem 1rem;
+    }
+
+    .page-game__nav-utilities {
+        display: none;
+    }
+
+    .page-game__nav-logo {
+        width: 5.4rem;
     }
 
     .page-game__main {
         gap: 2rem;
-        padding: 1.25rem 1rem calc(14.75rem + env(safe-area-inset-bottom));
+        padding: 1rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
     }
 
 }
@@ -309,5 +330,14 @@
 
     .page-game__overlay-heading {
         font-size: 1.65rem;
+    }
+
+    .page-game__nav {
+        gap: 0.6rem;
+        padding-inline: 0.7rem;
+    }
+
+    .page-game__nav-logo {
+        width: 4.5rem;
     }
 }

@@ -23,6 +23,7 @@ import { getGameBoardDropAction } from './dnd'
 import { getShortcutAction, shouldIgnoreShortcutTarget, type BoardSelection } from './shortcuts'
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal'
 import { PlayerStatusStrip, type PlayerStatusStripPlayer } from '../PlayerStatusStrip/PlayerStatusStrip'
+import { getGameBoardEmphasis } from './emphasis'
 
 export interface GameBoardLocalPlayer {
     id: string
@@ -63,6 +64,8 @@ const gameBoardCollisionDetection: CollisionDetection = (args) => {
 export interface GameBoardProps {
     /** Current game phase. */
     phase: 'waiting' | 'playing' | 'finished'
+    /** Player IDs in authoritative server turn order. */
+    playerOrder?: string[]
     /** The local player's ID, used for status labels. */
     localPlayerId: string
     /** Winning player ID, if the round is finished. */
@@ -85,6 +88,8 @@ export interface GameBoardProps {
     drawnCardId: string | null
     /** ID of the card that should flash before automatic discard. */
     willAutoDiscardCardId: string | null
+    /** Whether the active timer is within the urgent threshold. */
+    timerIsUrgent?: boolean
     /** Called when the local player draws from a pile. */
     onDraw?: (source: 'draw' | 'discard') => void
     /** Called when a card is placed into a word slot. */
@@ -101,6 +106,7 @@ export interface GameBoardProps {
 
 export function GameBoard({
     phase,
+    playerOrder,
     localPlayerId,
     winnerId,
     localPlayer,
@@ -112,6 +118,7 @@ export function GameBoard({
     handCount,
     drawnCardId,
     willAutoDiscardCardId,
+    timerIsUrgent = false,
     onDraw,
     onPlace,
     onUnplace,
@@ -131,6 +138,12 @@ export function GameBoard({
     const canEditBoard = localPlayer !== null && phase === 'playing' && (turn.phase === 'draw' || turn.phase === 'arrange')
     const canDiscard = isActiveTurn && phase === 'playing' && turn.phase === 'arrange'
     const isDrawPhase = isActiveTurn && turn.phase === 'draw'
+    const emphasis = getGameBoardEmphasis({
+        phase,
+        turnPhase: turn.phase,
+        isLocalTurn: isActiveTurn,
+        timerIsUrgent,
+    })
     const visibleSelectedBoardSlot = selectedHandCardId ? null : selectedBoardSlot
 
     useEffect(() => {
@@ -337,6 +350,11 @@ export function GameBoard({
         setActiveDragCard(null)
     }
 
+    const selectedBoardCard = selectedBoardSlot
+        ? localPlayer?.wordBoard.rows[selectedBoardSlot.rowIndex]?.slots[selectedBoardSlot.slotIndex]?.card
+        : null
+    const selectedDiscardCardId = selectedHandCardId ?? selectedBoardCard?.id ?? null
+
     const drawPileProps: CardPileProps = {
         type: 'draw',
         topCard: null,
@@ -353,9 +371,12 @@ export function GameBoard({
         isDropTarget: canDiscard,
         onDraw,
         onDiscard: handleDiscard,
+        onDiscardSelected: canDiscard && selectedDiscardCardId
+            ? () => handleDiscard(selectedDiscardCardId)
+            : undefined,
     }
 
-    const statusPlayers: PlayerStatusStripPlayer[] = [
+    const unorderedStatusPlayers: PlayerStatusStripPlayer[] = [
         ...(localPlayer
             ? [
                 {
@@ -375,6 +396,16 @@ export function GameBoard({
             cardCount: opponent.handCount,
         })),
     ]
+    const statusPlayersById = new Map(unorderedStatusPlayers.map((player) => [player.id, player]))
+    const statusPlayers: PlayerStatusStripPlayer[] = playerOrder
+        ? [
+            ...playerOrder.flatMap((playerId) => {
+                const player = statusPlayersById.get(playerId)
+                return player ? [player] : []
+            }),
+            ...unorderedStatusPlayers.filter((player) => !playerOrder.includes(player.id)),
+        ]
+        : unorderedStatusPlayers
 
     function hasPlacedBoardCards(wordBoard: WordBoardState): boolean {
         return wordBoard.rows.some((row) => row.slots.some((slot) => slot.card !== null))
@@ -391,17 +422,30 @@ export function GameBoard({
             onDragEnd={handleDndDragEnd}
             onDragCancel={handleDndDragCancel}
         >
-            <div className="game-board" aria-label={`Game board, ${totalBoardSlots} word slots`}>
-                <PlayerStatusStrip
-                    players={statusPlayers}
-                    phase={phase}
-                    currentPlayerId={turn.currentPlayerId}
-                    turnPhase={turn.phase}
-                    winnerId={winnerId}
-                />
+            <div
+                className="game-board"
+                aria-label={`Game board, ${totalBoardSlots} word slots`}
+                data-game-phase={phase}
+                data-turn-phase={turn.phase}
+                data-turn-owner={isActiveTurn ? 'local' : 'opponent'}
+                data-urgent={timerIsUrgent || undefined}
+            >
+                <div className="game-board__players" data-emphasis={emphasis.players}>
+                    <PlayerStatusStrip
+                        players={statusPlayers}
+                        phase={phase}
+                        currentPlayerId={turn.currentPlayerId}
+                        turnPhase={turn.phase}
+                        winnerId={winnerId}
+                    />
+                </div>
 
                 {localPlayer && (
-                    <section className="game-board__board-section" aria-labelledby="game-board-title">
+                    <section
+                        className="game-board__board-section"
+                        aria-labelledby="game-board-title"
+                        data-emphasis={emphasis.workspace}
+                    >
                         <div className="game-board__board-header">
                             <div className="game-board__board-copy">
                                 <h1 className="game-board__board-title" id="game-board-title">
@@ -440,28 +484,29 @@ export function GameBoard({
                     </section>
                 )}
 
-                <section className="game-board__piles" aria-label="Card piles">
+                <section
+                    className="game-board__piles"
+                    aria-label="Card pile dock"
+                    data-emphasis={emphasis.piles}
+                >
                     <div className="game-board__pile">
-                        <p className="game-board__pile-label">Draw</p>
+                        <p className="game-board__pile-label">Draw pile</p>
                         <CardPile {...drawPileProps} />
                     </div>
 
                     <div className="game-board__pile">
-                        <p className="game-board__pile-label">Discard</p>
+                        <p className="game-board__pile-label">Discard pile</p>
                         <CardPile {...discardPileProps} />
                     </div>
                 </section>
 
                 {localPlayer && (
-                    <footer className="game-board__hand-footer">
+                    <footer className="game-board__hand-footer" data-emphasis={emphasis.hand}>
                         <div className="game-board__hand-shell">
                             <div className="game-board__hand-content">
                                 <div className="game-board__hand-header">
                                     <div className="game-board__hand-heading">
-                                        <h2 className="game-board__hand-title">Your Deck</h2>
-                                        <span className="game-board__hand-count">
-                                            {handCount} {handCount === 1 ? 'Card' : 'Cards'}
-                                        </span>
+                                        <h2 className="game-board__hand-title">Your Hand</h2>
                                     </div>
                                 </div>
 

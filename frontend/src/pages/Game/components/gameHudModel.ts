@@ -5,7 +5,8 @@ export type GameHudViewModel = {
     ownerLabel: string
     title: string
     detail: string
-    compactTitle: string
+    primaryLabel: string
+    announcement: string
     timerLabel: string
     timerAriaLabel: string
     progress: number
@@ -43,32 +44,34 @@ export function createGameHudModel({
     let ownerLabel = isLocalTurn ? 'Your turn' : 'Opponent turn'
     let title = isLocalTurn ? ownerLabel : `${activePlayerName}'s turn`
     let detail = 'You can continue arranging your words.'
-    let compactTitle = isLocalTurn ? 'Your turn' : 'Waiting'
 
     if (gameState.phase === 'waiting') {
         ownerLabel = 'Getting ready'
         title = 'Preparing the board'
         detail = 'The round will begin shortly.'
-        compactTitle = 'Preparing'
     } else if (isLocalTurn && gameState.turn.phase === 'draw') {
         title = 'Draw a card'
         detail = 'Choose the deck or discard pile.'
-        compactTitle = 'Draw'
     } else if (isLocalTurn && gameState.turn.phase === 'arrange' && timerIsUrgent) {
         title = 'Discard now'
         detail = 'Your drawn card will be discarded when time expires.'
-        compactTitle = 'Discard now'
     } else if (isLocalTurn && gameState.turn.phase === 'arrange') {
         title = 'Build words or discard'
         detail = 'Discard one card to end your turn.'
-        compactTitle = 'Build / discard'
     }
+
+    const primaryLabel = gameState.phase === 'waiting'
+        ? title
+        : isLocalTurn
+            ? `${ownerLabel} · ${title}`
+            : title
 
     return {
         ownerLabel,
         title,
         detail,
-        compactTitle,
+        primaryLabel,
+        announcement: detail ? `${primaryLabel}. ${detail}` : primaryLabel,
         timerLabel,
         timerAriaLabel: isActive ? `Time remaining ${timerLabel}` : 'Turn timer inactive',
         progress,

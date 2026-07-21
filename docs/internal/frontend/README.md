@@ -101,6 +101,7 @@ frontend/
 │   ├── Card.md
 │   ├── CardPile.md
 │   ├── PlayerHand.md
+│   ├── PlayerStatusStrip.md
 │   ├── WordSlot.md
 │   ├── WordRow.md
 │   ├── WordBoard.md

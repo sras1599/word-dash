@@ -1,96 +1,50 @@
 # Component: GameBoard
 
----
 ## Purpose
 
+`GameBoard` lays out player status, the local word workspace, the integrated pile dock, and the local hand. It routes pointer, keyboard, and drag-and-drop interactions through the existing game callbacks; presentation emphasis never authorizes game actions.
 
-The gameplay-content layout component for the game screen. It assembles the player status, card piles, local word board, and hand. Page-level navigation is rendered by `GameTopBar`; persistent turn guidance and timing are rendered by `GameHud`.
+## Production Layout
 
----
-
-## Layout
-
-```
-┌────────────────────────────────────────────────────────────┐
-│  Opponents band                                            │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │  OpponentStatus   OpponentStatus   OpponentStatus   │  │
-│  └─────────────────────────────────────────────────────┘  │
-│                                                            │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│  Card piles (centre)                                       │
-│      ┌──────────┐              ┌──────────┐               │
-│      │ DrawPile │              │Discard   │               │
-│      └──────────┘              └──────────┘               │
-│                                                            │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│  Local player area                                         │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │                    WordBoard                        │  │
-│  └─────────────────────────────────────────────────────┘  │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │                    PlayerHand                       │  │
-│  └─────────────────────────────────────────────────────┘  │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
+```text
+Desktop
+┌───────────┬──────────────────────────────┬──────────┐
+│ Players   │ Word workspace               │ Draw     │
+│ in server │                              │ Discard  │
+│ order     │                              │ dock     │
+├───────────┴──────────────────────────────┴──────────┤
+│ Your Hand — compact horizontal overflow             │
+└──────────────────────────────────────────────────────┘
 ```
 
----
+The dock is visually attached to the workspace, but owns a reserved grid column and never overlaps word slots. At narrower widths the players become a horizontal strip; below `50rem` the intact pile group moves below the workspace.
 
-## Props / Data Needed
+## Props and Derived Presentation
 
-`GameBoard` reads directly from `GameContext` — it does not accept most game state as props, since it is always rendered inside the `GameContext` provider.
+- `playerOrder` is the authoritative server player order used by the status region.
+- `phase`, `turn`, local ownership, and `timerIsUrgent` feed `getGameBoardEmphasis`.
+- `data-emphasis` values are `primary`, `available`, `informational`, and `unavailable`.
+- The mapping changes outlines/surfaces only. Persistent geometry and action authorization stay unchanged.
 
-| Prop / Context          | Source                   | Description                                                    |
-|-------------------------|--------------------------|----------------------------------------------------------------|
-| `gameState`             | `GameContext`            | Full `GameState` (see `state/game-state.md`).                  |
-| `localPlayerId`         | Session context          | Identifies which player is "local".                            |
-
----
+Normal phases have one primary board region: piles for local draw, workspace for local arrange, players for an opponent turn, and the discard-capable dock during urgent arrange. The local board and hand remain available during opponent turns.
 
 ## Interactions
 
-`GameBoard` owns user interaction callbacks. The game state layer applies safe optimistic updates for public/local card moves, then sends the same WebSocket events so the next authoritative server event reconciles exact state:
+| Input | Behaviour |
+|---|---|
+| Click/activate either pile during local draw | Dispatch the unchanged draw callback for that source. |
+| Select a hand or board card, then activate discard | Dispatch the unchanged discard callback. This supports pointer and touch play without adding a second action button. |
+| Drag hand/board card to a word slot | Place or move through the existing DnD action mapping. |
+| Drag a board card to hand | Unplace through the existing callback. |
+| Drag a card to discard | Discard only when the discard target is valid; the draw pile never accepts drops. |
+| Keyboard shortcuts | Reuse the same draw, place, unplace, clear, and discard callbacks. |
 
-| Child callback                           | WebSocket event dispatched                          |
-|------------------------------------------|-----------------------------------------------------|
-| `CardPile.onDraw(source)`                | `game:draw_card { source }`                         |
-| `WordSlot.onPlace(cardId, row, slot)`    | `game:place_card { cardId, rowIndex, slotIndex, clientActionId }` |
-| `WordSlot.onUnplace(row, slot)`          | `game:unplace_card { rowIndex, slotIndex, clientActionId }` |
-| `WordBoard.onClearWord(row)`             | `game:clear_word { rowIndex, clientActionId }`      |
-| `GameBoard.onClearBoard()`               | `game:clear_board { clientActionId }`               |
-| `CardPile.onDiscard(cardId)`             | `game:discard_card { cardId, clientActionId }`      |
+The keyboard shortcut map remains documented in the in-game `KeyboardShortcutsModal`. Collision detection checks pointer hits first, then falls back to nearest-center matching.
 
-Keyboard shortcuts are enabled by default on the game board and reuse the same callbacks:
+## Responsive and Accessibility Rules
 
-| Shortcut                                | Behaviour                                                         |
-|-----------------------------------------|-------------------------------------------------------------------|
-| `Shift+?`                               | Open the keyboard shortcuts modal.                                |
-| `Shift+D`                               | Draw from the draw pile during draw phase, or discard the selected card during arrange phase. |
-| `Shift+Alt+D`                           | Draw from the discard pile during the local player's draw phase.  |
-| `1`-`9`                                 | Select a word row and focus its first empty slot, or slot 1.       |
-| `ArrowLeft` / `ArrowRight`              | Move the selected slot within the current row.                    |
-| `ArrowUp` / `ArrowDown`                 | Move to the previous/next row, clamping to that row's length.     |
-| `Shift+ArrowLeft` / `Shift+ArrowRight`  | Move or swap the selected card within the same row only.          |
-| `A`-`Z`                                 | Place the first matching hand card into the selected slot only when the board is selected. |
-| `Backspace`                             | Return the selected slot's card to hand, or move to the previous slot if empty. |
-| `Shift+Backspace`                       | Clear the selected word row.                                      |
-| `Shift+Alt+Delete`                      | Clear the whole word board without confirmation.                  |
-| `Escape`                                | Clear the selected slot.                                          |
-
-Shortcuts are ignored while typing in form fields. `Enter` and `Space` are intentionally unused.
-
----
-
-## Key Behaviours
-
-- `GameBoard` derives the local player and opponent players from `gameState.players` and `localPlayerId` once, and passes the relevant slice to each child.
-- The "is active turn" flag passed to children is computed as `gameState.turn.currentPlayerId === localPlayerId`.
-- The "is arrange phase" flag is `isActiveTurn && gameState.turn.phase === 'arrange'`.
-- The component is purely a layout/orchestration layer — no game logic lives here beyond deriving these flags and routing callbacks to WebSocket events.
-- During the "draw" and "arrange" phases, the local player's `PlayerHand` and `WordBoard`/`WordSlot` can be edited. Draw piles are only clickable during the local player's draw phase, and the discard pile accepts discarded cards during arrange.
-- Dropping a board card onto an occupied board slot swaps the two board cards, including across rows. Dropping a hand card onto an occupied board slot moves the displaced board card to the end of the hand.
-- Typed-letter shortcuts are case-insensitive and only apply while the board is selected. If the hand is selected or the selected slot already contains that letter, no action is sent.
-- Keyboard card movement never wraps across word boundaries.
+- DOM order is players, workspace, piles, hand, then secondary keyboard help; visual reflow preserves that reading order.
+- Player rows do not reorder on active-turn changes.
+- The hand uses visible horizontal overflow and consistent card order.
+- Emphasis uses inset outlines and static copy, so it never resizes a region or relies on color alone.
+- Reduced motion removes transition/entry animation while preserving state outlines and text.

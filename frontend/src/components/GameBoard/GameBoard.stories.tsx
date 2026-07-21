@@ -155,7 +155,7 @@ export const ProductionDrawParity: Story = {
         await expect(getComputedStyle(slot).borderStyle).toBe('dashed')
         await expect(getComputedStyle(slot).borderWidth).toBe('2px')
         await expect(getComputedStyle(hand).overflowX).toBe('auto')
-        await expect(getComputedStyle(hand).scrollbarWidth).toBe('none')
+        await expect(getComputedStyle(hand).scrollbarWidth).toBe('thin')
     },
 }
 
@@ -269,6 +269,12 @@ export const LocalArrangePhase: Story = {
 
         await userEvent.keyboard('{Shift>}D{/Shift}')
         await expect(args.onDiscard).toHaveBeenCalledWith('c1')
+
+        const firstHandCard = canvasElement.querySelector<HTMLElement>('.player-hand .card[role="button"]')
+        if (!firstHandCard) throw new Error('Expected an interactive hand card')
+        await userEvent.click(firstHandCard)
+        await userEvent.click(canvasElement.querySelector<HTMLElement>('.card-pile--discard')!)
+        await expect(args.onDiscard).toHaveBeenCalledWith('c1')
     },
 }
 
@@ -301,6 +307,17 @@ export const OpponentTurn: Story = {
             currentPlayerId: 'opp-1',
             phase: 'draw',
         },
+    },
+}
+
+export const ServerPlayerOrder: Story = {
+    args: {
+        playerOrder: ['opp-1', 'local', 'opp-2'],
+    },
+    play: async ({ canvasElement }) => {
+        const playerCards = Array.from(canvasElement.querySelectorAll<HTMLElement>('.player-status-strip__card'))
+        await expect(playerCards.map((card) => card.getAttribute('aria-label')?.split(',')[0]))
+            .toEqual(['Bob', 'Alice', 'Carol'])
     },
 }
 

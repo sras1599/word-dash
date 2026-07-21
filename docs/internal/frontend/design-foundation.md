@@ -40,7 +40,7 @@ Drift risks:
 
 ### Spacing And Layout
 
-Repeated spacing appears around page gutters (`1rem` to `1.5rem`), panel padding (`1.25rem`, `1.5rem`, `2rem`), control gaps (`0.5rem`, `0.75rem`, `1rem`), and large screen composition gaps (`2rem` to `2.75rem`). Home uses a centered first screen. Lobby uses a two-column settings/players grid that stacks at narrower widths. Game keeps the board center stage with fixed chrome and a side/bottom HUD.
+Repeated spacing appears around page gutters (`1rem` to `1.5rem`), panel padding (`1.25rem`, `1.5rem`, `2rem`), control gaps (`0.5rem`, `0.75rem`, `1rem`), and large screen composition gaps (`2rem` to `2.75rem`). Home uses a centered first screen. Lobby uses a two-column settings/players grid that stacks at narrower widths. Game uses a sticky top command HUD, reserved player and pile columns, and a compact in-flow hand.
 
 Drift risks:
 
@@ -109,7 +109,7 @@ Pages can compose primitives, but page-specific flow and routing behavior should
 ## Migration Map
 
 - `Button`: Home create/join/submit actions, Lobby copy/start/ready/apply/timer controls, Game state and overlay actions.
-- `IconButton`: Lobby timer increment/decrement controls, Game HUD toggle, future compact chrome actions.
+- `IconButton`: Lobby timer increment/decrement controls and future compact chrome actions.
 - `Panel`: Home create/join form shell, Lobby settings and players containers, Lobby timer container, Game loading/error state panels, dialog surfaces.
 - `Dialog`: Game-over dialog and future tutorial/help/keyboard-shortcut shells.
 - `FormField`: Home name/room code fields, Lobby custom word-length input, future settings validation.
