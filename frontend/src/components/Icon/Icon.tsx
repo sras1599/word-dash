@@ -4,6 +4,7 @@ import {
     CircleHelp,
     DoorOpen,
     Layers,
+    Keyboard,
     Minus,
     Plus,
     Settings,
@@ -29,6 +30,7 @@ type IconName =
     | 'settings'
     | 'cards'
     | 'clear'
+    | 'keyboard'
 
 type IconProps = {
     name: IconName
@@ -49,6 +51,7 @@ const ICONS: Record<IconName, LucideIcon> = {
     settings: Settings,
     cards: Layers,
     clear: Trash2,
+    keyboard: Keyboard,
 }
 
 export function Icon({ name, className }: IconProps) {

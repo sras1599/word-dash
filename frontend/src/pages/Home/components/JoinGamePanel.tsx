@@ -26,6 +26,7 @@ export function JoinGamePanel({
                 <FormField id="join-name" label="Your name" error={nameError}>
                     <TextInput
                         id="join-name"
+                        data-bwignore="true"
                         invalid={!!nameError}
                         autoComplete="nickname"
                         aria-describedby={getFormFieldDescription('join-name', false, !!nameError)}
@@ -36,6 +37,7 @@ export function JoinGamePanel({
                 <FormField id="join-room-code" label="Room code" error={roomCodeError}>
                     <TextInput
                         id="join-room-code"
+                        data-bwignore="true"
                         invalid={!!roomCodeError}
                         autoComplete="off"
                         autoCapitalize="characters"

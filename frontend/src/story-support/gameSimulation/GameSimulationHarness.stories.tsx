@@ -26,11 +26,14 @@ export const ProductionDrawLayout: Story = {
     },
     play: async ({ canvasElement }) => {
         const hud = canvasElement.querySelector<HTMLElement>('.game-hud')
-        if (!hud) throw new Error('Expected command HUD')
+        const workspace = canvasElement.querySelector<HTMLElement>('.game-board__board-section')
+        if (!hud || !workspace) throw new Error('Expected command HUD and word workspace')
 
         const hudRect = hud.getBoundingClientRect()
-        const viewportCenter = canvasElement.ownerDocument.documentElement.clientWidth / 2
-        await expect(Math.abs((hudRect.left + hudRect.width / 2) - viewportCenter)).toBeLessThan(2)
+        const workspaceRect = workspace.getBoundingClientRect()
+        const hudCenter = hudRect.left + hudRect.width / 2
+        const workspaceCenter = workspaceRect.left + workspaceRect.width / 2
+        await expect(Math.abs(hudCenter - workspaceCenter)).toBeLessThan(2)
     },
 }
 
@@ -190,6 +193,7 @@ export const MobileHudLayout: Story = {
     },
     args: {
         playerCount: 2,
+        showControls: false,
         showEventLog: false,
     },
     play: async ({ canvasElement }) => {
@@ -238,11 +242,12 @@ export const ResponsiveStress: Story = {
         if (!board || !hand) throw new Error('Expected production game layout')
 
         await expect(canvas.getByRole('region', { name: 'Player status' }).children).toHaveLength(4)
-        await expect(canvas.getByRole('region', { name: 'Card pile dock' })).toBeVisible()
+        await expect(canvas.getByRole('region', { name: 'Card piles' })).toBeVisible()
         await expect(canvas.getByLabelText('Discard pile, empty')).toBeVisible()
         await expect(canvas.getByLabelText('Draw pile, 1 card')).toBeVisible()
-        await expect(board.querySelector('[data-emphasis="primary"]')).not.toBeNull()
-        await expect(getComputedStyle(hand).overflowX).toBe('auto')
+        await expect(board.querySelector('[data-emphasis]')).toBeNull()
+        await expect(getComputedStyle(hand).overflowX).toBe('visible')
+        await expect(getComputedStyle(hand).flexWrap).toBe('wrap')
         await expect(canvasElement.ownerDocument.documentElement.scrollWidth)
             .toBe(canvasElement.ownerDocument.documentElement.clientWidth)
     },

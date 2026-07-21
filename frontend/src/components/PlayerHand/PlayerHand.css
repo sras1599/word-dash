@@ -1,8 +1,7 @@
 /* ─────────────────────────────────────────────
    PlayerHand
-   Horizontal row of the local player's cards.
-   The drawn card is separated by a divider and
-   always appears last (rightmost).
+   Centered wrapping rows of the local player's cards.
+   The drawn card remains last in logical order.
 ───────────────────────────────────────────── */
 .player-hand {
     --card-flex: 0 0 auto;
@@ -38,23 +37,17 @@
    Card row
 ───────────────────────────────────────────── */
 .player-hand__cards {
+    box-sizing: border-box;
+    width: 100%;
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
+    align-content: center;
+    justify-content: center;
     gap: var(--player-hand-card-gap, 0.75rem);
-    overflow-x: auto;
-    margin-top: -1rem;
+    overflow: visible;
+    margin-top: 0;
     padding: 0.8rem;
-    scrollbar-width: none;
-}
-
-.player-hand__cards::-webkit-scrollbar {
-    height: 0.4rem;
-}
-
-.player-hand__cards::-webkit-scrollbar-thumb {
-    border-radius: 9999px;
-    background: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 38%, transparent);
 }
 
 .player-hand__empty {
@@ -63,20 +56,8 @@
 }
 
 /* ─────────────────────────────────────────────
-   Divider between hand cards and drawn card
-───────────────────────────────────────────── */
-.player-hand__divider {
-    width: 1px;
-    height: 56px;
-    background: rgba(255, 255, 255, 0.3);
-    align-self: center;
-    border-radius: 1px;
-    margin: 0 4px;
-}
-
-/* ─────────────────────────────────────────────
-   Drawn card wrapper — slight upward nudge to
-   visually distinguish it from the hand cards.
+   Drawn card wrapper keeps the optional standalone
+   card as one wrapping flex item.
 ───────────────────────────────────────────── */
 .player-hand__drawn-wrapper {
     display: flex;

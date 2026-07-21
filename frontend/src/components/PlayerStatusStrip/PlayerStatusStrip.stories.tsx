@@ -10,6 +10,8 @@ const PLAYERS: PlayerStatusStripPlayer[] = [
         isLocal: true,
         isConnected: true,
         cardCount: 12,
+        validWordCount: 1,
+        totalWordCount: 3,
     },
     {
         id: 'opponent',
@@ -17,6 +19,8 @@ const PLAYERS: PlayerStatusStripPlayer[] = [
         isLocal: false,
         isConnected: true,
         cardCount: 10,
+        validWordCount: 0,
+        totalWordCount: 3,
     },
 ]
 
@@ -50,10 +54,23 @@ export const LocalDrawTurn: Story = {
         const strip = canvas.getByRole('region', { name: 'Player status' })
         const status = within(strip)
 
-        await expect(status.getByText('You', { selector: '.player-status-strip__name' })).toBeInTheDocument()
+        await expect(status.getByText('Alice', { selector: '.player-status-strip__name-text' })).toBeInTheDocument()
+        await expect(status.getByText('You', { selector: '.player-status-strip__local-tag' })).toBeInTheDocument()
         await expect(status.getByText('Drawing…')).toBeInTheDocument()
         await expect(status.queryByText('Draw a card')).not.toBeInTheDocument()
-        await expect(status.getByText('12', { selector: '.player-status-strip__count-value' })).toBeInTheDocument()
+        await expect(status.queryByTitle('Cards in hand')).not.toBeInTheDocument()
+        await expect(status.getByLabelText('1 of 3 valid words')).toBeInTheDocument()
+        await expect(status.getByRole('article', {
+            name: /Alice, you, active player, Drawing…, 1 of 3 valid words/,
+        })).toBeInTheDocument()
+    },
+}
+
+/** The local arrange turn uses the same stable strip geometry. */
+export const LocalArrangeTurn: Story = {
+    args: { turnPhase: 'arrange' },
+    play: async ({ canvasElement }) => {
+        await expect(within(canvasElement).getByText('Building…')).toBeInTheDocument()
     },
 }
 
@@ -127,6 +144,17 @@ export const MobileStrip: Story = {
                 isLocal: false,
                 isConnected: true,
                 cardCount: 11,
+                validWordCount: 2,
+                totalWordCount: 3,
+            },
+            {
+                id: 'opponent-3',
+                name: 'Dominique Verylongplayername',
+                isLocal: false,
+                isConnected: true,
+                cardCount: 9,
+                validWordCount: 1,
+                totalWordCount: 3,
             },
         ],
     },
@@ -138,8 +166,8 @@ export const MobileStrip: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement)
 
-        await expect(canvas.getAllByRole('article')).toHaveLength(3)
+        await expect(canvas.getAllByRole('article')).toHaveLength(4)
         await expect(canvas.getAllByRole('article').map((card) => card.getAttribute('aria-label')?.split(',')[0]))
-            .toEqual(['Alice', 'Bob', 'Carol Jones'])
+            .toEqual(['Alice', 'Bob', 'Carol Jones', 'Dominique Verylongplayername'])
     },
 }

@@ -23,7 +23,6 @@ import { getGameBoardDropAction } from './dnd'
 import { getShortcutAction, shouldIgnoreShortcutTarget, type BoardSelection } from './shortcuts'
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal'
 import { PlayerStatusStrip, type PlayerStatusStripPlayer } from '../PlayerStatusStrip/PlayerStatusStrip'
-import { getGameBoardEmphasis } from './emphasis'
 
 export interface GameBoardLocalPlayer {
     id: string
@@ -88,8 +87,6 @@ export interface GameBoardProps {
     drawnCardId: string | null
     /** ID of the card that should flash before automatic discard. */
     willAutoDiscardCardId: string | null
-    /** Whether the active timer is within the urgent threshold. */
-    timerIsUrgent?: boolean
     /** Called when the local player draws from a pile. */
     onDraw?: (source: 'draw' | 'discard') => void
     /** Called when a card is placed into a word slot. */
@@ -118,7 +115,6 @@ export function GameBoard({
     handCount,
     drawnCardId,
     willAutoDiscardCardId,
-    timerIsUrgent = false,
     onDraw,
     onPlace,
     onUnplace,
@@ -138,12 +134,6 @@ export function GameBoard({
     const canEditBoard = localPlayer !== null && phase === 'playing' && (turn.phase === 'draw' || turn.phase === 'arrange')
     const canDiscard = isActiveTurn && phase === 'playing' && turn.phase === 'arrange'
     const isDrawPhase = isActiveTurn && turn.phase === 'draw'
-    const emphasis = getGameBoardEmphasis({
-        phase,
-        turnPhase: turn.phase,
-        isLocalTurn: isActiveTurn,
-        timerIsUrgent,
-    })
     const visibleSelectedBoardSlot = selectedHandCardId ? null : selectedBoardSlot
 
     useEffect(() => {
@@ -385,6 +375,8 @@ export function GameBoard({
                     isLocal: localPlayer.id === localPlayerId,
                     isConnected: localPlayer.isConnected,
                     cardCount: handCount,
+                    validWordCount: localPlayer.wordBoard.rows.filter((row) => row.isComplete).length,
+                    totalWordCount: localPlayer.wordBoard.rows.length,
                 },
             ]
             : []),
@@ -394,6 +386,8 @@ export function GameBoard({
             isLocal: opponent.id === localPlayerId,
             isConnected: opponent.isConnected,
             cardCount: opponent.handCount,
+            validWordCount: opponent.wordBoard.rows.filter((row) => row.isComplete).length,
+            totalWordCount: opponent.wordBoard.rows.length,
         })),
     ]
     const statusPlayersById = new Map(unorderedStatusPlayers.map((player) => [player.id, player]))
@@ -428,9 +422,12 @@ export function GameBoard({
                 data-game-phase={phase}
                 data-turn-phase={turn.phase}
                 data-turn-owner={isActiveTurn ? 'local' : 'opponent'}
-                data-urgent={timerIsUrgent || undefined}
             >
-                <div className="game-board__players" data-emphasis={emphasis.players}>
+                <div
+                    className="game-board__players"
+                    tabIndex={0}
+                    aria-label="Scrollable player statuses"
+                >
                     <PlayerStatusStrip
                         players={statusPlayers}
                         phase={phase}
@@ -444,7 +441,6 @@ export function GameBoard({
                     <section
                         className="game-board__board-section"
                         aria-labelledby="game-board-title"
-                        data-emphasis={emphasis.workspace}
                     >
                         <div className="game-board__board-header">
                             <div className="game-board__board-copy">
@@ -486,8 +482,7 @@ export function GameBoard({
 
                 <section
                     className="game-board__piles"
-                    aria-label="Card pile dock"
-                    data-emphasis={emphasis.piles}
+                    aria-label="Card piles"
                 >
                     <div className="game-board__pile">
                         <p className="game-board__pile-label">Draw pile</p>
@@ -501,7 +496,7 @@ export function GameBoard({
                 </section>
 
                 {localPlayer && (
-                    <footer className="game-board__hand-footer" data-emphasis={emphasis.hand}>
+                    <footer className="game-board__hand-footer">
                         <div className="game-board__hand-shell">
                             <div className="game-board__hand-content">
                                 <div className="game-board__hand-header">
@@ -531,11 +526,7 @@ export function GameBoard({
                     aria-label="Open keyboard shortcuts"
                     title="Keyboard shortcuts"
                 >
-                    <Icon name="help" className="game-board__shortcuts-btn-icon" />
-                    <span className="game-board__shortcut-keys" aria-hidden="true">
-                        <kbd>Shift</kbd>
-                        <kbd>?</kbd>
-                    </span>
+                    <Icon name="keyboard" className="game-board__shortcuts-btn-icon" />
                 </button>
             </div>
             <DragOverlay>

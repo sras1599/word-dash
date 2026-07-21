@@ -37,7 +37,6 @@ export function GameHud({
                 model.isUrgent && 'game-hud--urgent',
             )}
             aria-label="Turn guidance"
-            data-emphasis={model.isUrgent ? 'primary' : 'informational'}
         >
             <div className="game-hud__content">
                 <div className="game-hud__copy" aria-hidden="true">

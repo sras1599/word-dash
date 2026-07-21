@@ -14,16 +14,20 @@ The main gameplay screen for the Word. Set. Go. variant. All active game interac
 
 ```text
 ┌────────────────────────────────────────────────────────────┐
-│ Home/logo          owner · action · timer        utilities  │
-├────────────┬──────────────────────────────────┬─────────────┤
+│ Home/logo                                                   │
+└────────────────────────────────────────────────────────────┘
+               ┌────────────────────────────┐
+               │ owner · action · timer     │  floating HUD
+┌────────────┬─┴────────────────────────────┴─┬─────────────┐
 │ Players    │ Word-building workspace          │ Integrated  │
 │            │                                  │ pile dock   │
 ├────────────┴──────────────────────────────────┴─────────────┤
 │ Your Hand — compact, horizontally scrollable when needed   │
 └────────────────────────────────────────────────────────────┘
+                                              [keyboard help]
 ```
 
-The top bar is sticky. The hand is part of normal layout flow rather than a fixed overlay. Tablet/reflow uses a horizontal player strip, and mobile stacks the workspace and intact pile dock while retaining the compact HUD.
+The logo-only top bar is thin and fully transparent, leaving only the logo visible. The independently sticky HUD floats above the word workspace instead of reading as header content. The keyboard-help icon is fixed to the viewport's bottom-right safe area. The hand is part of normal layout flow rather than a fixed overlay. Tablet/reflow uses a horizontal player strip, and mobile stacks the workspace and intact pile dock while retaining the compact HUD.
 
 ---
 

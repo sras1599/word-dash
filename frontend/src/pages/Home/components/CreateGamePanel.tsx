@@ -24,6 +24,7 @@ export function CreateGamePanel({
                 <FormField id="create-name" label="Your name" error={nameError}>
                     <TextInput
                         id="create-name"
+                        data-bwignore="true"
                         invalid={!!nameError}
                         autoComplete="nickname"
                         aria-describedby={getFormFieldDescription('create-name', false, !!nameError)}

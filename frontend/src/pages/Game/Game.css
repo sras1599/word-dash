@@ -24,6 +24,7 @@
     --font-headline: 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Be Vietnam Pro', sans-serif;
     --page-game-card-width: 5rem;
+    --page-game-nav-height: 3.75rem;
     --page-game-nav-shadow: 0 10px 40px -15px color-mix(in srgb, var(--primary-container) 8%, transparent);
     --page-game-panel-shadow: 0 25px 50px -12px color-mix(in srgb, var(--on-surface) 16%, transparent);
     --page-game-card-shadow: 0 10px 15px -3px color-mix(in srgb, var(--on-surface) 12%, transparent), 0 4px 6px -2px color-mix(in srgb, var(--on-surface) 8%, transparent);
@@ -84,25 +85,37 @@
     position: sticky;
     z-index: 10;
     top: 0;
-    display: grid;
-    grid-template-columns: minmax(7rem, 1fr) minmax(18rem, 36rem) minmax(7rem, 1fr);
-    align-items: center;
-    gap: 1rem;
-    min-height: 4.75rem;
-    padding: 0.75rem 1.5rem;
-    background: color-mix(in srgb, var(--surface-container-lowest) 72%, transparent);
-    box-shadow: var(--page-game-nav-shadow);
-    backdrop-filter: blur(24px);
-}
-
-.page-game__nav-hud {
-    min-width: 0;
     display: flex;
-    justify-content: center;
+    align-items: center;
+    min-height: var(--page-game-nav-height);
+    padding: 0.35rem 1.5rem;
+    background: transparent;
 }
 
-.page-game__nav-utilities {
+.page-game__hud-layer {
+    position: sticky;
+    z-index: 9;
+    top: calc(var(--page-game-nav-height) + 0.75rem);
+    box-sizing: border-box;
+    width: min(100%, 96rem);
+    height: 0;
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+    pointer-events: none;
+}
+
+.page-game__hud-grid {
+    display: grid;
+    grid-template-columns: clamp(20rem, 21vw, 22rem) minmax(0, 1fr) 8rem;
+    gap: 1rem;
+}
+
+.page-game__hud {
+    grid-column: 2;
+    justify-self: center;
+    width: min(36rem, 100%);
     min-width: 0;
+    pointer-events: auto;
 }
 
 .page-game__overlay-actions {
@@ -133,7 +146,7 @@
 }
 
 .page-game__nav-logo {
-    width: clamp(6.6rem, 12vw, 8rem);
+    width: clamp(4.5rem, 8vw, 5.4rem);
 }
 
 .page-game__overlay-heading,
@@ -147,7 +160,7 @@
     z-index: 1;
     width: min(100%, 96rem);
     margin: 0 auto;
-    padding: 1.5rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom));
+    padding: 5rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 2.75rem;
@@ -293,29 +306,44 @@
 
 }
 
+@media (max-width: 74rem) {
+    .page-game__hud-grid {
+        grid-template-columns: minmax(0, 1fr) 8rem;
+    }
+
+    .page-game__hud {
+        grid-column: 1;
+    }
+}
+
 @media (max-width: 760px) {
     .page-game {
         --page-game-card-width: 4.2rem;
     }
 
     .page-game__nav {
-        grid-template-columns: auto minmax(0, 1fr);
-        padding: 0.65rem 1rem;
-    }
-
-    .page-game__nav-utilities {
-        display: none;
+        padding-inline: 1rem;
     }
 
     .page-game__nav-logo {
-        width: 5.4rem;
+        width: 4.6rem;
     }
 
     .page-game__main {
         gap: 2rem;
-        padding: 1rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
+        padding: 4.5rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
     }
 
+    .page-game__hud-layer {
+        padding-inline: 1rem;
+    }
+
+}
+
+@media (max-width: 50rem) {
+    .page-game__hud-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 @media (max-width: 560px) {
@@ -333,11 +361,10 @@
     }
 
     .page-game__nav {
-        gap: 0.6rem;
         padding-inline: 0.7rem;
     }
 
     .page-game__nav-logo {
-        width: 4.5rem;
+        width: 4.25rem;
     }
 }

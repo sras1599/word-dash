@@ -42,6 +42,17 @@ function wordBoardWithPlacedCard(variation: GameBoardVariation, card: CardData, 
     return board
 }
 
+function wordBoardWithCompletedRow(variation: GameBoardVariation, rowIndex = 0) {
+    const board = emptyWordBoard(variation)
+    board.rows[rowIndex].slots = board.rows[rowIndex].slots.map((slot, slotIndex) => ({
+        ...slot,
+        card: { id: `complete-${rowIndex}-${slotIndex}`, letter: LETTERS[slotIndex] },
+    }))
+    board.rows[rowIndex].isComplete = true
+    board.allComplete = board.rows.every((row) => row.isComplete)
+    return board
+}
+
 function keyboardShortcutBoard() {
     const board = emptyWordBoard(VARIATION_345)
     board.rows[0].slots[0].card = { id: 'placed-c', letter: 'C' }
@@ -146,16 +157,23 @@ export const ProductionDrawParity: Story = {
         const row = canvasElement.querySelector<HTMLElement>('.word-row')
         const slot = canvasElement.querySelector<HTMLElement>('.word-slot--empty')
         const hand = canvasElement.querySelector<HTMLElement>('.player-hand__cards')
+        const shortcutsButton = canvasElement.querySelector<HTMLElement>('.game-board__shortcuts-btn')
 
-        if (!label || !row || !slot || !hand) throw new Error('Expected production GameBoard elements')
+        if (!label || !row || !slot || !hand || !shortcutsButton) {
+            throw new Error('Expected production GameBoard elements')
+        }
 
         await expect(getComputedStyle(label).display).toBe('none')
         const rootFontSize = Number.parseFloat(getComputedStyle(canvasElement.ownerDocument.documentElement).fontSize)
         await expect(Number.parseFloat(getComputedStyle(row).padding)).toBeCloseTo(rootFontSize * 0.2, 4)
         await expect(getComputedStyle(slot).borderStyle).toBe('dashed')
         await expect(getComputedStyle(slot).borderWidth).toBe('2px')
-        await expect(getComputedStyle(hand).overflowX).toBe('auto')
-        await expect(getComputedStyle(hand).scrollbarWidth).toBe('thin')
+        await expect(getComputedStyle(hand).overflowX).toBe('visible')
+        await expect(getComputedStyle(hand).flexWrap).toBe('wrap')
+        await expect(getComputedStyle(hand).justifyContent).toBe('center')
+        await expect(getComputedStyle(shortcutsButton).position).toBe('fixed')
+        await expect(shortcutsButton.querySelector('kbd')).toBeNull()
+        await expect(shortcutsButton.querySelector('svg')).not.toBeNull()
     },
 }
 
@@ -318,6 +336,54 @@ export const ServerPlayerOrder: Story = {
         const playerCards = Array.from(canvasElement.querySelectorAll<HTMLElement>('.player-status-strip__card'))
         await expect(playerCards.map((card) => card.getAttribute('aria-label')?.split(',')[0]))
             .toEqual(['Bob', 'Alice', 'Carol'])
+    },
+}
+
+/** Four server-ordered players expose different authoritative word progress. */
+export const FourPlayersWithProgress: Story = {
+    args: {
+        playerOrder: ['opp-2', 'local', 'opp-1', 'opp-3'],
+        localPlayer: {
+            ...makeLocalPlayer(VARIATION_345, 'local'),
+            wordBoard: wordBoardWithCompletedRow(VARIATION_345),
+        },
+        opponents: [
+            makeOpponent(VARIATION_345, 'opp-1', 'Bob'),
+            makeOpponent(VARIATION_345, 'opp-2', 'Carol', {
+                wordBoard: wordBoardWithCompletedRow(VARIATION_345),
+            }),
+            makeOpponent(VARIATION_345, 'opp-3', 'Dominique Verylongplayername'),
+        ],
+    },
+    play: async ({ canvasElement }) => {
+        const playerCards = Array.from(canvasElement.querySelectorAll<HTMLElement>('.player-status-strip__card'))
+        await expect(playerCards.map((card) => card.getAttribute('aria-label')?.split(',')[0]))
+            .toEqual(['Carol', 'Alice', 'Bob', 'Dominique Verylongplayername'])
+        await expect(playerCards[0]).toHaveAccessibleName(/1 of 3 valid words/)
+        await expect(playerCards[1]).toHaveAccessibleName(/1 of 3 valid words/)
+    },
+}
+
+/** Medium production composition moves players above the workspace. */
+export const MediumProductionLayout: Story = {
+    ...FourPlayersWithProgress,
+    render: productionRender,
+    parameters: { viewport: { defaultViewport: 'tablet' } },
+}
+
+/** Narrow production composition keeps players scrollable and piles horizontal. */
+export const MobileProductionLayout: Story = {
+    ...FourPlayersWithProgress,
+    render: productionRender,
+    parameters: { viewport: { defaultViewport: 'mobile1' } },
+}
+
+/** Finished state retains all player statistics while identifying the winner. */
+export const FinishedWithWinner: Story = {
+    args: {
+        phase: 'finished',
+        winnerId: 'opp-1',
+        turn: { currentPlayerId: 'opp-1', phase: 'idle' },
     },
 }
 

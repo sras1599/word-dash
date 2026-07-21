@@ -5,7 +5,6 @@
 ───────────────────────────────────────────── */
 .card-pile {
     --pile-width: 80px;
-    --pile-teal: var(--secondary, #406925);
     --pile-radius: calc(var(--pile-width) * 0.09);
     --pile-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.14);
 
@@ -15,6 +14,8 @@
     gap: 8px;
     cursor: default;
     outline: none;
+    border-radius: 0.75rem;
+    transition: background-color 150ms ease, box-shadow 150ms ease;
 }
 
 /* ─────────────────────────────────────────────
@@ -77,14 +78,6 @@
 }
 
 /* ─────────────────────────────────────────────
-   Modifier: active (local player's draw phase)
-   Subtle static cue signals the player to act.
-───────────────────────────────────────────── */
-.card-pile--active .card-pile__stack {
-    --card-box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary, #406925) 48%, transparent);
-}
-
-/* ─────────────────────────────────────────────
    Modifier: interactive (clickable pile)
 ───────────────────────────────────────────── */
 .card-pile--interactive {
@@ -97,6 +90,7 @@
 
 .card-pile--interactive:hover .card-pile__stack {
     --card-composition-transform: translateY(-2px);
+    --card-box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--on-surface, #1b1b1b) 48%, transparent);
 }
 
 .card-pile--interactive .card-pile__stack,
@@ -105,7 +99,7 @@
 }
 
 .card-pile--interactive:focus-visible {
-    outline: 3px solid var(--pile-teal);
+    outline: 3px solid var(--primary, #bb000e);
     outline-offset: 4px;
     border-radius: 0.65rem;
 }
@@ -115,7 +109,11 @@
    Discard pile is eligible to receive a card.
 ───────────────────────────────────────────── */
 .card-pile--drop-target .card-pile__stack {
-    --card-box-shadow: 0 0 0 2px var(--pile-teal);
+    --card-box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--primary, #bb000e) 46%, transparent);
+}
+
+.card-pile--drop-target {
+    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 34%, transparent);
 }
 
 /* ─────────────────────────────────────────────
@@ -123,5 +121,29 @@
    Green ring confirms valid drop target.
 ───────────────────────────────────────────── */
 .card-pile--drag-over .card-pile__stack {
-    --card-box-shadow: 0 0 0 3px var(--pile-teal), var(--pile-shadow);
+    --card-composition-transform: translateY(-3px) scale(1.02);
+    --card-box-shadow: 0 14px 26px -10px color-mix(in srgb, var(--primary, #bb000e) 60%, transparent);
+}
+
+.card-pile--drag-over {
+    background: color-mix(in srgb, var(--primary-fixed, #ffdad5) 62%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary, #bb000e) 42%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card-pile {
+        transition: none;
+    }
+}
+
+@media (forced-colors: active) {
+    .card-pile--drop-target,
+    .card-pile--drag-over {
+        outline: 2px dashed Highlight;
+        outline-offset: 3px;
+    }
+
+    .card-pile--interactive:focus-visible {
+        outline-color: Highlight;
+    }
 }

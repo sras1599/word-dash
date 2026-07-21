@@ -249,18 +249,21 @@ export function GameSimulationHarness({
                 </aside>
             )}
 
-            <GameTopBar
-                onHome={() => undefined}
-                hud={(
-                    <GameHud
-                        gameState={gameState}
-                        localPlayerId={LOCAL_PLAYER_ID}
-                        timeRemainingMs={clockSnapshot.remainingMs}
-                        turnDurationMs={clockSnapshot.durationMs}
-                        timerIsUrgent={timerUrgent}
-                    />
-                )}
-            />
+            <GameTopBar onHome={() => undefined} />
+
+            <div className="page-game__hud-layer">
+                <div className="page-game__hud-grid">
+                    <div className="page-game__hud">
+                        <GameHud
+                            gameState={gameState}
+                            localPlayerId={LOCAL_PLAYER_ID}
+                            timeRemainingMs={clockSnapshot.remainingMs}
+                            turnDurationMs={clockSnapshot.durationMs}
+                            timerIsUrgent={timerUrgent}
+                        />
+                    </div>
+                </div>
+            </div>
 
             <main className="page-game__main game-simulation__board">
                 <GameBoard
@@ -284,7 +287,6 @@ export function GameSimulationHarness({
                             ? drawnCardId
                             : null
                     }
-                    timerIsUrgent={timerUrgent}
                     onDraw={(source) => update((current) => drawCard(current, source))}
                     onPlace={(cardId, rowIndex, slotIndex) =>
                         update((current) => placeCard(current, cardId, rowIndex, slotIndex))}

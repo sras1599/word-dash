@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { fn } from 'storybook/test'
+import { expect, fn } from 'storybook/test'
 
 import { PlayerHand } from './PlayerHand'
 
@@ -48,8 +48,14 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+const fixedWidthRender = (width: string): Story['render'] => (args) => (
+    <div style={{ width, maxWidth: 'calc(100vw - 2rem)' }}>
+        <PlayerHand {...args} />
+    </div>
+)
+
 /** Normal hand displayed during an opponent's turn — cards are not draggable. */
-export const Default: Story = {}
+export const Default: Story = { render: fixedWidthRender('36rem') }
 
 /** Hand during the local player's arrange phase — cards are draggable. */
 export const Draggable: Story = {
@@ -67,6 +73,21 @@ export const EmptyDropTarget: Story = {
     },
 }
 
+/** The complete wrapping region shows feedback when a board card is dragged over it. */
+export const DragOverHand: Story = {
+    args: {
+        isDraggable: true,
+        onDropOnHand: fn(),
+    },
+    render: fixedWidthRender('24rem'),
+    play: async ({ canvasElement }) => {
+        const hand = canvasElement.querySelector<HTMLElement>('.player-hand--drop-target')
+        if (!hand) throw new Error('Expected a hand drop target')
+        hand.classList.add('player-hand--drag-over')
+        await expect(hand).toHaveClass('player-hand--drag-over')
+    },
+}
+
 /** A card in the hand is selected for keyboard navigation. */
 export const CardSelected: Story = {
     args: {
@@ -80,6 +101,7 @@ export const WithDrawnCard: Story = {
         drawnCard: DRAWN_CARD,
         isDraggable: true,
     },
+    render: fixedWidthRender('30rem'),
 }
 
 /** Drawn card is selected for keyboard navigation. */
@@ -112,4 +134,24 @@ export const LargeHand: Story = {
         ],
         isDraggable: true,
     },
+    render: fixedWidthRender('24rem'),
+}
+
+/** An incomplete second row remains centered in a fixed-width tray. */
+export const TwoRowsIncompleteFinalRow: Story = {
+    args: { hand: [...SAMPLE_HAND, DRAWN_CARD, { id: 'card-o', letter: 'O' }] },
+    render: fixedWidthRender('22rem'),
+}
+
+/** A narrow tray deliberately produces three centered rows. */
+export const ThreeRows: Story = {
+    args: { hand: [...SAMPLE_HAND, DRAWN_CARD, { id: 'card-o', letter: 'O' }] },
+    render: fixedWidthRender('14rem'),
+}
+
+/** Mobile-sized container wraps without introducing hand-level horizontal scrolling. */
+export const NarrowMobile: Story = {
+    args: { hand: [...SAMPLE_HAND, DRAWN_CARD, { id: 'card-o', letter: 'O' }] },
+    render: fixedWidthRender('18rem'),
+    parameters: { viewport: { defaultViewport: 'mobile1' } },
 }

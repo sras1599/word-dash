@@ -121,18 +121,21 @@ export function Game() {
             floatingLetterClassName="page-game__floating-letter"
             floatingLetters={FLOATING_LETTERS}
         >
-            <GameTopBar
-                onHome={handleHome}
-                hud={(
-                    <GameHud
-                        gameState={gameState}
-                        localPlayerId={localPlayerId}
-                        timeRemainingMs={timeRemainingMs}
-                        turnDurationMs={turnDurationMs}
-                        timerIsUrgent={timerIsUrgent}
-                    />
-                )}
-            />
+            <GameTopBar onHome={handleHome} />
+
+            <div className="page-game__hud-layer">
+                <div className="page-game__hud-grid">
+                    <div className="page-game__hud">
+                        <GameHud
+                            gameState={gameState}
+                            localPlayerId={localPlayerId}
+                            timeRemainingMs={timeRemainingMs}
+                            turnDurationMs={turnDurationMs}
+                            timerIsUrgent={timerIsUrgent}
+                        />
+                    </div>
+                </div>
+            </div>
 
             {rejectionFeedback && (
                 <div className="page-game__rejection" role="alert">
@@ -155,7 +158,6 @@ export function Game() {
                     handCount={handCount}
                     drawnCardId={drawnCardId}
                     willAutoDiscardCardId={isArrangePhase && timerIsUrgent ? drawnCardId : null}
-                    timerIsUrgent={timerIsUrgent}
                     onDraw={draw}
                     onPlace={place}
                     onUnplace={unplace}

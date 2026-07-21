@@ -40,7 +40,7 @@ Drift risks:
 
 ### Spacing And Layout
 
-Repeated spacing appears around page gutters (`1rem` to `1.5rem`), panel padding (`1.25rem`, `1.5rem`, `2rem`), control gaps (`0.5rem`, `0.75rem`, `1rem`), and large screen composition gaps (`2rem` to `2.75rem`). Home uses a centered first screen. Lobby uses a two-column settings/players grid that stacks at narrower widths. Game uses a sticky top command HUD, reserved player and pile columns, and a compact in-flow hand.
+Repeated spacing appears around page gutters (`1rem` to `1.5rem`), panel padding (`1.25rem`, `1.5rem`, `2rem`), control gaps (`0.5rem`, `0.75rem`, `1rem`), and large screen composition gaps (`2rem` to `2.75rem`). Home uses a centered first screen. Lobby uses a two-column settings/players grid that stacks at narrower widths. Game uses a thin logo bar, an independently sticky floating command HUD, reserved player and pile columns, and a compact in-flow hand.
 
 Drift risks:
 

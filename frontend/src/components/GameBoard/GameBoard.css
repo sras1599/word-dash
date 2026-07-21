@@ -1,7 +1,8 @@
 .game-board {
     --word-slot-width: var(--page-game-card-width, 5rem);
-    --game-board-player-column: 11rem;
-    --game-board-pile-column: 7.5rem;
+    --game-board-player-column: clamp(20rem, 21vw, 22rem);
+    --game-board-pile-card-width: clamp(5.75rem, 6vw, 6.5rem);
+    --game-board-pile-column: 8rem;
 
     position: relative;
     width: 100%;
@@ -9,16 +10,15 @@
     grid-template-columns: var(--game-board-player-column) minmax(0, 1fr) var(--game-board-pile-column);
     grid-template-areas:
         "players workspace piles"
-        "hand hand hand"
-        "help help help";
+        "hand hand hand";
     align-items: start;
-    gap: 0.85rem 0;
+    gap: 0.85rem 1rem;
 }
 
 .game-board__players {
     grid-area: players;
     min-width: 0;
-    margin-right: 0.85rem;
+    align-self: center;
 }
 
 .game-board__players .player-status-strip {
@@ -27,21 +27,10 @@
     gap: 0.65rem;
 }
 
-.game-board__board-section,
-.game-board__piles,
-.game-board__hand-shell,
-.game-board__players {
-    transition: background-color 190ms ease-out, box-shadow 190ms ease-out, opacity 190ms ease-out;
-}
-
-.game-board [data-emphasis="primary"] {
-    box-shadow:
-        inset 0 0 0 2px color-mix(in srgb, var(--secondary, #406925) 48%, transparent),
-        0 18px 40px -32px color-mix(in srgb, var(--secondary, #406925) 48%, transparent);
-}
-
-.game-board [data-emphasis="unavailable"] {
-    opacity: 0.72;
+.game-board__players:focus-visible {
+    outline: 3px solid var(--primary, #bb000e);
+    outline-offset: 3px;
+    border-radius: 1rem;
 }
 
 .game-board__board-section {
@@ -54,7 +43,7 @@
     gap: 0.85rem;
     padding: 1rem;
     border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 58%, transparent);
-    border-radius: 1.5rem 0.35rem 0.35rem 1.5rem;
+    border-radius: 1.5rem;
     background: color-mix(in srgb, var(--surface-container-lowest, #fff) 70%, transparent);
 }
 
@@ -133,9 +122,16 @@
 }
 
 .game-board__shortcuts-btn {
-    grid-area: help;
-    justify-self: end;
-    background: color-mix(in srgb, var(--surface-container-lowest, #fff) 78%, transparent);
+    position: fixed;
+    z-index: 15;
+    right: max(1.25rem, env(safe-area-inset-right));
+    bottom: max(1.25rem, env(safe-area-inset-bottom));
+    width: 3rem;
+    min-height: 3rem;
+    padding: 0;
+    background: color-mix(in srgb, var(--surface-container-lowest, #fff) 90%, transparent);
+    box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--on-surface, #1b1b1b) 30%, transparent);
+    backdrop-filter: blur(16px);
 }
 
 .game-board__clear-board-btn:hover,
@@ -152,8 +148,8 @@
 
 .game-board__clear-icon,
 .game-board__shortcuts-btn-icon {
-    width: 1rem;
-    height: 1rem;
+    width: 1.2rem;
+    height: 1.2rem;
     flex: 0 0 auto;
 }
 
@@ -165,13 +161,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
-    margin-left: -1px;
-    padding: 0.85rem 0.4rem;
-    border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 58%, transparent);
-    border-left-color: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 84%, transparent);
-    border-radius: 0 1.5rem 1.5rem 0;
-    background: color-mix(in srgb, var(--surface-container-lowest, #fff) 42%, transparent);
+    gap: 1.25rem;
+    padding: 0.5rem 0;
+    background: transparent;
 }
 
 .game-board__pile {
@@ -183,7 +175,7 @@
 }
 
 .game-board__pile .card-pile {
-    --pile-width: var(--page-game-card-width, 5rem);
+    --pile-width: var(--game-board-pile-card-width);
 }
 
 .game-board__pile-label {
@@ -198,12 +190,12 @@
     grid-area: hand;
     min-width: 0;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .game-board__hand-shell {
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 56%, transparent);
     border-radius: 1.25rem;
     background: color-mix(in srgb, var(--surface-container-low, #f6f3f2) 84%, transparent);
@@ -231,19 +223,19 @@
     box-sizing: border-box;
     width: 100%;
     max-width: 100%;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: center;
     margin-top: 0;
-    padding: 0.45rem 0.35rem 0.55rem;
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--on-surface-variant, #5e3f3b) 38%, transparent) transparent;
+    overflow: visible;
+    padding: 0.7rem 0.55rem 0.8rem;
 }
 
 .game-board__hand-footer .player-hand {
     width: 100%;
     min-width: 0;
     align-items: stretch;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .game-board__drag-overlay {
@@ -450,39 +442,46 @@
 }
 
 @keyframes game-board-shortcuts-enter {
-    from { opacity: 0; transform: translateY(0.5rem) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(0.5rem) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
-@media (max-width: 72rem) {
+@media (max-width: 74rem) {
     .game-board {
         grid-template-columns: minmax(0, 1fr) var(--game-board-pile-column);
         grid-template-areas:
             "players players"
             "workspace piles"
-            "hand hand"
-            "help help";
-    }
-
-    .game-board__players {
-        margin-right: 0;
+            "hand hand";
     }
 
     .game-board__players .player-status-strip {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+    }
+
+    .game-board__players {
+        align-self: stretch;
     }
 }
 
 @media (max-width: 50rem) {
     .game-board {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-areas: "players" "workspace" "piles" "hand" "help";
+        grid-template-areas: "players" "workspace" "piles" "hand";
     }
 
     .game-board__players {
         overflow-x: auto;
-        padding: 0.2rem;
+        padding: 0.25rem;
+        scrollbar-width: thin;
     }
 
     .game-board__players .player-status-strip {
@@ -493,12 +492,8 @@
     }
 
     .game-board__players .player-status-strip__card {
-        width: min(13rem, 76vw);
-        flex: 1 0 auto;
-    }
-
-    .game-board__board-section {
-        border-radius: 1.25rem;
+        width: min(20rem, 86vw);
+        flex: 0 0 auto;
     }
 
     .game-board__piles {
@@ -506,9 +501,7 @@
         flex-direction: row;
         justify-content: center;
         gap: clamp(1.5rem, 12vw, 4rem);
-        margin-left: 0;
-        border-left-color: color-mix(in srgb, var(--surface-container-highest, #e5e2e1) 58%, transparent);
-        border-radius: 1.25rem;
+        padding-block: 0.5rem;
     }
 
     .game-board__pile-label {
@@ -557,23 +550,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .game-board__board-section,
-    .game-board__piles,
-    .game-board__hand-shell,
-    .game-board__players,
     .game-board__shortcuts-modal {
         transition-duration: 0.001ms;
         animation: none;
-    }
-}
-
-@media (forced-colors: active) {
-    .game-board [data-emphasis="primary"] {
-        outline: 3px solid Highlight;
-        outline-offset: 2px;
-    }
-
-    .game-board [data-emphasis="unavailable"] {
-        opacity: 1;
     }
 }

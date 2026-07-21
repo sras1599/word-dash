@@ -88,22 +88,19 @@ export function PlayerHand({
                 ))}
 
                 {drawnCard && (
-                    <>
-                        <div className="player-hand__divider" aria-hidden="true" />
-                        <div className="player-hand__drawn-wrapper">
-                            <Card
-                                card={drawnCard}
-                                draggable={isDraggable}
-                                isDrawn
-                                willAutoDiscard={willAutoDiscardCardId === drawnCard.id}
-                                selected={selectedCardId === drawnCard.id}
-                                onClick={() => handleCardClick(drawnCard.id)}
-                                onDragStart={onDragStart}
-                                onDragEnd={onDragEnd}
-                                dragData={{ source: 'hand', cardId: drawnCard.id }}
-                            />
-                        </div>
-                    </>
+                    <div className="player-hand__drawn-wrapper">
+                        <Card
+                            card={drawnCard}
+                            draggable={isDraggable}
+                            isDrawn
+                            willAutoDiscard={willAutoDiscardCardId === drawnCard.id}
+                            selected={selectedCardId === drawnCard.id}
+                            onClick={() => handleCardClick(drawnCard.id)}
+                            onDragStart={onDragStart}
+                            onDragEnd={onDragEnd}
+                            dragData={{ source: 'hand', cardId: drawnCard.id }}
+                        />
+                    </div>
                 )}
             </div>
 
