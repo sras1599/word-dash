@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/sras1599/word-dash/compare/v1.1.0...v1.2.0) (2026-07-21)
+
+
+### Features
+
+* **ui:** complete layout redesign on game page ([9e8d394](https://github.com/sras1599/word-dash/commit/9e8d3942556756acd292cce2449cd473ee7e5ef9))
+
 ## [1.1.0](https://github.com/sras1599/word-dash/compare/v1.0.0...v1.1.0) (2026-07-20)
 
 
