@@ -51,7 +51,6 @@ type Player struct {
     Hand        []Card // normal hand only - does not include DrawnCard
     WordBoard   WordBoard // empty in waiting rooms; initialized when the game starts
     BoardRevision uint64 // persisted monotonic revision for board/hand mutation snapshots
-    IsReady     bool
     IsConnected bool
 }
 

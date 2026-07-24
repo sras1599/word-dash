@@ -18,7 +18,6 @@ export type LobbyMachineEvent =
     | { type: 'CONNECTION_ERROR' }
     | { type: 'LOBBY_STATE'; state: LobbyState }
     | { type: 'PLAYER_JOINED'; player: LobbyPlayer }
-    | { type: 'PLAYER_READY'; playerId: string; isReady: boolean }
     | { type: 'PLAYER_DISCONNECTED'; playerId: string; hostPlayerId: string }
     | ({ type: 'SETTINGS_CHANGED' } & LobbySettingsPayload)
 
@@ -28,12 +27,6 @@ function reduceLobbyEvent(context: LobbyMachineContext, event: LobbyMachineEvent
             return lobbyReducer(context.lobby, { type: 'lobby/state', state: event.state })
         case 'PLAYER_JOINED':
             return lobbyReducer(context.lobby, { type: 'lobby/playerJoined', player: event.player })
-        case 'PLAYER_READY':
-            return lobbyReducer(context.lobby, {
-                type: 'lobby/playerReady',
-                playerId: event.playerId,
-                isReady: event.isReady,
-            })
         case 'PLAYER_DISCONNECTED':
             return lobbyReducer(context.lobby, {
                 type: 'lobby/playerDisconnected',
@@ -95,7 +88,6 @@ export const lobbyMachine = setup({
                 CONNECTION_ERROR: 'connectionError',
                 LOBBY_STATE: { actions: 'reduceLobby' },
                 PLAYER_JOINED: { actions: 'reduceLobby' },
-                PLAYER_READY: { actions: 'reduceLobby' },
                 PLAYER_DISCONNECTED: { actions: 'reduceLobby' },
                 SETTINGS_CHANGED: { actions: 'reduceLobby' },
             },

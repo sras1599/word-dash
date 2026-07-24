@@ -8,7 +8,7 @@ const lobbyState: LobbyState = {
     hostPlayerId: 'p1',
     variation: { wordLengths: [3, 4, 5] },
     turnDurationMs: 90_000,
-    players: [{ id: 'p1', name: 'Host', isReady: false, isConnected: true }],
+    players: [{ id: 'p1', name: 'Host', isConnected: true }],
 }
 
 describe('lobbyMachine', () => {

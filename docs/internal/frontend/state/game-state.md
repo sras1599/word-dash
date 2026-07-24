@@ -57,13 +57,12 @@ type Player = {
   hand: Card[];          // cards in hand (normal hand size = sum of variation.wordLengths)
   wordBoard: WordBoard;  // this player's word arrangement
   boardRevision: number; // monotonic server revision for board/hand reconciliation
-  isReady: boolean;      // in lobby: has clicked "Ready"
   isConnected: boolean;  // whether the player's WebSocket is currently active
 };
 
 /** Overall game lifecycle phase */
 type GamePhase =
-  | 'waiting'   // in lobby, not all players ready
+  | 'waiting'   // in lobby, before the host starts
   | 'playing'   // game in progress
   | 'finished'; // a winner has been declared
 

@@ -11,7 +11,6 @@ function createGameState(phase: GameState['phase'] = 'playing', turnPhase: GameS
             {
                 id: 'p1',
                 name: 'Host',
-                isReady: true,
                 isConnected: true,
                 handCount: 1,
                 hand: [{ id: 'c1', letter: 'A' }],

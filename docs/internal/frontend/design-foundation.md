@@ -60,9 +60,9 @@ Drift risks:
 
 ### Controls And States
 
-Repeated control patterns include primary and secondary action buttons, ghost/text buttons, icon-only timer controls, form labels and text inputs, segmented variation choices, player-ready buttons, copy buttons, error states, and modal/state-screen actions.
+Repeated control patterns include primary and secondary action buttons, ghost/text buttons, icon-only timer controls, form labels and text inputs, segmented variation choices, copy buttons, error states, and modal/state-screen actions.
 
-Current states include disabled, active/selected, hover, pressed, focus-visible, loading text, invalid fields, ready/not-ready/disconnected player states, urgent timers, valid/invalid word rows, and read-only game states.
+Current states include disabled, active/selected, hover, pressed, focus-visible, loading text, invalid fields, connected/disconnected player states, urgent timers, valid/invalid word rows, and read-only game states.
 
 Drift risks:
 
@@ -101,14 +101,14 @@ These components may consume `--wd-*` tokens where it improves consistency, but 
 Route-level layouts and workflows stay as page compositions:
 
 - Home hero, create flow, and join flow.
-- Lobby settings, players, room code, readiness, and bottom navigation.
+- Lobby settings, players, room code, start flow, and bottom navigation.
 - Game loading/error states, game chrome, board layout, overlays, and game-over flow.
 
 Pages can compose primitives, but page-specific flow and routing behavior should remain in page modules.
 
 ## Migration Map
 
-- `Button`: Home create/join/submit actions, Lobby copy/start/ready/apply/timer controls, Game state and overlay actions.
+- `Button`: Home create/join/submit actions, Lobby copy/start/apply/timer controls, Game state and overlay actions.
 - `IconButton`: Lobby timer increment/decrement controls and future compact chrome actions.
 - `Panel`: Home create/join form shell, Lobby settings and players containers, Lobby timer container, Game loading/error state panels, dialog surfaces.
 - `Dialog`: Game-over dialog and future tutorial/help/keyboard-shortcut shells.
@@ -123,7 +123,7 @@ Adoption should start with Home forms and actions, continue through Lobby settin
 - Physical card visuals, card back patterning, pile depth, and selected/drawn card styling.
 - Drag-and-drop board logic, slot validation, and card placement affordances.
 - Game HUD layout model and timer copy.
-- Lobby player avatar colors and player-card readiness presentation.
+- Lobby player avatar colors and connection-state presentation.
 - Page-specific floating letter backgrounds and decorative hero details.
 - Storybook simulation controls, which serve test harness needs more than app UI needs.
 

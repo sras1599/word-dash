@@ -49,7 +49,6 @@ type cardJSON struct {
 type lobbyPlayerJSON struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
-	IsReady     bool   `json:"isReady"`
 	IsConnected bool   `json:"isConnected"`
 }
 
@@ -63,14 +62,6 @@ type lobbyStatePayload struct {
 
 type lobbyPlayerJoinedPayload struct {
 	Player lobbyPlayerJSON `json:"player"`
-}
-
-type lobbyPlayerReadyPayload struct {
-	PlayerID string `json:"playerId"`
-}
-
-type lobbyPlayerUnreadyPayload struct {
-	PlayerID string `json:"playerId"`
 }
 
 type lobbyPlayerDisconnectedPayload struct {
@@ -113,7 +104,6 @@ type gamePlayerJSON struct {
 	Hand          []cardJSON    `json:"hand,omitempty"`
 	WordBoard     wordBoardJSON `json:"wordBoard"`
 	BoardRevision uint64        `json:"boardRevision"`
-	IsReady       bool          `json:"isReady"`
 	IsConnected   bool          `json:"isConnected"`
 }
 

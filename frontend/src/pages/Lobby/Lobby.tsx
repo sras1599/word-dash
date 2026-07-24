@@ -41,7 +41,7 @@ export function Lobby() {
     const { roomCode } = useParams<{ roomCode: string }>()
     const navigate = useNavigate()
     const localPlayerId = session.getPlayerId() ?? ''
-    const { lobby, pageStatus, sendReady, startGame, updateSettings } = useLobbyRoom(roomCode, localPlayerId)
+    const { lobby, pageStatus, startGame, updateSettings } = useLobbyRoom(roomCode, localPlayerId)
     useDocumentTitle('Lobby')
 
     const [customInput, setCustomInput] = useState('')
@@ -52,9 +52,7 @@ export function Lobby() {
     const copyStatusTimerRef = useRef<number | null>(null)
 
     const isHost = lobby !== null && lobby.hostPlayerId === localPlayerId
-    const localPlayer = lobby?.players.find((player) => player.id === localPlayerId) ?? null
-    const isLocalReady = localPlayer?.isReady ?? false
-    const canStart = lobby !== null && lobby.players.length >= 2 && lobby.players.every((player) => player.isReady)
+    const canStart = lobby !== null && lobby.players.length >= 2
     const activeVariationTab =
         activeVariationTabOverride ?? getVariationDifficulty(lobby?.variation.wordLengths ?? [3, 4, 5])
     const turnDurationFields = turnDurationDraft ?? turnDurationMsToFields(lobby?.turnDurationMs ?? 90_000)
@@ -75,10 +73,6 @@ export function Lobby() {
             setCopyStatus('idle')
             copyStatusTimerRef.current = null
         }, COPY_STATUS_RESET_MS)
-    }
-
-    function handleReady() {
-        sendReady(isLocalReady)
     }
 
     function handlePresetClick(wordLengths: number[]) {
@@ -243,8 +237,6 @@ export function Lobby() {
                         hostPlayerId={lobby.hostPlayerId}
                         localPlayerId={localPlayerId}
                         maxPlayers={MAX_PLAYERS}
-                        isLocalReady={isLocalReady}
-                        onReadyToggle={handleReady}
                     />
                 </div>
             </main>

@@ -4,7 +4,6 @@ import type { LobbyPlayer, LobbyState, Variation } from '../../../lib/gameTypes'
 export type LobbyAction =
     | { type: 'lobby/state'; state: LobbyState | null }
     | { type: 'lobby/playerJoined'; player: LobbyPlayer }
-    | { type: 'lobby/playerReady'; playerId: string; isReady: boolean }
     | { type: 'lobby/playerDisconnected'; playerId: string; hostPlayerId: string }
     | { type: 'lobby/settingsChanged'; variation: Variation; turnDurationMs: number }
 
@@ -21,11 +20,6 @@ export function lobbyReducer(state: LobbyState | null, action: LobbyAction): Lob
                 } else {
                     draft.players[existingIndex] = action.player
                 }
-                break
-            }
-            case 'lobby/playerReady': {
-                const player = draft.players.find((p) => p.id === action.playerId)
-                if (player) player.isReady = action.isReady
                 break
             }
             case 'lobby/playerDisconnected':

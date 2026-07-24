@@ -34,7 +34,6 @@ func TestEncodeDecodePreservesGameBoardDiscardAndWinner(t *testing.T) {
 					AllComplete: true,
 				},
 				BoardRevision: 7,
-				IsReady:       true,
 				IsConnected:   true,
 			},
 		},
@@ -96,5 +95,19 @@ func TestEncodeDecodePreservesGameBoardDiscardAndWinner(t *testing.T) {
 	}
 	if decoded.Turn.EndsAtUnixMs != 123_456 || decoded.Turn.Sequence != 9 {
 		t.Fatalf("decoded turn deadline/sequence = %d/%d, want 123456/9", decoded.Turn.EndsAtUnixMs, decoded.Turn.Sequence)
+	}
+}
+
+func TestDecodeGameStateIgnoresLegacyReadinessField(t *testing.T) {
+	decoded, err := decodeGameState([]byte(`{
+		"roomCode":"ROOM1",
+		"players":[{"ID":"player-1","Name":"Player 1","IsReady":true,"IsConnected":true}],
+		"phase":"waiting"
+	}`))
+	if err != nil {
+		t.Fatalf("decode legacy state: %v", err)
+	}
+	if len(decoded.Players) != 1 || decoded.Players[0].ID != "player-1" || !decoded.Players[0].IsConnected {
+		t.Fatalf("decoded legacy players = %#v", decoded.Players)
 	}
 }

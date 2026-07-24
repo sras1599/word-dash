@@ -23,7 +23,7 @@ This directory contains the frontend design specification for the WordIt! web ap
 | Route             | Page        | Description                                 |
 |-------------------|-------------|---------------------------------------------|
 | `/`               | Home        | Landing page — create or join a game        |
-| `/lobby/:roomCode`| Lobby       | Pre-game room — configure, ready up, start  |
+| `/lobby/:roomCode`| Lobby       | Pre-game room — configure, gather players, start  |
 | `/game/:roomCode` | Game        | Main gameplay view (includes win overlay)   |
 
 See `pages/` for individual page specs.

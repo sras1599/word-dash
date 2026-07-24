@@ -167,7 +167,6 @@
 }
 
 .page-lobby__bottom-nav-icon,
-.page-lobby__player-check-icon,
 .page-lobby__timer-icon,
 .page-lobby__timer-step-icon,
 .page-lobby__preset-check-icon,
@@ -304,8 +303,8 @@
 .page-lobby__custom-input:disabled,
 .page-lobby__timer-step:disabled,
 .page-lobby__timer-input:disabled,
-.page-lobby__start-btn:disabled,
-.page-lobby__ready-btn:disabled {
+.page-lobby__timer-input:disabled+.page-lobby__timer-separator,
+.page-lobby__start-btn:disabled {
     cursor: not-allowed;
     opacity: 0.56;
 }
@@ -370,7 +369,6 @@
 }
 
 .page-lobby__preset-button-check,
-.page-lobby__player-check,
 .page-lobby__timer-icon-wrap,
 .page-lobby__player-empty-photo {
     display: inline-flex;
@@ -379,8 +377,7 @@
     flex-shrink: 0;
 }
 
-.page-lobby__preset-button-check,
-.page-lobby__player-check {
+.page-lobby__preset-button-check {
     width: 1.3rem;
     height: 1.3rem;
     border-radius: var(--radius-full);
@@ -433,7 +430,6 @@
 }
 
 .page-lobby__custom-apply-btn,
-.page-lobby__ready-btn,
 .page-lobby__start-btn {
     border: 0;
     padding: 0.95rem 1.45rem;
@@ -582,17 +578,12 @@
     border-top: 1px solid color-mix(in srgb, var(--outline-variant) 32%, transparent);
 }
 
-.page-lobby__ready-btn,
 .page-lobby__start-btn {
     border-radius: var(--radius-full);
     font-size: 0.95rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-}
-
-.page-lobby__ready-btn {
-    min-width: 9rem;
 }
 
 .page-lobby__start-btn {
@@ -659,10 +650,6 @@
     background: var(--surface-container-lowest);
     border-radius: 1.75rem;
     box-shadow: 0 10px 30px color-mix(in srgb, var(--on-surface) 4%, transparent);
-}
-
-.page-lobby__player-card--ready {
-    border-bottom: 4px solid var(--secondary);
 }
 
 .page-lobby__player-card--current {
@@ -740,12 +727,8 @@
     font-weight: 800;
 }
 
-.page-lobby__player-status--ready {
+.page-lobby__player-status--connected {
     color: var(--secondary);
-}
-
-.page-lobby__player-status--not-ready {
-    color: var(--primary);
 }
 
 .page-lobby__player-status--disconnected {
@@ -805,12 +788,8 @@
     border: 2px solid var(--surface-container-lowest);
 }
 
-.page-lobby__player-dot--ready {
+.page-lobby__player-dot--connected {
     background: var(--secondary);
-}
-
-.page-lobby__player-dot--not-ready {
-    background: var(--primary);
 }
 
 .page-lobby__player-dot--disconnected {
@@ -820,18 +799,6 @@
 .page-lobby__player-dot--current {
     width: 1.2rem;
     height: 1.2rem;
-}
-
-.page-lobby__player-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.page-lobby__player-check {
-    width: 2rem;
-    height: 2rem;
-    background: var(--secondary);
 }
 
 .page-lobby__player-empty {
@@ -1020,10 +987,6 @@
     .page-lobby__player-card {
         flex-direction: column;
         align-items: stretch;
-    }
-
-    .page-lobby__player-actions {
-        justify-content: flex-end;
     }
 
     .page-lobby__bottom-nav {

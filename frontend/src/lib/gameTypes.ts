@@ -23,7 +23,6 @@ export type Turn = {
 export type BasePlayer = {
     id: string
     name: string
-    isReady: boolean
     isConnected: boolean
 }
 

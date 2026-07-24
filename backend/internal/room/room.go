@@ -14,7 +14,7 @@ var (
 	ErrPlayerDuplicate    = errors.New("player already in room")
 	ErrNotHost            = errors.New("only the host can start the game")
 	ErrGameAlreadyStarted = errors.New("game already in progress")
-	ErrNotAllReady        = errors.New("not all players are ready")
+	ErrNotEnoughPlayers   = errors.New("at least 2 players are required to start")
 	ErrPlayerNotFound     = errors.New("player not found")
 )
 
@@ -67,7 +67,6 @@ type Player struct {
 	Hand          []Card
 	WordBoard     WordBoard
 	BoardRevision uint64
-	IsReady       bool
 	IsConnected   bool
 }
 
@@ -105,6 +104,20 @@ func (state *GameState) GetPlayer(playerId string) (*Player, error) {
 	return nil, ErrPlayerNotFound
 }
 
+// ValidateStart checks whether playerID may transition a waiting room into play.
+func ValidateStart(state *GameState, playerID string) error {
+	if len(state.Players) == 0 || state.Players[0].ID != playerID {
+		return ErrNotHost
+	}
+	if state.Phase != GamePhaseWaiting {
+		return ErrGameAlreadyStarted
+	}
+	if len(state.Players) < 2 {
+		return ErrNotEnoughPlayers
+	}
+	return nil
+}
+
 // Store defines the persistence contract used by room orchestration and the
 // HTTP/WebSocket layers. Concrete implementations live in infrastructure
 // packages. A nil error from Get means the returned state is non-nil.
@@ -114,8 +127,6 @@ type Store interface {
 	UpdateGameState(roomCode string, mutateFn func(*GameState) error) (GameState, error)
 	MarkPlayerConnected(roomCode, playerID string) (GameState, error)
 	MarkPlayerDisconnected(roomCode, playerID string) (GameState, error)
-	MarkPlayerReady(roomCode, playerID string) (GameState, error)
-	MarkPlayerUnready(roomCode, playerID string) (GameState, error)
 	RemovePlayer(roomCode, playerID string) (GameState, bool, error)
 	StartGame(roomCode, playerID string, drawPile []Card, endsAtUnixMs int64) (GameState, error)
 	NextTurn(roomCode string, endsAtUnixMs int64) (GameState, error)
@@ -147,7 +158,6 @@ func Create(store Store, hostName string) (roomCode string, playerID string, err
 		ID:          playerID,
 		Name:        hostName,
 		Hand:        []Card{},
-		IsReady:     false,
 		IsConnected: false,
 	}
 
@@ -202,7 +212,6 @@ func Join(store Store, roomCode, playerName string) (string, error) {
 		ID:          playerID,
 		Name:        playerName,
 		Hand:        []Card{},
-		IsReady:     false,
 		IsConnected: false,
 	}
 	state.Players = append(state.Players, player)

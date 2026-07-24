@@ -101,7 +101,7 @@ export function LobbySettingsPanel({
                             Start →
                         </Button>
                         <p className="page-lobby__start-note">
-                            {canStart ? 'Everyone is ready.' : 'Need at least 2 ready players to start.'}
+                            {canStart ? 'Ready to begin.' : 'Need at least 2 players to start.'}
                         </p>
                     </div>
                 )}

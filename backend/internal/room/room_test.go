@@ -1,6 +1,7 @@
 package room_test
 
 import (
+	"errors"
 	"slices"
 	"testing"
 
@@ -48,14 +49,53 @@ func TestCreateInitializesRoomWithDefaults(t *testing.T) {
 	if host.Name != "Alice" {
 		t.Fatalf("host name = %q, want Alice", host.Name)
 	}
-	if host.IsReady {
-		t.Fatal("host should not start ready")
-	}
 	if host.IsConnected {
 		t.Fatal("host should not start connected")
 	}
 	if len(host.WordBoard.Rows) != 0 {
 		t.Fatalf("word board rows = %d, want 0 before game start", len(host.WordBoard.Rows))
+	}
+}
+
+func TestValidateStart(t *testing.T) {
+	tests := []struct {
+		name     string
+		state    room.GameState
+		playerID string
+		wantErr  error
+	}{
+		{
+			name:     "two players may start without readiness state",
+			state:    room.GameState{Players: []room.Player{{ID: "host"}, {ID: "guest"}}, Phase: room.GamePhaseWaiting},
+			playerID: "host",
+		},
+		{
+			name:     "one player is not enough",
+			state:    room.GameState{Players: []room.Player{{ID: "host"}}, Phase: room.GamePhaseWaiting},
+			playerID: "host",
+			wantErr:  room.ErrNotEnoughPlayers,
+		},
+		{
+			name:     "non-host cannot start",
+			state:    room.GameState{Players: []room.Player{{ID: "host"}, {ID: "guest"}}, Phase: room.GamePhaseWaiting},
+			playerID: "guest",
+			wantErr:  room.ErrNotHost,
+		},
+		{
+			name:     "started game cannot start again",
+			state:    room.GameState{Players: []room.Player{{ID: "host"}, {ID: "guest"}}, Phase: room.GamePhasePlaying},
+			playerID: "host",
+			wantErr:  room.ErrGameAlreadyStarted,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := room.ValidateStart(&tt.state, tt.playerID)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("ValidateStart() error = %v, want %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 

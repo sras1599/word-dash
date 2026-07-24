@@ -24,7 +24,6 @@ type LobbyState = {
     players: {
         id: string
         name: string
-        isReady: boolean
         isConnected: boolean
     }[]
 }
@@ -98,17 +97,22 @@ export const HostWaiting: Story = {
                     sendState(client, {
                         ...BASE_STATE,
                         players: [
-                            { id: 'p1', name: 'Alice', isReady: false, isConnected: true },
+                            { id: 'p1', name: 'Alice', isConnected: true },
                         ],
                     })
                 }),
             ],
         },
     },
+    play: async ({ canvas }) => {
+        await expect(await canvas.findByRole('button', { name: 'Start →' })).toBeDisabled()
+        await expect(await canvas.findByText('Need at least 2 players to start.')).toBeInTheDocument()
+        await expect(canvas.queryByRole('button', { name: /^ready$/i })).not.toBeInTheDocument()
+    },
 }
 
-/** Host view — two players joined, neither ready yet. */
-export const TwoPlayersNotReady: Story = {
+/** Host view — two players joined, so Start is enabled. */
+export const TwoPlayers: Story = {
     parameters: {
         msw: {
             handlers: [
@@ -117,18 +121,23 @@ export const TwoPlayersNotReady: Story = {
                     sendState(client, {
                         ...BASE_STATE,
                         players: [
-                            { id: 'p1', name: 'Alice', isReady: false, isConnected: true },
-                            { id: 'p2', name: 'Bob', isReady: false, isConnected: true },
+                            { id: 'p1', name: 'Alice', isConnected: true },
+                            { id: 'p2', name: 'Bob', isConnected: true },
                         ],
                     })
                 }),
             ],
         },
     },
+    play: async ({ canvas }) => {
+        await expect(await canvas.findByRole('button', { name: 'Start →' })).toBeEnabled()
+        await expect(await canvas.findByText('Ready to begin.')).toBeInTheDocument()
+        await expect(canvas.queryByText('Not Ready')).not.toBeInTheDocument()
+    },
 }
 
-/** Host view — two players, one ready. Start button still disabled. */
-export const PartiallyReady: Story = {
+/** Full room — four players. */
+export const FullRoom: Story = {
     parameters: {
         msw: {
             handlers: [
@@ -137,51 +146,10 @@ export const PartiallyReady: Story = {
                     sendState(client, {
                         ...BASE_STATE,
                         players: [
-                            { id: 'p1', name: 'Alice', isReady: true, isConnected: true },
-                            { id: 'p2', name: 'Bob', isReady: false, isConnected: true },
-                        ],
-                    })
-                }),
-            ],
-        },
-    },
-}
-
-/** Host view — all players ready; Start button is enabled. */
-export const AllReady: Story = {
-    parameters: {
-        msw: {
-            handlers: [
-                roomExists,
-                lobbyWs.addEventListener('connection', ({ client }) => {
-                    sendState(client, {
-                        ...BASE_STATE,
-                        players: [
-                            { id: 'p1', name: 'Alice', isReady: true, isConnected: true },
-                            { id: 'p2', name: 'Bob', isReady: true, isConnected: true },
-                            { id: 'p3', name: 'Carol', isReady: true, isConnected: true },
-                        ],
-                    })
-                }),
-            ],
-        },
-    },
-}
-
-/** Full room — four players, all ready. */
-export const FullRoomAllReady: Story = {
-    parameters: {
-        msw: {
-            handlers: [
-                roomExists,
-                lobbyWs.addEventListener('connection', ({ client }) => {
-                    sendState(client, {
-                        ...BASE_STATE,
-                        players: [
-                            { id: 'p1', name: 'Alice', isReady: true, isConnected: true },
-                            { id: 'p2', name: 'Bob', isReady: true, isConnected: true },
-                            { id: 'p3', name: 'Carol', isReady: true, isConnected: true },
-                            { id: 'p4', name: 'Dave', isReady: true, isConnected: true },
+                            { id: 'p1', name: 'Alice', isConnected: true },
+                            { id: 'p2', name: 'Bob', isConnected: true },
+                            { id: 'p3', name: 'Carol', isConnected: true },
+                            { id: 'p4', name: 'Dave', isConnected: true },
                         ],
                     })
                 }),
@@ -206,13 +174,18 @@ export const GuestView: Story = {
                     sendState(client, {
                         ...BASE_STATE,
                         players: [
-                            { id: 'p1', name: 'Alice', isReady: true, isConnected: true },
-                            { id: 'p2', name: 'Bob', isReady: false, isConnected: true },
+                            { id: 'p1', name: 'Alice', isConnected: true },
+                            { id: 'p2', name: 'Bob', isConnected: true },
                         ],
                     })
                 }),
             ],
         },
+    },
+    play: async ({ canvas }) => {
+        await canvas.findByText('You')
+        await expect(canvas.queryByRole('button', { name: 'Start →' })).not.toBeInTheDocument()
+        await expect(canvas.queryByRole('button', { name: /^ready$/i })).not.toBeInTheDocument()
     },
 }
 
@@ -226,47 +199,13 @@ export const PlayerDisconnected: Story = {
                     sendState(client, {
                         ...BASE_STATE,
                         players: [
-                            { id: 'p1', name: 'Alice', isReady: false, isConnected: true },
-                            { id: 'p2', name: 'Bob', isReady: false, isConnected: false },
+                            { id: 'p1', name: 'Alice', isConnected: true },
+                            { id: 'p2', name: 'Bob', isConnected: false },
                         ],
                     })
                 }),
             ],
         },
-    },
-}
-
-/** Ready button interaction — click Ready and see the server echo back the ready event. */
-export const ReadyButtonInteraction: Story = {
-    parameters: {
-        msw: {
-            handlers: [
-                roomExists,
-                lobbyWs.addEventListener('connection', ({ client }) => {
-                    sendState(client, {
-                        ...BASE_STATE,
-                        players: [
-                            { id: 'p1', name: 'Alice', isReady: false, isConnected: true },
-                            { id: 'p2', name: 'Bob', isReady: false, isConnected: true },
-                        ],
-                    })
-
-                    client.addEventListener('message', (event) => {
-                        const msg = JSON.parse(event.data as string) as { event: string }
-                        if (msg.event === 'lobby:player_ready') {
-                            client.send(JSON.stringify({
-                                event: 'lobby:player_ready',
-                                payload: { playerId: 'p1' },
-                            }))
-                        }
-                    })
-                }),
-            ],
-        },
-    },
-    play: async ({ canvas, userEvent }) => {
-        const readyBtn = await canvas.findByRole('button', { name: /^ready$/i })
-        await userEvent.click(readyBtn)
     },
 }
 

@@ -7,8 +7,6 @@ type eventHandler func(*Hub, *client, string, string, json.RawMessage)
 
 var eventHandlers = map[string]eventHandler{
 	"lobby:join":             routeLobbyJoin,
-	"lobby:player_ready":     routeLobbyPlayerReady,
-	"lobby:player_unready":   routeLobbyPlayerUnready,
 	"lobby:settings_changed": routeLobbySettingsChanged,
 	"lobby:start_game":       routeLobbyStartGame,
 	"game:player_connected":  routeGamePlayerConnected,
@@ -69,16 +67,6 @@ func (h *Hub) dispatchMessage(c *client, roomCode, playerID string, msg incoming
 // routeLobbyJoin adapts the lobby join event to the shared handler signature.
 func routeLobbyJoin(h *Hub, c *client, roomCode, playerID string, _ json.RawMessage) {
 	h.handleLobbyJoin(c, roomCode, playerID)
-}
-
-// routeLobbyPlayerReady adapts the ready event to the shared handler signature.
-func routeLobbyPlayerReady(h *Hub, c *client, roomCode, playerID string, _ json.RawMessage) {
-	h.handleLobbyPlayerReady(c, roomCode, playerID)
-}
-
-// routeLobbyPlayerUnready adapts the unready event to the shared handler signature.
-func routeLobbyPlayerUnready(h *Hub, c *client, roomCode, playerID string, _ json.RawMessage) {
-	h.handleLobbyPlayerUnready(c, roomCode, playerID)
 }
 
 // routeLobbySettingsChanged forwards lobby settings payloads to the handler.

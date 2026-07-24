@@ -1,5 +1,5 @@
 import { Icon } from '../../../components/Icon/Icon'
-import { Button, Panel } from '../../../components/ui'
+import { Panel } from '../../../components/ui'
 import { cx } from '../../../lib/cx'
 import type { LobbyPlayer } from '../../../lib/gameTypes'
 
@@ -15,8 +15,6 @@ type PlayerSlotsProps = {
     hostPlayerId: string
     localPlayerId: string
     maxPlayers: number
-    isLocalReady: boolean
-    onReadyToggle: () => void
 }
 
 export function PlayerSlots({
@@ -24,8 +22,6 @@ export function PlayerSlots({
     hostPlayerId,
     localPlayerId,
     maxPlayers,
-    isLocalReady,
-    onReadyToggle,
 }: PlayerSlotsProps) {
     const playerSlots = Array.from({ length: maxPlayers }, (_, i) => players[i] ?? null)
 
@@ -49,8 +45,6 @@ export function PlayerSlots({
                             toneClass={PLAYER_TONE_CLASSES[index % PLAYER_TONE_CLASSES.length]}
                             isCurrentPlayer={player?.id === localPlayerId}
                             isHost={player?.id === hostPlayerId}
-                            isLocalReady={isLocalReady}
-                            onReadyToggle={onReadyToggle}
                         />
                     ))}
                 </div>
@@ -64,20 +58,16 @@ type PlayerSlotProps = {
     toneClass: string
     isCurrentPlayer: boolean
     isHost: boolean
-    isLocalReady: boolean
-    onReadyToggle: () => void
 }
 
-function PlayerSlot({ player, toneClass, isCurrentPlayer, isHost, isLocalReady, onReadyToggle }: PlayerSlotProps) {
-    const isReadyPlayer = player?.isReady ?? false
-    const statusText = player ? (!player.isConnected ? 'Disconnected' : player.isReady ? 'Ready' : 'Not Ready') : ''
+function PlayerSlot({ player, toneClass, isCurrentPlayer, isHost }: PlayerSlotProps) {
+    const statusText = player ? (player.isConnected ? 'Connected' : 'Disconnected') : ''
 
     return (
         <article
             className={cx(
                 'page-lobby__player-card',
                 player === null && 'page-lobby__player-card--empty',
-                player !== null && isReadyPlayer && 'page-lobby__player-card--ready',
                 player !== null && isCurrentPlayer && 'page-lobby__player-card--current',
                 player !== null && !player.isConnected && 'page-lobby__player-card--disconnected',
             )}
@@ -95,9 +85,7 @@ function PlayerSlot({ player, toneClass, isCurrentPlayer, isHost, isLocalReady, 
                                     'page-lobby__player-dot',
                                     !player.isConnected
                                         ? 'page-lobby__player-dot--disconnected'
-                                        : player.isReady
-                                          ? 'page-lobby__player-dot--ready'
-                                          : 'page-lobby__player-dot--not-ready',
+                                        : 'page-lobby__player-dot--connected',
                                     isCurrentPlayer && 'page-lobby__player-dot--current',
                                 )}
                                 aria-hidden="true"
@@ -113,8 +101,7 @@ function PlayerSlot({ player, toneClass, isCurrentPlayer, isHost, isLocalReady, 
                             <span
                                 className={cx(
                                     'page-lobby__player-status',
-                                    player.isConnected && player.isReady && 'page-lobby__player-status--ready',
-                                    player.isConnected && !player.isReady && 'page-lobby__player-status--not-ready',
+                                    player.isConnected && 'page-lobby__player-status--connected',
                                     !player.isConnected && 'page-lobby__player-status--disconnected',
                                 )}
                             >
@@ -123,22 +110,6 @@ function PlayerSlot({ player, toneClass, isCurrentPlayer, isHost, isLocalReady, 
                         </div>
                     </div>
 
-                    <div className="page-lobby__player-actions">
-                        {isCurrentPlayer ? (
-                            <Button
-                                variant={isLocalReady ? 'primary' : 'secondary'}
-                                className="page-lobby__ready-btn"
-                                type="button"
-                                onClick={onReadyToggle}
-                            >
-                                {isLocalReady ? 'Not Ready' : 'Ready'}
-                            </Button>
-                        ) : player.isReady ? (
-                            <span className="page-lobby__player-check" aria-label="Ready">
-                                <Icon name="check" className="page-lobby__player-check-icon" />
-                            </span>
-                        ) : null}
-                    </div>
                 </>
             ) : (
                 <div className="page-lobby__player-empty">

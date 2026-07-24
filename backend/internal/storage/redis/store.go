@@ -217,30 +217,11 @@ func (s *Store) MarkPlayerConnected(roomCode, playerID string) (room.GameState, 
 	})
 }
 
-// MarkPlayerDisconnected sets the given player's IsConnected flag to false,
-// clears their ready state, and returns a shallow copy of the updated room.
+// MarkPlayerDisconnected sets the given player's IsConnected flag to false and
+// returns a shallow copy of the updated room.
 func (s *Store) MarkPlayerDisconnected(roomCode, playerID string) (room.GameState, error) {
 	return s.mutatePlayer(roomCode, playerID, func(p *room.Player) error {
 		p.IsConnected = false
-		p.IsReady = false
-		return nil
-	})
-}
-
-// MarkPlayerReady sets the given player's IsReady flag to true and returns a
-// shallow copy of the game state after the update.
-func (s *Store) MarkPlayerReady(roomCode, playerID string) (room.GameState, error) {
-	return s.mutatePlayer(roomCode, playerID, func(p *room.Player) error {
-		p.IsReady = true
-		return nil
-	})
-}
-
-// MarkPlayerUnready sets the given player's IsReady flag to false and returns
-// a shallow copy of the updated room state.
-func (s *Store) MarkPlayerUnready(roomCode, playerID string) (room.GameState, error) {
-	return s.mutatePlayer(roomCode, playerID, func(p *room.Player) error {
-		p.IsReady = false
 		return nil
 	})
 }
@@ -325,16 +306,8 @@ func (s *Store) RemovePlayer(roomCode, playerID string) (room.GameState, bool, e
 // the front. Returns the updated game state after initialization.
 func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card, endsAtUnixMs int64) (room.GameState, error) {
 	return s.mutate(roomCode, func(state *room.GameState) (room.GameState, bool, error) {
-		if len(state.Players) == 0 || state.Players[0].ID != playerID {
-			return room.GameState{}, false, room.ErrNotHost
-		}
-		if state.Phase != room.GamePhaseWaiting {
-			return room.GameState{}, false, room.ErrGameAlreadyStarted
-		}
-		for _, p := range state.Players {
-			if !p.IsReady {
-				return room.GameState{}, false, room.ErrNotAllReady
-			}
+		if err := room.ValidateStart(state, playerID); err != nil {
+			return room.GameState{}, false, err
 		}
 
 		// create the word boards for every player

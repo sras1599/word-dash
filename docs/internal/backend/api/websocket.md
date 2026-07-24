@@ -33,18 +33,14 @@ All messages in both directions are JSON objects with the shape:
 |---------------------------|-----------|------------------------------|
 | `lobby:join`              | No        | _(none)_                     |
 | `lobby:settings_changed`  | Yes       | `{ "variation": Variation, "turnDurationMs": number }` |
-| `lobby:player_ready`      | No        | _(none)_                     |
-| `lobby:player_unready`    | No        | _(none)_                     |
 | `lobby:start_game`        | Yes       | _(none)_                     |
 
 ### Server -> Client
 
 | Event                     | Payload |
 |---------------------------|---------|
-| `lobby:state`             | `{ roomCode, hostPlayerId, variation, turnDurationMs, players: [{ id, name, isReady, isConnected }] }` |
-| `lobby:player_joined`     | `{ player: { id, name, isReady, isConnected } }` |
-| `lobby:player_ready`      | `{ playerId }` |
-| `lobby:player_unready`    | `{ playerId }` |
+| `lobby:state`             | `{ roomCode, hostPlayerId, variation, turnDurationMs, players: [{ id, name, isConnected }] }` |
+| `lobby:player_joined`     | `{ player: { id, name, isConnected } }` |
 | `lobby:player_disconnected` | `{ playerId, hostPlayerId }` |
 | `lobby:settings_changed`  | `{ variation, turnDurationMs }` |
 | `lobby:game_starting`     | `{ roomCode }` |
@@ -105,3 +101,4 @@ Each accepted board-mutation request increments the acting player's persisted mo
 | `INVALID_SLOT`  | `rowIndex` or `slotIndex` is out of range |
 | `TURN_EXPIRED`  | The turn deadline passed before the gameplay mutation was accepted |
 | `ROOM_NOT_FOUND`| WS upgrade attempted with an unknown `roomCode` |
+| `NOT_ENOUGH_PLAYERS` | Host attempted to start with fewer than two lobby players |

@@ -27,7 +27,6 @@ function makeWinner(words: string[], name = 'Raspreet'): GamePlayer {
     return {
         id: 'winner',
         name,
-        isReady: true,
         isConnected: true,
         handCount: 0,
         hand: [],

@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Pre-game room where the host configures the game and all players ready up before the game starts. The host is the player who created the room.
+Pre-game room where players gather and the host configures and starts the game. The host is the player who created the room.
 
 ---
 
@@ -26,13 +26,13 @@ Pre-game room where the host configures the game and all players ready up before
 │                                                  │
 │  Players (2–4)                                   │
 │  ┌───────────────────┐  ┌───────────────────┐    │
-│  │ 👤 Alice  (Host) ✓│  │ 👤 Bob           ✓│    │
+│  │ 👤 Alice  (Host)  │  │ 👤 Bob            │    │
 │  └───────────────────┘  └───────────────────┘    │
 │  ┌───────────────────┐  ┌───────────────────┐    │
 │  │ 👤 [Waiting...]  │  │ 👤 [Waiting...]  │    │
 │  └───────────────────┘  └───────────────────┘    │
 │                                                  │
-│  [Ready]                    (host only) [Start →]│
+│                           (host only) [Start →]│
 │                                                  │
 └─────────────────────────────────────────────────┘
 ```
@@ -46,9 +46,8 @@ Pre-game room where the host configures the game and all players ready up before
 | Page load                                | Validates that the room exists, then opens a WebSocket connection and receives the current lobby state.              |
 | Room does not exist                      | Shows a room-not-found message with a button that returns the user to the home page.                                 |
 | Host changes variation                   | Sends `lobby:variation_changed` event. All clients receive the update and re-render the settings panel.              |
-| Any player clicks **Ready**              | Sends `lobby:player_ready`. The player's card in the players list shows a ready indicator. Button becomes disabled.  |
 | Click **Copy Room Code**                 | Copies the room code to clipboard.                                                                                   |
-| Host clicks **Start** (enabled when all players ready, ≥2 players) | Sends `lobby:start_game`. All clients navigate to `/game/:roomCode`.                       |
+| Host clicks **Start** (enabled with ≥2 players) | Sends `lobby:start_game`. All clients navigate to `/game/:roomCode`.                                  |
 | A new player joins                       | Their card appears in an empty player slot in real time.                                                             |
 | A player disconnects in lobby            | Their slot shows as disconnected; they can rejoin before the game starts.                                            |
 
@@ -63,12 +62,12 @@ type LobbyState = {
   roomCode: string;
   hostPlayerId: string;
   variation: Variation;       // see state/game-state.md
-  players: Pick<Player, 'id' | 'name' | 'isReady' | 'isConnected'>[];
+  players: Pick<Player, 'id' | 'name' | 'isConnected'>[];
 };
 ```
 
 - `localPlayerId` — from session context, to know if this client is the host.
-- The **Start** button is only active when `players.length >= 2` and `players.every(p => p.isReady)`.
+- The **Start** button is only active when `players.length >= 2`; the server enforces the same minimum.
 
 ---
 

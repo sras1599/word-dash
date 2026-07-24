@@ -46,20 +46,12 @@ Optional manual re-sync event. The server already sends `lobby:state` automatica
 }
 ```
 
-#### `lobby:player_ready`
-```ts
-// No payload
-```
-
-#### `lobby:player_unready`
-```ts
-// No payload
-```
-
 #### `lobby:start_game` *(host only)*
 ```ts
 // No payload
 ```
+
+The server accepts this event only when at least two players are in the lobby.
 
 ---
 
@@ -76,7 +68,6 @@ Sent on connect and after any full lobby resync.
   players: Array<{
     id: string;
     name: string;
-    isReady: boolean;
     isConnected: boolean;
   }>;
 }
@@ -89,23 +80,8 @@ Sent to the other connected lobby members when a player joins.
   player: {
     id: string;
     name: string;
-    isReady: boolean;
     isConnected: boolean;
   };
-}
-```
-
-#### `lobby:player_ready`
-```ts
-{
-  playerId: string;
-}
-```
-
-#### `lobby:player_unready`
-```ts
-{
-  playerId: string;
 }
 ```
 

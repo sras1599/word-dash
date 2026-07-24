@@ -1,6 +1,8 @@
 package ws
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,6 +56,30 @@ func TestClearEventsAreRegistered(t *testing.T) {
 	}
 	if eventHandlers["game:clear_board"] == nil {
 		t.Fatal("game:clear_board handler is not registered")
+	}
+}
+
+func TestLobbyStartContractHasNoReadinessEvents(t *testing.T) {
+	if eventHandlers["lobby:start_game"] == nil {
+		t.Fatal("lobby:start_game handler is not registered")
+	}
+	if eventHandlers["lobby:player_ready"] != nil || eventHandlers["lobby:player_unready"] != nil {
+		t.Fatal("legacy readiness handlers should not be registered")
+	}
+	if got := roomErrorCode(room.ErrNotEnoughPlayers); got != "NOT_ENOUGH_PLAYERS" {
+		t.Fatalf("minimum-player error code = %q, want NOT_ENOUGH_PLAYERS", got)
+	}
+
+	payload := buildLobbyStatePayload(&room.GameState{
+		RoomCode: "ROOM1",
+		Players:  []room.Player{{ID: "host", Name: "Host", IsConnected: true}},
+	})
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal lobby payload: %v", err)
+	}
+	if strings.Contains(string(encoded), "isReady") {
+		t.Fatalf("lobby payload still contains readiness: %s", encoded)
 	}
 }
 

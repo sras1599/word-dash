@@ -65,14 +65,6 @@ export function useLobbyRoom(roomCode: string | undefined, localPlayerId: string
             const { player } = payload as { player: LobbyPlayer }
             send({ type: 'PLAYER_JOINED', player })
         })
-        ws.on('lobby:player_ready', (payload) => {
-            const { playerId } = payload as { playerId: string }
-            send({ type: 'PLAYER_READY', playerId, isReady: true })
-        })
-        ws.on('lobby:player_unready', (payload) => {
-            const { playerId } = payload as { playerId: string }
-            send({ type: 'PLAYER_READY', playerId, isReady: false })
-        })
         ws.on('lobby:player_disconnected', (payload) => {
             const { playerId, hostPlayerId } = payload as {
                 playerId: string
@@ -97,10 +89,6 @@ export function useLobbyRoom(roomCode: string | undefined, localPlayerId: string
         }
     }, [localPlayerId, navigate, roomCode, send, validateRoomQuery.isSuccess])
 
-    function sendReady(isReady: boolean) {
-        wsRef.current?.send(isReady ? 'lobby:player_unready' : 'lobby:player_ready')
-    }
-
     function startGame() {
         wsRef.current?.send('lobby:start_game')
     }
@@ -113,7 +101,6 @@ export function useLobbyRoom(roomCode: string | undefined, localPlayerId: string
     return {
         lobby: snapshot.context.lobby,
         pageStatus: getLobbyPageStatus(snapshot.value),
-        sendReady,
         startGame,
         updateSettings,
     }

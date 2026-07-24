@@ -23,7 +23,6 @@ function createGameState({
             {
                 id: 'p1',
                 name: 'Host',
-                isReady: true,
                 isConnected: true,
                 handCount: hand.length,
                 hand,
@@ -44,7 +43,6 @@ function createGameState({
             {
                 id: 'p2',
                 name: 'Guest',
-                isReady: true,
                 isConnected: true,
                 handCount: 2,
                 wordBoard: { allComplete: false, rows: [] },

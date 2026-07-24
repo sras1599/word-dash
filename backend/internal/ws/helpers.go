@@ -30,7 +30,7 @@ var roomErrorCodes = []errorCodeMapping{
 	{room.ErrNotHost, "FORBIDDEN"},
 	{room.ErrGameAlreadyStarted, "INVALID_PHASE"},
 	{room.ErrRoomNotFound, "ROOM_NOT_FOUND"},
-	{room.ErrNotAllReady, "NOT_ALL_READY"},
+	{room.ErrNotEnoughPlayers, "NOT_ENOUGH_PLAYERS"},
 }
 
 // sendErr sends a standardised game:error message to the client.
@@ -161,7 +161,6 @@ func buildGamePlayerJSON(p room.Player, includeHand bool) gamePlayerJSON {
 		Hand:          maybeHandJSON(p.Hand, includeHand),
 		WordBoard:     buildWordBoardJSON(p.WordBoard),
 		BoardRevision: p.BoardRevision,
-		IsReady:       p.IsReady,
 		IsConnected:   p.IsConnected,
 	}
 }
@@ -269,7 +268,6 @@ func buildLobbyPlayerJSON(p room.Player) lobbyPlayerJSON {
 	return lobbyPlayerJSON{
 		ID:          p.ID,
 		Name:        p.Name,
-		IsReady:     p.IsReady,
 		IsConnected: p.IsConnected,
 	}
 }

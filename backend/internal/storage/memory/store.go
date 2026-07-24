@@ -77,36 +77,13 @@ func (s *Store) MarkPlayerConnected(roomCode, playerID string) (room.GameState, 
 	})
 }
 
-// MarkPlayerDisconnected sets the given player's IsConnected flag to false,
-// clears their ready state, and returns a shallow copy of the updated room.
+// MarkPlayerDisconnected sets the given player's IsConnected flag to false and
+// returns a shallow copy of the updated room.
 func (s *Store) MarkPlayerDisconnected(roomCode, playerID string) (room.GameState, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.mutatePlayer(roomCode, playerID, func(p *room.Player) error {
 		p.IsConnected = false
-		p.IsReady = false
-		return nil
-	})
-}
-
-// MarkPlayerReady sets the given player's IsReady flag to true and returns a
-// shallow copy of the game state after the update.
-func (s *Store) MarkPlayerReady(roomCode, playerID string) (room.GameState, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.mutatePlayer(roomCode, playerID, func(p *room.Player) error {
-		p.IsReady = true
-		return nil
-	})
-}
-
-// MarkPlayerUnready sets the given player's IsReady flag to false and returns
-// a shallow copy of the updated room state.
-func (s *Store) MarkPlayerUnready(roomCode, playerID string) (room.GameState, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.mutatePlayer(roomCode, playerID, func(p *room.Player) error {
-		p.IsReady = false
 		return nil
 	})
 }
@@ -153,16 +130,8 @@ func (s *Store) StartGame(roomCode, playerID string, drawPile []room.Card, endsA
 	if !ok {
 		return room.GameState{}, fmt.Errorf("%w: %s", room.ErrRoomNotFound, roomCode)
 	}
-	if len(state.Players) == 0 || state.Players[0].ID != playerID {
-		return room.GameState{}, room.ErrNotHost
-	}
-	if state.Phase != room.GamePhaseWaiting {
-		return room.GameState{}, room.ErrGameAlreadyStarted
-	}
-	for _, p := range state.Players {
-		if !p.IsReady {
-			return room.GameState{}, room.ErrNotAllReady
-		}
+	if err := room.ValidateStart(state, playerID); err != nil {
+		return room.GameState{}, err
 	}
 
 	// create the word boards for every player

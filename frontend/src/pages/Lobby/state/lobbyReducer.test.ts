@@ -8,8 +8,8 @@ const initialLobby: LobbyState = {
     variation: { wordLengths: [3, 4, 5] },
     turnDurationMs: 90_000,
     players: [
-        { id: 'p1', name: 'Host', isReady: false, isConnected: true },
-        { id: 'p2', name: 'Guest', isReady: false, isConnected: true },
+        { id: 'p1', name: 'Host', isConnected: true },
+        { id: 'p2', name: 'Guest', isConnected: true },
     ],
 }
 
@@ -17,25 +17,22 @@ describe('lobbyReducer', () => {
     it('upserts joined players', () => {
         const joined = lobbyReducer(initialLobby, {
             type: 'lobby/playerJoined',
-            player: { id: 'p3', name: 'New', isReady: false, isConnected: true },
+            player: { id: 'p3', name: 'New', isConnected: true },
         })
 
         expect(joined?.players.map((player) => player.id)).toEqual(['p1', 'p2', 'p3'])
 
         const updated = lobbyReducer(joined, {
             type: 'lobby/playerJoined',
-            player: { id: 'p3', name: 'Renamed', isReady: true, isConnected: true },
+            player: { id: 'p3', name: 'Renamed', isConnected: true },
         })
 
         expect(updated?.players).toHaveLength(3)
-        expect(updated?.players[2]).toMatchObject({ name: 'Renamed', isReady: true })
+        expect(updated?.players[2]).toMatchObject({ name: 'Renamed', isConnected: true })
     })
 
-    it('updates readiness and removes disconnected players', () => {
-        const ready = lobbyReducer(initialLobby, { type: 'lobby/playerReady', playerId: 'p2', isReady: true })
-        expect(ready?.players.find((player) => player.id === 'p2')?.isReady).toBe(true)
-
-        const disconnected = lobbyReducer(ready, {
+    it('removes disconnected players and updates the host', () => {
+        const disconnected = lobbyReducer(initialLobby, {
             type: 'lobby/playerDisconnected',
             playerId: 'p1',
             hostPlayerId: 'p2',

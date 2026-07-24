@@ -79,7 +79,6 @@ function createPlayer(
         name: longContent && index === 1
             ? 'Bob With An Extraordinarily Long Display Name'
             : PLAYER_NAMES[index],
-        isReady: true,
         isConnected: true,
         handCount: handSize,
         hand,

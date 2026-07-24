@@ -87,24 +87,6 @@ func (h *Hub) broadcastLobbySettingsChanged(roomCode string, state room.GameStat
 	})
 }
 
-// handleLobbyPlayerReady marks a player ready and broadcasts the change.
-func (h *Hub) handleLobbyPlayerReady(c *client, roomCode, playerID string) {
-	if _, err := h.store.MarkPlayerReady(roomCode, playerID); err != nil {
-		sendErr(c, "ROOM_NOT_FOUND", err.Error())
-		return
-	}
-	h.broadcastToRoom(roomCode, "lobby:player_ready", lobbyPlayerReadyPayload{PlayerID: playerID})
-}
-
-// handleLobbyPlayerUnready marks a player unready and broadcasts the change.
-func (h *Hub) handleLobbyPlayerUnready(c *client, roomCode, playerID string) {
-	if _, err := h.store.MarkPlayerUnready(roomCode, playerID); err != nil {
-		sendErr(c, "ROOM_NOT_FOUND", err.Error())
-		return
-	}
-	h.broadcastToRoom(roomCode, "lobby:player_unready", lobbyPlayerUnreadyPayload{PlayerID: playerID})
-}
-
 // handleLobbyStartGame creates a deck, starts the game, and announces navigation.
 func (h *Hub) handleLobbyStartGame(c *client, roomCode, playerID string) {
 	drawPile, err := deck.New()
