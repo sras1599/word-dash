@@ -30,6 +30,6 @@ A turn has three phases:
 After the swap phase, the turn passes clockwise to the next player.
 
 ###### Win Condition
-A player wins the moment they have arranged **all required words simultaneously** — every word slot filled, and every word validated as a real word by the dictionary. The win is checked at the end of the swap phase (when the player returns to their normal hand size). There is no partial-win; all words must be complete at the same time.
+A player wins the moment they have arranged **all required words simultaneously** — every word slot filled, and every word validated as a real word by the dictionary. The win is checked immediately after a card is places. There is no partial-win; all words must be complete at the same time.
 
 If the draw pile is exhausted, the discard pile is reshuffled to form a new draw pile.
