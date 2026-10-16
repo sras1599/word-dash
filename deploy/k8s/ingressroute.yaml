@@ -40,7 +40,7 @@ spec:
         - name: strip-realtime-prefix
       services:
         - name: backend
-          port: 8081
+          port: 8080
     - match: Host(`word-dash.rasmalai.dev`)
       kind: Rule
       services:

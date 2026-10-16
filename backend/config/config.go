@@ -8,7 +8,6 @@ import (
 
 const (
 	defaultPort           = "8080"
-	defaultWSPort         = "8081"
 	defaultTurnDurationMS = 90_000
 	defaultCORSOrigin     = "http://localhost:5173"
 )
@@ -21,7 +20,6 @@ var Cfg = Load()
 
 type Config struct {
 	Port               string
-	WSPort             string
 	DBURL              string
 	RedisURL           string
 	TurnDurationMS     int
@@ -29,12 +27,8 @@ type Config struct {
 	CORSOrigin         string
 }
 
-func (c Config) RESTAddr() string {
+func (c Config) Addr() string {
 	return ":" + c.Port
-}
-
-func (c Config) WSAddr() string {
-	return ":" + c.WSPort
 }
 
 func Load() Config {
@@ -54,7 +48,6 @@ func Load() Config {
 
 	return Config{
 		Port:               getEnvOrDefault("PORT", defaultPort),
-		WSPort:             getEnvOrDefault("WS_PORT", defaultWSPort),
 		DBURL:              os.Getenv("DB_URL"),
 		RedisURL:           os.Getenv("REDIS_URL"),
 		TurnDurationMS:     turnDurationMS,

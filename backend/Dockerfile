@@ -17,6 +17,6 @@ COPY --from=build /out/server /app/server
 
 USER worddash
 
-EXPOSE 8080 8081
+EXPOSE 8080
 
 ENTRYPOINT ["/app/server"]

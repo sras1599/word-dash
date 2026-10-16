@@ -3,9 +3,9 @@
 Last checked: October 16, 2026.
 
 Deploy the existing Go backend and React frontend without maintaining a VPS.
-This guide describes the intended setup; the Render compatibility changes below
-have **not** been implemented yet. No Render services have been created as part
-of writing this document.
+The backend now uses one port for REST, health checks, and WebSockets. Cold-start
+and connection-recovery preparation below remains pending. No Render services
+have been created as part of this code preparation.
 
 ## 1. Account setup
 
@@ -20,27 +20,22 @@ Keep credentials in Render environment settings, outside the repository.
 
 ## 2. Prepare the code before deployment
 
-### Required: share one backend port
+### Complete: share one backend port
 
-The backend currently starts REST on `PORT` and WebSockets on `WS_PORT` in
-`backend/cmd/server/main.go`. Render routes public HTTP and WebSocket traffic to
-one port per web service.
+The backend registers `/rooms`, `/healthz`, and `/ws` on one HTTP server listening
+on `PORT` (default `8080`) in `backend/cmd/server/main.go`. This is the standard
+configuration for local development and all deployments; no additional mode
+setting is needed. `WS_PORT` has been removed.
 
-Add a shared-listener deployment mode that registers `/rooms`, `/healthz`, and
-`/ws` on one HTTP server listening on `PORT`. Preserve the existing two-port mode
-for local development and current deployments. Document the selected mode and
-its configuration when implementing it.
+WebSocket upgrades bypass the REST logging/CORS wrapper so the connection retains
+HTTP upgrade support. REST routes keep their existing logging and CORS behavior.
+Local frontend defaults now use `http://localhost:8080` and `ws://localhost:8080`.
 
-**Do not simply set `PORT` and `WS_PORT` to the same number:** the current code
-would try to start two listeners on that port and fail.
-
-Keep WebSocket upgrades outside the current REST logging wrapper, or update that
-wrapper to preserve HTTP upgrade support. Its response writer currently wraps
-`http.ResponseWriter` without forwarding `http.Hijacker`.
+Tests, builds, and deployment verification for this change have been deferred.
 
 Source: [Render WebSocket port requirements](https://render.com/docs/websocket).
 
-### Prepare for cold starts and interrupted connections
+### Pending: prepare for cold starts and interrupted connections
 
 - Show a useful waiting state when the backend is starting. Render documents a
   roughly one-minute wake-up delay; the frontend should not treat that as a missing
@@ -82,8 +77,7 @@ Configure these environment variables:
 
 | Variable | Value |
 | --- | --- |
-| `PORT` | Use Render's injected value; the shared listener must honor it |
-| Shared-listener configuration | Set the option introduced during code preparation |
+| `PORT` | Use Render's injected value; the single listener honors it |
 | `CORS_ORIGIN` | Exact frontend origin, e.g. `https://word-dash.onrender.com` |
 | `TURN_DURATION_MS` | Optional; current code defaults to `90000` |
 | `DEFAULT_WORD_LENGTHS` | Optional; current code defaults to `3,4,5` |

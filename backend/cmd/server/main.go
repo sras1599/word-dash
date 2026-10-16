@@ -14,6 +14,7 @@ import (
 	apiws "github.com/sras1599/wordit/backend/api/ws"
 	"github.com/sras1599/wordit/backend/config"
 	"github.com/sras1599/wordit/backend/internal/dictionary"
+	"github.com/sras1599/wordit/backend/internal/room"
 	"github.com/sras1599/wordit/backend/internal/storage"
 	internalws "github.com/sras1599/wordit/backend/internal/ws"
 )
@@ -39,24 +40,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	restMux := http.NewServeMux()
-	apihttp.RegisterRoutes(restMux, store)
-	restServer := &http.Server{
-		Addr:    cfg.RESTAddr(),
-		Handler: apihttp.LoggingMiddleware(apihttp.CORSMiddleware(cfg.CORSOrigin, restMux)),
-	}
-
-	wsMux := http.NewServeMux()
 	hub := internalws.NewHub(store, dict)
-	apiws.RegisterRoutes(wsMux, hub)
-	wsServer := &http.Server{
-		Addr:    cfg.WSAddr(),
-		Handler: wsMux,
+	server := &http.Server{
+		Addr:    cfg.Addr(),
+		Handler: newHandler(store, hub, cfg.CORSOrigin),
 	}
 
-	errCh := make(chan error, 2)
-	go listenAndServe("REST", restServer, errCh)
-	go listenAndServe("WS", wsServer, errCh)
+	errCh := make(chan error, 1)
+	go listenAndServe("HTTP", server, errCh)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -72,8 +63,18 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	shutdownServer("REST", restServer, ctx)
-	shutdownServer("WS", wsServer, ctx)
+	shutdownServer("HTTP", server, ctx)
+}
+
+func newHandler(store room.Store, hub *internalws.Hub, corsOrigin string) http.Handler {
+	restMux := http.NewServeMux()
+	apihttp.RegisterRoutes(restMux, store)
+
+	mux := http.NewServeMux()
+	// Keep WebSocket upgrades outside the REST response-writer wrapper.
+	apiws.RegisterRoutes(mux, hub)
+	mux.Handle("/", apihttp.LoggingMiddleware(apihttp.CORSMiddleware(corsOrigin, restMux)))
+	return mux
 }
 
 func listenAndServe(name string, srv *http.Server, errCh chan<- error) {

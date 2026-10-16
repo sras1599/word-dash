@@ -17,7 +17,7 @@ Run all repository commands below from the repository root.
 
 The deployment contains:
 
-- A Go backend serving REST on `8080` and WebSockets on `8081`.
+- A Go backend serving REST, health checks, and WebSockets on one port (`8080`).
 - A React/Vite frontend served by Nginx on `80`.
 - Redis for shared room state.
 - Traefik `IngressRoute` resources for public routing.
@@ -27,13 +27,17 @@ The deployment contains:
 The public routes are:
 
 ```text
-/api       -> backend REST server
-/realtime  -> backend WebSocket server
+/api       -> backend :8080 (REST and health checks)
+/realtime  -> backend :8080 (WebSockets at /ws)
 /           -> frontend
 ```
 
 Cloudflare Tunnel is required by the current deployment script. The script
 always applies `deploy/cloudflare` and waits for `cloudflared` to become ready.
+
+The backend uses `PORT` (default `8080`) for its single HTTP listener. `WS_PORT`
+is no longer supported. Both ingress routes target the same backend service
+port; the public `/api` and `/realtime` prefixes remain unchanged.
 
 ## Prerequisites
 

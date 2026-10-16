@@ -22,15 +22,11 @@ spec:
           image: ghcr.io/sras1599/word-dash/backend:v0.0.0 # {"$imagepolicy": "flux-system:word-dash:tag"}
           imagePullPolicy: Always
           ports:
-            - name: rest
+            - name: http
               containerPort: 8080
-            - name: websocket
-              containerPort: 8081
           env:
             - name: PORT
               value: "8080"
-            - name: WS_PORT
-              value: "8081"
             - name: REDIS_URL
               value: redis://redis.word-dash.svc.cluster.local:6379
             - name: CORS_ORIGIN
@@ -42,11 +38,11 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: rest
+              port: http
           livenessProbe:
             httpGet:
               path: /healthz
-              port: rest
+              port: http
 ---
 apiVersion: v1
 kind: Service
@@ -60,9 +56,6 @@ spec:
   selector:
     app.kubernetes.io/name: backend
   ports:
-    - name: rest
+    - name: http
       port: 8080
-      targetPort: rest
-    - name: websocket
-      port: 8081
-      targetPort: websocket
+      targetPort: http

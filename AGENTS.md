@@ -15,7 +15,7 @@ Run commands from the relevant application directory:
 
 ```bash
 docker compose up -d redis       # Start Redis on port 6379
-cd backend && make run           # Run REST :8080 and WebSocket :8081 servers
+cd backend && make run           # Run REST and WebSockets on :8080
 cd backend && make build         # Build backend/bin/server
 cd backend && make test          # Run all Go tests
 cd backend && make lint          # Run golangci-lint
@@ -41,4 +41,4 @@ Recent commits use imperative prefixes such as `fix:`, `ui:`, `docs:`, `chore:`,
 
 ## Configuration & Security
 
-The backend works in memory when `REDIS_URL` is unset. Common variables include `PORT`, `WS_PORT`, `REDIS_URL`, `CORS_ORIGIN`, `TURN_DURATION_MS`, and `DEFAULT_WORD_LENGTHS`; the frontend uses `VITE_API_URL` and `VITE_WS_URL`. Never commit credentials or local environment files.
+The backend works in memory when `REDIS_URL` is unset. REST, health checks, and WebSockets share `PORT` (default `8080`). Common variables include `PORT`, `REDIS_URL`, `CORS_ORIGIN`, `TURN_DURATION_MS`, and `DEFAULT_WORD_LENGTHS`; the frontend uses `VITE_API_URL` and `VITE_WS_URL`. Never commit credentials or local environment files.

@@ -10,3 +10,20 @@ It's basically a hosted backend service which is an alternative to Google's [Fir
 During the research, I also asked Codex to give me alternatives to the supabase migration. Render, apparently, has a free tier where I can host the game with minimal code changes.
 #### Supporting this deployment
 My game currently exposes 2 ports, 1 for connecting to the REST API and another to connect to the WS client. Render only allows exposing one port, so I'll have to make this change first.
+
+### Final approach
+We're going ahead with render for now. I do want to experiment with cloud workers later but this game, specially in its current state, is not really the best use case for it.
+
+#### Code changes
+I first asked codex to use one backend port instead of 2. Other than supporting the Render deployment, this will also simplify local development.
+
+##### One Backend port
+- Frontend
+	- Updated `WS_BASE_URL` in `frontend/src/lib/config.ts`
+	- Updated `VITE_BASE_URL` in `frontend/Dockerfile`
+- Backend
+	- remove `WsPort` from `backend/config/config.go`. Also remove those references in `backend/cmd/server/main.go`
+	- Update `backend/Dockerfile`
+- Other
+	- Removed the now obsolete `WS_PORT` variable from `.vscode/launch.json`
+	- Update k8s deployment manifests and readme file
