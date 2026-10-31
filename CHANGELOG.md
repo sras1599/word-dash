@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/sras1599/word-dash/compare/v1.2.0...v1.3.0) (2026-10-31)
+
+
+### Features
+
+* remove lobby requirement of players having to set ready before being able to start a game ([e0ef697](https://github.com/sras1599/word-dash/commit/e0ef697ec1b0f92f18812b7147e58883d0c346a4))
+* use only one backend port insteat of separate ports for exposing rest and ws endpoints ([71fe9a5](https://github.com/sras1599/word-dash/commit/71fe9a5301b20af7e9f1b6d697e13450be07208b))
+
 ## [1.2.0](https://github.com/sras1599/word-dash/compare/v1.1.0...v1.2.0) (2026-07-21)
 
 
