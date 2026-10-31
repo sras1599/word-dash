@@ -367,6 +367,7 @@
     }
 
     .page-home__cta-btn {
+        --cta-rotation: 0deg;
         width: 100%;
         min-width: 0;
         font-size: 0.98rem;

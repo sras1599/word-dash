@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { expect } from 'storybook/test'
+import { expect, waitFor } from 'storybook/test'
 import { Home } from './Home'
 
 const meta = {
@@ -31,6 +31,40 @@ export const Default: Story = {
         await expect(canvas.getByText(
             'Test your speed and vocabulary at the same time by building words as quickly as possible!',
         )).toBeInTheDocument()
+    },
+}
+
+export const Mobile: Story = {
+    parameters: {
+        viewport: { defaultViewport: 'mobile1' },
+    },
+    play: async ({ canvas, userEvent }) => {
+        expect(window.innerWidth).toBeLessThanOrEqual(640)
+        const createButton = canvas.getByRole('button', { name: /create game/i })
+        const joinButton = canvas.getByRole('button', { name: /join game/i })
+        const expectLevel = async (button: HTMLElement) => {
+            await waitFor(() => {
+                const matrix = new DOMMatrixReadOnly(getComputedStyle(button).transform)
+                expect(matrix.b).toBeCloseTo(0, 5)
+                expect(matrix.c).toBeCloseTo(0, 5)
+            })
+        }
+
+        for (const button of [createButton, joinButton]) {
+            await expectLevel(button)
+            await userEvent.hover(button)
+            await expectLevel(button)
+            await userEvent.pointer({ target: button, keys: '[MouseLeft>]' })
+            await expectLevel(button)
+            await userEvent.pointer({ target: button, keys: '[/MouseLeft]' })
+            await userEvent.unhover(button)
+        }
+
+        const createRect = createButton.getBoundingClientRect()
+        const joinRect = joinButton.getBoundingClientRect()
+        expect(joinRect.top - createRect.bottom).toBeGreaterThanOrEqual(15)
+        expect(createRect.left).toBeCloseTo(joinRect.left, 0)
+        expect(createRect.width).toBeCloseTo(joinRect.width, 0)
     },
 }
 
