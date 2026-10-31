@@ -1,1 +1,0 @@
-I've vibe coded this game for as long as I can remember. While this has definitely accelerated the pace of development and allowed me to work with unfamiliar tools, it has also meant that I now don't know how my own game works. I'm creating this log to be more conscious about the development I do on this codebase.
